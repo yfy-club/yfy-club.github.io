@@ -50,6 +50,13 @@ const RULES = [
   { fg: '--stage-zgyc', bg: '--bg-sky', min: 3, usage: '智光耀城展台框线' },
   { fg: '--stage-zhixueban', bg: '--bg-sky', min: 3, usage: '智学伴展台框线' },
   { fg: '--stage-matrix', bg: '--bg-sky', min: 3, usage: '矩阵计算器展台框线' },
+  // 角色主调承载 halo 与道具线条，同样是非文本图形，按 1.4.11 卡 3:1
+  { fg: '--char-navi-accent', bg: '--bg-sky', min: 3, usage: 'NAVI halo 与道具线条' },
+  { fg: '--char-oracle-accent', bg: '--bg-sky', min: 3, usage: 'ORACLE halo 与道具线条' },
+  { fg: '--char-weaver-accent', bg: '--bg-sky', min: 3, usage: 'WEAVER halo 与道具线条' },
+  { fg: '--char-vault-accent', bg: '--bg-sky', min: 3, usage: 'VAULT halo 与道具线条' },
+  { fg: '--char-relay-accent', bg: '--bg-sky', min: 3, usage: 'RELAY halo 与道具线条' },
+  { fg: '--char-forge-accent', bg: '--bg-sky', min: 3, usage: 'FORGE halo 与道具线条' },
 ] as const
 
 /** 明确禁止承载文字的令牌。写进代码，免得三个月后有人"顺手"用了。 */

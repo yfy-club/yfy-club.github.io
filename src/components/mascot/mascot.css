@@ -1,0 +1,567 @@
+/* =========================================================================
+   半身矢量看板娘
+   色值一律取令牌，这里不出现 #hex。几何在 geometry.ts，表情在 expressions.ts。
+   ========================================================================= */
+
+.mascot {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  /* 空白处不吃点击，只有画到的地方能被戳。SVG 的 visiblePainted 语义。 */
+  pointer-events: none;
+
+  /* 惯性写进来的量，全部无量纲，在下面各自换算成 px 或 deg */
+  --sway-ahoge: 0;
+  --sway-ahoge-y: 0;
+  --sway-hair-b: 0;
+  --sway-hair-f: 0;
+  --sway-scarf: 0;
+  --sway-halo-x: 0;
+  --sway-halo-y: 0;
+  --sway-body-x: 0;
+  --sway-body-y: 0;
+  --gaze-x: 0;
+  --gaze-y: 0;
+  --gaze-flip: 1;
+  --iris-scale: 1;
+}
+
+.mascot .m-parallax {
+  pointer-events: auto;
+}
+
+/* -------------------------------------------------------------------------
+   六人色板。人与人的差别只有这五个变量 + 发型 path + halo/道具变体。
+   ------------------------------------------------------------------------- */
+
+.mascot[data-char='navi'] {
+  --hair: var(--char-navi-main);
+  --hair-deep: var(--char-navi-deep);
+  --hair-line: var(--char-navi-line);
+  --iris-color: var(--char-navi-iris);
+  --accent: var(--char-navi-accent);
+}
+
+.mascot[data-char='oracle'] {
+  --hair: var(--char-oracle-main);
+  --hair-deep: var(--char-oracle-deep);
+  --hair-line: var(--char-oracle-line);
+  --iris-color: var(--char-oracle-iris);
+  --accent: var(--char-oracle-accent);
+}
+
+.mascot[data-char='weaver'] {
+  --hair: var(--char-weaver-main);
+  --hair-deep: var(--char-weaver-deep);
+  --hair-line: var(--char-weaver-line);
+  --iris-color: var(--char-weaver-iris);
+  --accent: var(--char-weaver-accent);
+}
+
+.mascot[data-char='vault'] {
+  --hair: var(--char-vault-main);
+  --hair-deep: var(--char-vault-deep);
+  --hair-line: var(--char-vault-line);
+  --iris-color: var(--char-vault-iris);
+  --accent: var(--char-vault-accent);
+}
+
+.mascot[data-char='relay'] {
+  --hair: var(--char-relay-main);
+  --hair-deep: var(--char-relay-deep);
+  --hair-line: var(--char-relay-line);
+  --iris-color: var(--char-relay-iris);
+  --accent: var(--char-relay-accent);
+}
+
+.mascot[data-char='forge'] {
+  --hair: var(--char-forge-main);
+  --hair-deep: var(--char-forge-deep);
+  --hair-line: var(--char-forge-line);
+  --iris-color: var(--char-forge-iris);
+  --accent: var(--char-forge-accent);
+}
+
+/* -------------------------------------------------------------------------
+   材质。扁平色块 + 同色系深色描边，不做厚涂（spec 3.1）。
+   ------------------------------------------------------------------------- */
+
+.mascot path,
+.mascot ellipse,
+.mascot circle {
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.mascot .skin {
+  fill: var(--skin-base);
+  stroke: var(--skin-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+/* 不描边的皮肤色。眨眼遮罩用，描了边会在脸上多出一圈眼窝轮廓。 */
+.mascot .skin-flat {
+  fill: var(--skin-base);
+}
+
+.mascot .skin-shade {
+  fill: var(--skin-shade);
+  stroke: none;
+  opacity: 0.75;
+}
+
+.mascot .skin-line {
+  fill: none;
+  stroke: var(--skin-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+.mascot .hair-mass {
+  fill: var(--hair);
+  stroke: var(--hair-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+/* 惯性组比主体暗一档，头发才有前后层，不是一块色板 */
+.mascot .strand-b,
+.mascot .strand-f {
+  fill: var(--hair-deep);
+}
+
+.mascot .ornament {
+  fill: var(--accent);
+  stroke: var(--hair-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+.mascot .cloth {
+  fill: var(--uniform-base);
+  stroke: var(--uniform-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+.mascot .cloth-sunk {
+  fill: var(--uniform-shade);
+  stroke: var(--uniform-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+/* 锁骨。肩不能是一整块白。 */
+.mascot .cloth-line {
+  fill: none;
+  stroke: var(--uniform-line);
+  stroke-width: var(--mascot-stroke);
+  opacity: 0.6;
+}
+
+/* 制服六人同款，只有这两道镶边与领巾换成各自主调 */
+.mascot .trim {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: var(--mascot-stroke);
+}
+
+.mascot .trim-fill {
+  fill: var(--accent);
+  stroke: var(--uniform-line);
+  stroke-width: var(--mascot-stroke);
+}
+
+/* ---------------------------------------------------------------- 眼 */
+
+.mascot .sclera {
+  fill: var(--sclera);
+  stroke: none;
+}
+
+.mascot .sclera-shade {
+  fill: var(--sclera-shade);
+  stroke: none;
+}
+
+.mascot .socket-line {
+  fill: none;
+  stroke: var(--hair-line);
+  stroke-width: var(--mascot-stroke);
+  opacity: 0.55;
+}
+
+.mascot .iris-body {
+  fill: var(--iris-color);
+  stroke: none;
+}
+
+/* 瞳底一圈亮。规格 3.1 只准两处渐变，这是其中之一（另一处在发丝）。 */
+.mascot .iris-glow {
+  fill: var(--sclera);
+  stroke: none;
+  opacity: 0.42;
+}
+
+.mascot .pupil {
+  fill: var(--ink-900);
+  stroke: none;
+}
+
+.mascot .shine {
+  fill: var(--sclera);
+  stroke: none;
+}
+
+.mascot .shine-sub {
+  opacity: 0.6;
+}
+
+.mascot .lash,
+.mascot .lid-line {
+  fill: none;
+  stroke: var(--hair-line);
+  stroke-width: calc(var(--mascot-stroke) * 3.2);
+}
+
+.mascot .lash-flick {
+  fill: none;
+  stroke: var(--hair-line);
+  stroke-width: calc(var(--mascot-stroke) * 2);
+}
+
+.mascot .brow {
+  fill: none;
+  stroke: var(--hair-line);
+  stroke-width: calc(var(--mascot-stroke) * 2.5);
+}
+
+.mascot .mouth {
+  fill: none;
+  stroke: var(--mouth-line);
+  stroke-width: calc(var(--mascot-stroke) * 1.6);
+}
+
+.mascot .mouth-open {
+  fill: var(--mouth-fill);
+}
+
+.mascot .blush {
+  fill: var(--pink-300);
+  stroke: none;
+}
+
+/* 瞳跟着鼠标走 ±3 用户单位，放大缩小以瞳心为轴。裁在眼窝里，跑不出去。 */
+.mascot .iris {
+  transform: translate(
+      calc((var(--gaze-x) + var(--gaze-bias-x, 0)) * var(--gaze-flip) * 1px),
+      calc((var(--gaze-y) + var(--gaze-bias-y, 0)) * 1px)
+    )
+    scale(var(--iris-scale));
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--dur-swap) var(--ease-out-expo);
+}
+
+/* 右眼在镜像坐标系里，横向跟随要反号才和左眼看同一个方向 */
+.mascot .eye-unit[data-side='r'] {
+  --gaze-flip: -1;
+}
+
+/*
+ * 闭眼 → 眼球淡出，闭眼弧线在差分层里同步淡入。
+ * 压睑 → 固定睫毛淡出，睑缘线接手。睫毛留在原位不动的话，
+ * 半睁的眼会变成脸上糊了一块肉色，试过，很吓人。
+ */
+.mascot .eyeball,
+.mascot .lashes {
+  transition: opacity var(--dur-swap) var(--ease-out-expo);
+}
+
+.mascot[data-eye-l='shut'] .eye-unit[data-side='l'] .eyeball,
+.mascot[data-eye-r='shut'] .eye-unit[data-side='r'] .eyeball,
+.mascot[data-eye-l='shut'] .eye-unit[data-side='l'] .lashes,
+.mascot[data-eye-r='shut'] .eye-unit[data-side='r'] .lashes,
+.mascot[data-eye-l='lid'] .eye-unit[data-side='l'] .lashes,
+.mascot[data-eye-r='lid'] .eye-unit[data-side='r'] .lashes {
+  opacity: 0;
+}
+
+/* 眨眼。闭 90ms 张 60ms，规格 3.3 写死。 */
+.mascot .m-blink {
+  opacity: 0;
+  transition: opacity 60ms linear;
+}
+
+.mascot .m-blink[data-on='true'] {
+  opacity: 1;
+  transition-duration: 90ms;
+}
+
+/* -------------------------------------------------------------------------
+   差分交叉淡入。120ms，opacity + 3px 位移，不允许硬切（spec 3.3）。
+   ------------------------------------------------------------------------- */
+
+.mascot .m-diff {
+  animation: mascot-diff-in var(--dur-swap) var(--ease-out-expo) both;
+}
+
+.mascot .m-diff[data-phase='out'] {
+  animation-name: mascot-diff-out;
+  pointer-events: none;
+}
+
+@keyframes mascot-diff-in {
+  from {
+    opacity: 0;
+    translate: 0 3px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes mascot-diff-out {
+  from {
+    opacity: 1;
+    translate: 0 0;
+  }
+  to {
+    opacity: 0;
+    translate: 0 -3px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   惯性。位移由弹簧算好写成变量，这里只做「位移 → 角度」的换算。
+
+   换算系数 = 目标位移 / 部件长度，单位 deg/单位：
+     后发  9.0 / 250 rad ≈ 2.06°  → 0.24
+     前发  6.3 / 130 rad ≈ 2.78°  → 0.44
+     呆毛 14.0 /  60 rad ≈ 13.4°  → 0.90
+     领巾 10.8 /  95 rad ≈  6.5°  → 0.60
+   halo 与身体是整体平移，不转，直接用位移。
+   ------------------------------------------------------------------------- */
+
+.mascot .m-parallax {
+  transform: translate(calc(var(--sway-body-x) * 1px), calc(var(--sway-body-y) * 1px));
+}
+
+.mascot .strand-b {
+  transform: rotate(calc(var(--sway-hair-b) * 0.24deg));
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+.mascot .strand-f {
+  transform: rotate(calc(var(--sway-hair-f) * 0.44deg));
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+/* 呆毛从发根往上翘，轴心在下端 */
+.mascot .ahoge {
+  transform: rotate(calc(var(--sway-ahoge) * 0.9deg + var(--ahoge-droop, 0deg)));
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+/* 领巾轴心在结上，不在尾巴中间 */
+.mascot .scarf {
+  transform: rotate(calc(var(--sway-scarf) * 0.6deg));
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+}
+
+/* halo 延迟跟随头部，比身体多走一点 */
+.mascot .m-halo {
+  transform: translate(calc(var(--sway-halo-x) * 1px), calc(var(--sway-halo-y) * 1px));
+}
+
+/* THINK 呆毛下垂（spec 3.3） */
+.mascot[data-state='THINK'] {
+  --ahoge-droop: 26deg;
+}
+
+.mascot .ahoge {
+  transition: rotate var(--dur-enter) var(--ease-out-expo);
+}
+
+/* -------------------------------------------------------------------------
+   halo 与道具。线条走角色主调，全部 ≥3:1（check:contrast 里卡着）。
+   ------------------------------------------------------------------------- */
+
+.mascot .halo-ring path,
+.mascot .halo-ring circle {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 3;
+  /* 环上的装饰是在压扁过的坐标系里画的，描边不能跟着压 */
+  vector-effect: non-scaling-stroke;
+}
+
+.mascot .halo-solid {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.mascot .halo-node {
+  fill: var(--bg-paper);
+  animation: mascot-node 2.2s ease-in-out infinite;
+}
+
+.mascot .halo-orbit {
+  animation: mascot-spin 14s linear infinite;
+  transform-origin: 0 0;
+}
+
+.mascot .halo-spin-cw {
+  animation: mascot-spin 22s linear infinite;
+  transform-origin: 0 0;
+}
+
+.mascot .halo-spin-ccw {
+  animation: mascot-spin 16s linear infinite reverse;
+  transform-origin: 0 0;
+}
+
+.mascot .halo-sink {
+  animation: mascot-sink 2.6s ease-in-out infinite;
+}
+
+.mascot .halo-wave {
+  animation: mascot-wave 2.1s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+@keyframes mascot-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+@keyframes mascot-node {
+  0%,
+  70%,
+  100% {
+    fill: var(--bg-paper);
+  }
+  80%,
+  90% {
+    fill: var(--accent);
+  }
+}
+
+@keyframes mascot-sink {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 5px;
+  }
+}
+
+@keyframes mascot-wave {
+  0% {
+    scale: 0.55;
+    opacity: 0;
+  }
+  25% {
+    opacity: 0.9;
+  }
+  100% {
+    scale: 1.25;
+    opacity: 0;
+  }
+}
+
+/* POUT 时 halo 抖（spec 3.3） */
+.mascot[data-state='POUT'] .m-halo {
+  animation: mascot-shake 0.24s linear infinite;
+}
+
+@keyframes mascot-shake {
+  0%,
+  100% {
+    rotate: -1.4deg;
+  }
+  50% {
+    rotate: 1.4deg;
+  }
+}
+
+/* ---------------------------------------------------------------- 道具 */
+
+.mascot .prop-line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+}
+
+.mascot .prop-solid {
+  fill: var(--accent);
+  stroke: none;
+}
+
+.mascot .prop-node {
+  fill: var(--bg-paper);
+  stroke: var(--accent);
+  stroke-width: 2;
+  animation: mascot-node 1.7s ease-in-out infinite;
+}
+
+.mascot .prop-wave {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2.6;
+  animation: mascot-wave 1.35s ease-out infinite;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+
+.mascot .prop-stack {
+  animation: mascot-sink 2.6s ease-in-out infinite;
+}
+
+.mascot .prop-float {
+  animation: mascot-float 5.5s ease-in-out infinite;
+}
+
+.mascot .prop-needle {
+  animation: mascot-spin 26s linear infinite;
+  transform-origin: 0 0;
+}
+
+@keyframes mascot-float {
+  0%,
+  100% {
+    translate: 0 -4px;
+  }
+  50% {
+    translate: 0 4px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   降级。规格第 6 节：reduce 下关掉立绘惯性。
+   still 走同一条路，用于静态截图与低端设备。
+   ------------------------------------------------------------------------- */
+
+.mascot[data-alive='false'] .halo-node,
+.mascot[data-alive='false'] .halo-orbit,
+.mascot[data-alive='false'] .halo-spin-cw,
+.mascot[data-alive='false'] .halo-spin-ccw,
+.mascot[data-alive='false'] .halo-sink,
+.mascot[data-alive='false'] .halo-wave,
+.mascot[data-alive='false'] .prop-node,
+.mascot[data-alive='false'] .prop-wave,
+.mascot[data-alive='false'] .prop-stack,
+.mascot[data-alive='false'] .prop-float,
+.mascot[data-alive='false'] .prop-needle,
+.mascot[data-alive='false'] .m-halo {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mascot * {
+    animation: none !important;
+  }
+}

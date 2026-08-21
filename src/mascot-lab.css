@@ -1,0 +1,145 @@
+/* =========================================================================
+   M2 验收页。M3 起随 App.tsx 一起被真首屏替换。
+   ========================================================================= */
+
+.mlab {
+  padding-block: var(--space-7);
+}
+
+.mlab-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block: var(--space-5) var(--space-6);
+}
+
+.mlab-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.mlab-title {
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  font-weight: 700;
+}
+
+.mlab-sub {
+  color: var(--ink-600);
+  max-width: 62ch;
+}
+
+.mlab-h3 {
+  margin-block: var(--space-6) var(--space-5);
+}
+
+/* 状态开关条 */
+.mlab-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-6);
+}
+
+.mlab-key {
+  --tag-bevel: 7px;
+  padding: 5px var(--space-4);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  background: var(--bg-paper);
+  color: var(--ink-600);
+  border: var(--hairline) solid var(--line-solid);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--tag-bevel)) 0,
+    100% var(--tag-bevel),
+    100% 100%,
+    var(--tag-bevel) 100%,
+    0 calc(100% - var(--tag-bevel))
+  );
+}
+
+.mlab-key[data-on='true'] {
+  background: var(--sky-700);
+  color: var(--bg-paper);
+  border-color: var(--sky-700);
+}
+
+.mlab-key-alt[data-on='true'] {
+  background: var(--pink-100);
+  color: var(--pink-700);
+  border-color: var(--pink-700);
+}
+
+/* 六人全身 */
+.mlab-cast {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-5);
+}
+
+.mlab-cell,
+.mlab-face {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mlab-stage {
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-card);
+  padding: var(--space-3);
+  /* 立绘要能溢出裁切边界（破框），容器不能 hidden */
+  overflow: visible;
+}
+
+.mlab-stage-tight {
+  padding: 0;
+  overflow: hidden;
+}
+
+.mlab-cell figcaption,
+.mlab-face figcaption {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  line-height: 1.45;
+}
+
+.mlab-name {
+  font-size: var(--text-h3);
+  font-weight: 700;
+}
+
+.mlab-romaji,
+.mlab-state {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--sky-700);
+}
+
+.mlab-role {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}
+
+.mlab-note {
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+}
+
+/* 七态矩阵与小卡裁切 */
+.mlab-matrix,
+.mlab-bust {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: var(--space-4);
+}
