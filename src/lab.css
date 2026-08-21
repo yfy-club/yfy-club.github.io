@@ -1,0 +1,278 @@
+/* =========================================================================
+   设计系统样板间
+   M1 的验收页面。M3 起被真正的首屏替换掉。
+   ========================================================================= */
+
+.lab {
+  position: relative;
+  min-height: 100dvh;
+  padding-block: var(--space-7) var(--space-9);
+}
+
+.lab-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+
+.lab-title {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-h1);
+  font-weight: 700;
+}
+
+.lab-sub {
+  color: var(--ink-600);
+  max-width: 62ch;
+}
+
+/* 左侧常驻刻度尺 */
+.lab-scale {
+  position: fixed;
+  left: var(--space-5);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: var(--z-content);
+}
+
+@media (max-width: 1100px) {
+  .lab-scale {
+    display: none;
+  }
+}
+
+/* 区块 */
+.sec {
+  margin-top: var(--space-8);
+}
+
+.sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  margin-bottom: var(--space-5);
+}
+
+.sec-num {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.sec-title {
+  font-size: var(--text-h2);
+  line-height: var(--leading-h2);
+  font-weight: 700;
+}
+
+.sec-note {
+  margin-left: auto;
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+}
+
+.sec-body {
+  margin-top: var(--space-5);
+}
+
+/* 色卡 */
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+@media (max-width: 900px) {
+  .swatches {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.swatch {
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-badge);
+  overflow: hidden;
+  background: var(--bg-paper);
+}
+
+.swatch-chip {
+  height: 68px;
+  display: flex;
+  align-items: flex-end;
+  padding: var(--space-2);
+}
+
+.swatch-meta {
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.swatch-name {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-900);
+}
+
+.swatch-hex {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+  text-transform: uppercase;
+}
+
+.swatch-use {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  line-height: 1.5;
+  margin-top: var(--space-1);
+}
+
+/* 字阶样张 */
+.type-row {
+  display: grid;
+  grid-template-columns: 130px 1fr;
+  gap: var(--space-5);
+  align-items: baseline;
+  padding-block: var(--space-4);
+  border-bottom: var(--hairline) solid var(--line-hair);
+}
+
+.type-label {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  text-transform: uppercase;
+}
+
+.type-sample {
+  color: var(--ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* HUD 原子演示格 */
+.atoms {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-5);
+}
+
+.atom {
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-card);
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-height: 172px;
+}
+
+.atom-name {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  text-transform: uppercase;
+}
+
+.atom-stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.atom-desc {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  line-height: 1.6;
+}
+
+/* 切角卡片示例 */
+.bevel-card {
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  padding: var(--space-5);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel))
+  );
+  transition: box-shadow var(--dur-micro) var(--ease-out-expo);
+}
+
+.bevel-card:hover {
+  box-shadow: var(--shadow-lift);
+}
+
+/* 间距尺 */
+.space-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding-block: var(--space-2);
+}
+
+.space-bar {
+  height: 10px;
+  background: var(--sky-300);
+  border-radius: 2px;
+}
+
+.space-name {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  width: 92px;
+  flex: none;
+}
+
+/* 展台三色 */
+/* 展台三色。取景框的角线画在元素外侧，栅格间距要留得下两侧角线，
+   容器也要留出内边距，否则最右一张的角线会被 shell 裁掉。 */
+.stages {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-7);
+  padding-inline: var(--space-3);
+}
+
+.stage-demo {
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-hair);
+  aspect-ratio: 16 / 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stage-demo-name {
+  font-weight: 700;
+}
+
+.stage-demo-hex {
+  font-family: var(--font-mono);
+  font-size: var(--text-caption);
+  color: var(--ink-400);
+}

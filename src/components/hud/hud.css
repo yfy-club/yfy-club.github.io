@@ -1,0 +1,268 @@
+/* =========================================================================
+   HUD 原子语汇
+   规格见 docs/design-spec.md 2.4。全站的秩序感由这六个东西撑起来，
+   不靠模糊、不靠阴影、不靠渐变。
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   Rail —— 导轨。全幅 1px 线，两端各一道 4px 短刻。
+   ------------------------------------------------------------------------- */
+
+.hud-rail {
+  position: relative;
+  flex: none;
+  background: var(--line-hair);
+}
+
+.hud-rail[data-orientation='horizontal'] {
+  width: 100%;
+  height: var(--hairline);
+}
+
+.hud-rail[data-orientation='vertical'] {
+  width: var(--hairline);
+  height: 100%;
+}
+
+.hud-rail[data-ticks='true']::before,
+.hud-rail[data-ticks='true']::after {
+  content: '';
+  position: absolute;
+  background: var(--line-solid);
+}
+
+.hud-rail[data-orientation='horizontal'][data-ticks='true']::before,
+.hud-rail[data-orientation='horizontal'][data-ticks='true']::after {
+  top: -1.5px;
+  width: var(--hairline);
+  height: 4px;
+}
+
+.hud-rail[data-orientation='horizontal'][data-ticks='true']::before {
+  left: 0;
+}
+
+.hud-rail[data-orientation='horizontal'][data-ticks='true']::after {
+  right: 0;
+}
+
+.hud-rail[data-orientation='vertical'][data-ticks='true']::before,
+.hud-rail[data-orientation='vertical'][data-ticks='true']::after {
+  left: -1.5px;
+  width: 4px;
+  height: var(--hairline);
+}
+
+.hud-rail[data-orientation='vertical'][data-ticks='true']::before {
+  top: 0;
+}
+
+.hud-rail[data-orientation='vertical'][data-ticks='true']::after {
+  bottom: 0;
+}
+
+/* -------------------------------------------------------------------------
+   Reticle —— 十字准星。两条线 + 中心空心方。区块锚点与卡片四角。
+   ------------------------------------------------------------------------- */
+
+.hud-reticle {
+  display: block;
+  color: var(--sky-500);
+  flex: none;
+}
+
+.hud-reticle[data-tone='pink'] {
+  color: var(--pink-500);
+}
+
+.hud-reticle[data-tone='ink'] {
+  color: var(--ink-400);
+}
+
+/* -------------------------------------------------------------------------
+   TickScale —— 垂直刻度尺。每 5 格一长刻，长刻带序号。
+   ------------------------------------------------------------------------- */
+
+.hud-scale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+  user-select: none;
+}
+
+.hud-scale-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 6px;
+}
+
+.hud-scale-mark {
+  height: var(--hairline);
+  background: var(--line-solid);
+  transition: background var(--dur-micro) var(--ease-out-expo);
+}
+
+.hud-scale-row[data-major='true'] .hud-scale-mark {
+  width: 18px;
+}
+
+.hud-scale-row[data-major='false'] .hud-scale-mark {
+  width: 8px;
+}
+
+.hud-scale-row[data-active='true'] .hud-scale-mark {
+  background: var(--pink-500);
+  width: 26px;
+}
+
+.hud-scale-num {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-scale-row[data-active='true'] .hud-scale-num {
+  color: var(--pink-700);
+}
+
+/* -------------------------------------------------------------------------
+   Tag —— 切角标签。方向代号、技术栈、状态。
+   ------------------------------------------------------------------------- */
+
+.hud-tag {
+  --tag-bevel: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 3px var(--space-3);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--tag-bevel)) 0,
+    100% var(--tag-bevel),
+    100% 100%,
+    var(--tag-bevel) 100%,
+    0 calc(100% - var(--tag-bevel))
+  );
+}
+
+.hud-tag[data-tone='sky'] {
+  background: var(--sky-100);
+  color: var(--sky-700);
+}
+
+.hud-tag[data-tone='pink'] {
+  background: var(--pink-100);
+  color: var(--pink-700);
+}
+
+.hud-tag[data-tone='ink'] {
+  background: var(--bg-sunk);
+  color: var(--ink-600);
+}
+
+.hud-tag[data-tone='solid'] {
+  background: var(--sky-700);
+  color: var(--bg-paper);
+}
+
+/* -------------------------------------------------------------------------
+   Bracket —— 四角 L 形取景框。只有角，不闭合。
+   展台主调由外部传 --bracket-tone 覆盖。
+   ------------------------------------------------------------------------- */
+
+.hud-bracket {
+  --bracket-tone: var(--sky-500);
+  --bracket-len: 22px;
+  --bracket-gap: 10px;
+  position: relative;
+}
+
+.hud-bracket > .hud-bracket-corner {
+  position: absolute;
+  width: var(--bracket-len);
+  height: var(--bracket-len);
+  border-color: var(--bracket-tone);
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+.hud-bracket-corner[data-corner='tl'] {
+  top: calc(var(--bracket-gap) * -1);
+  left: calc(var(--bracket-gap) * -1);
+  border-top-width: var(--hairline);
+  border-left-width: var(--hairline);
+}
+
+.hud-bracket-corner[data-corner='tr'] {
+  top: calc(var(--bracket-gap) * -1);
+  right: calc(var(--bracket-gap) * -1);
+  border-top-width: var(--hairline);
+  border-right-width: var(--hairline);
+}
+
+.hud-bracket-corner[data-corner='bl'] {
+  bottom: calc(var(--bracket-gap) * -1);
+  left: calc(var(--bracket-gap) * -1);
+  border-bottom-width: var(--hairline);
+  border-left-width: var(--hairline);
+}
+
+.hud-bracket-corner[data-corner='br'] {
+  bottom: calc(var(--bracket-gap) * -1);
+  right: calc(var(--bracket-gap) * -1);
+  border-bottom-width: var(--hairline);
+  border-right-width: var(--hairline);
+}
+
+/* -------------------------------------------------------------------------
+   Diamond —— 45° 实心小方块。替代全站所有 Emoji 与 - 列表符号。
+   ------------------------------------------------------------------------- */
+
+.hud-diamond {
+  display: inline-block;
+  width: 4px;
+  height: 4px;
+  flex: none;
+  rotate: 45deg;
+  background: currentColor;
+  color: var(--sky-500);
+  vertical-align: 0.35em;
+}
+
+.hud-diamond[data-tone='pink'] {
+  color: var(--pink-500);
+}
+
+.hud-diamond[data-tone='ink'] {
+  color: var(--ink-400);
+}
+
+/* 用 Diamond 做项目符号的列表 */
+.hud-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.hud-list > li {
+  display: grid;
+  grid-template-columns: 4px 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
