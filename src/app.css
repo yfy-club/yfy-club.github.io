@@ -9,41 +9,8 @@
 /*
  * 锚点跳转的预留量。
  * 导航条固定高 63px，不给 scroll-margin 的话 #tracks 的分区头正好被盖住。
+ * /docs 的三级标题另有一份，在 docs.css 里。
  */
 main > section[id] {
   scroll-margin-top: 63px;
-}
-
-/* -------------------------------------------------------------------------
-   待建分区。M5 落地后整块替换掉，不要在这上面加内容。
-   ------------------------------------------------------------------------- */
-
-.slot {
-  padding-block: var(--space-8);
-}
-
-.slot-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-4);
-  padding-top: var(--space-6);
-}
-
-.slot-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-
-.slot-title {
-  font-size: var(--text-h2);
-  font-weight: 700;
-  line-height: var(--leading-h2);
-  color: var(--ink-900);
-}
-
-.slot-note {
-  max-width: 52ch;
-  color: var(--ink-600);
 }

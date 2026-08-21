@@ -1,5 +1,6 @@
 node_modules/
 dist/
+dist-ssr/
 .vite/
 *.local
 .DS_Store
@@ -8,6 +9,12 @@ Thumbs.db
 .env.*
 !.env.example
 *.tsbuildinfo
+
+# 临时探针与截图目录，别提交
+.tmp-*/
+
+# git commit -F 的临时消息文件，别提交
+.commit-msg
 .idea/
 .vscode/*
 !.vscode/extensions.json

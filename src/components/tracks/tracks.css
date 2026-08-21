@@ -108,6 +108,18 @@
   }
 }
 
+/*
+ * 没有 JS 就没人来打 data-entered，卡片会一直停在 opacity: 0。
+ * 首页自 M5 起是预渲染出来的静态页，规格第 6 节要求无 JS 时内容可读，
+ * 这里直接把入场动画的起始态取消掉。
+ */
+@media (scripting: none) {
+  .track-card {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
 .track-tilt {
   position: relative;
   height: 100%;

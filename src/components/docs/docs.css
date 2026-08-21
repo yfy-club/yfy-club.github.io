@@ -1,0 +1,714 @@
+/* =========================================================================
+   开发者档案库
+   规格 4.4。左栏目录树 + 右栏长文，段落虚焦聚焦，HUD 表格，构建期高亮的代码块。
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   首页入口分区
+   ------------------------------------------------------------------------- */
+
+.entry {
+  padding-block: var(--space-8) var(--space-7);
+}
+
+.entry-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-5);
+  padding-bottom: var(--space-4);
+}
+
+.entry-meta {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}
+
+.entry-meta li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.entry-meta-code {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-600);
+}
+
+.entry-meta-count {
+  font-family: var(--font-hud);
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--sky-700);
+}
+
+.entry-go {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  text-decoration: none;
+  color: var(--ink-900);
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  /* 右上切角。与方向卡、挂件同一套几何语言 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% 100%,
+    0 100%
+  );
+  transition:
+    background var(--dur-micro) var(--ease-out-expo),
+    translate var(--dur-micro) var(--ease-out-expo);
+}
+
+.entry-go:hover {
+  background: var(--sky-100);
+  translate: 0 -2px;
+}
+
+.entry-go-zh {
+  font-weight: 700;
+}
+
+.entry-go-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+}
+
+/* -------------------------------------------------------------------------
+   两栏骨架
+   ------------------------------------------------------------------------- */
+
+.docs {
+  /* 导航条固定高 63px，长文顶不能压在它下面 */
+  padding-top: calc(63px + var(--space-6));
+  padding-bottom: var(--space-7);
+}
+
+.docs-inner {
+  display: grid;
+  grid-template-columns: 232px minmax(0, 42em);
+  justify-content: center;
+  gap: var(--space-7);
+  align-items: start;
+}
+
+.docs-side {
+  position: sticky;
+  top: calc(63px + var(--space-4));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.docs-back {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  text-decoration: none;
+}
+
+.docs-back:hover {
+  color: var(--sky-700);
+}
+
+/* HUD 原子的自带样式压得过单类选择器，要提特异性才改得动它的 color */
+.docs .docs-back .hud-reticle {
+  color: currentColor;
+}
+
+/* -------------------------------------------------------------------------
+   目录树
+   ------------------------------------------------------------------------- */
+
+.doc-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.doc-tree-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.doc-tree-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-600);
+}
+
+.doc-tree-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doc-tree-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink-900);
+}
+
+.doc-tree-code {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+}
+
+.doc-tree-list,
+.doc-tree-sub {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.doc-tree-item {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--ink-600);
+  text-decoration: none;
+  transition: color var(--dur-micro) var(--ease-out-expo);
+}
+
+.doc-tree-item:hover {
+  color: var(--ink-900);
+  background: var(--bg-paper);
+}
+
+/*
+ * 当前项：切角实心块 + 左侧 3px 粉色标记。规格 4.4 原文。
+ * 反白文字走 --bg-paper 压 --sky-700，check:contrast 里有这条规则卡着（4.5:1）。
+ */
+.doc-tree-item[data-current='true'] {
+  color: var(--bg-paper);
+  font-weight: 700;
+  background: var(--sky-700);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 10px) 0,
+    100% 10px,
+    100% 100%,
+    0 100%
+  );
+}
+
+.doc-tree-item[data-current='true']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--pink-500);
+}
+
+.doc-tree-index {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+}
+
+.doc-tree-item[data-current='true'] .doc-tree-index {
+  color: var(--pink-300);
+}
+
+.doc-tree-title {
+  flex: 1;
+}
+
+/* 第三层：当前篇的三级标题。只在当前篇下展开 */
+.doc-tree-sub {
+  margin: var(--space-1) 0 var(--space-2);
+  padding-left: var(--space-4);
+  border-left: var(--hairline) solid var(--line-hair);
+}
+
+.doc-tree-sub a {
+  display: block;
+  padding: 2px var(--space-2);
+  font-size: var(--text-caption);
+  line-height: 1.7;
+  color: var(--ink-600);
+  text-decoration: none;
+}
+
+.doc-tree-sub a:hover {
+  color: var(--sky-700);
+}
+
+.doc-tree-sub a[data-current='true'] {
+  color: var(--sky-700);
+  font-weight: 700;
+}
+
+/* -------------------------------------------------------------------------
+   长文头
+   ------------------------------------------------------------------------- */
+
+.doc-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.doc-head-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.doc-title {
+  font-size: var(--text-h1);
+  line-height: var(--leading-h1);
+  letter-spacing: var(--tracking-h1);
+  color: var(--ink-900);
+}
+
+/* 摘要是 --ink-600，不参与虚焦：opacity .7 下只有 3.32:1，过不了 AA */
+.doc-summary {
+  max-width: 40em;
+  color: var(--ink-600);
+}
+
+.doc-head .hud-rail {
+  margin-top: var(--space-3);
+}
+
+/* -------------------------------------------------------------------------
+   长文正文
+   ------------------------------------------------------------------------- */
+
+.doc-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.doc-h3 {
+  /* 导航条固定高 63px，锚点跳过来不留量的话标题正好被盖住 */
+  scroll-margin-top: calc(63px + var(--space-4));
+  margin-top: var(--space-4);
+  color: var(--ink-900);
+}
+
+.doc-para {
+  color: var(--ink-900);
+}
+
+.doc-line {
+  display: block;
+}
+
+.doc-para code,
+.doc-h3 code,
+.doc-table code {
+  padding: 1px 5px;
+  background: var(--bg-sunk);
+  border-radius: var(--radius-badge);
+  color: var(--ink-900);
+}
+
+.doc-para strong {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+/*
+ * 虚焦聚焦。规格 4.4，全站唯一允许的 blur 动画。
+ *
+ * 默认态是实焦，虚焦要靠 JS 显式打上 data-focus="false"——
+ * 反过来写的话预渲染出的静态页在没有 JS 时全文糊掉，
+ * 那正是规格第 6 节要保住的「无 JS 内容可读」。
+ *
+ * opacity 取 .7 不是规格原文的 .35：.35 实测只有 2.08:1，远低于 AA 的 4.5。
+ * 抬到 .7 得 5.54:1，虚实差别改由 blur 承担。见 spec 4.4 的 M5 修正记录一。
+ */
+.doc-body [data-focus='false'] {
+  filter: blur(3px);
+  opacity: 0.7;
+}
+
+.doc-body [data-focus-unit] {
+  transition:
+    filter var(--dur-micro) var(--ease-out-expo),
+    opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+/* -------------------------------------------------------------------------
+   代码块
+   规格 4.4：--bg-sunk 底 + 左侧 3px --sky-500 竖条 + Chakra Petch 语言角标。
+   ------------------------------------------------------------------------- */
+
+.doc-code {
+  position: relative;
+  /*
+   * 顶上留一条 space-5 的空带专门放语言角标。
+   * 角标是绝对定位在 .doc-code 上的，而 .doc-pre 自己横向滚动——
+   * 不留空带的话长命令一滚就钻到角标底下，移动端第一屏就撞上了。
+   */
+  padding-top: var(--space-5);
+  background: var(--bg-sunk);
+  border-left: 3px solid var(--sky-500);
+}
+
+.doc-code-lang {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-3);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  pointer-events: none;
+}
+
+.doc-pre {
+  overflow-x: auto;
+  padding: 0 var(--space-5) var(--space-4);
+  line-height: 1.75;
+  color: var(--ink-900);
+  tab-size: 2;
+}
+
+/*
+ * 高亮三色。产物 HTML 里只有 class，颜色全在这里引令牌。
+ * 对 --bg-sunk 实测：ink-900 13.21，sky-700 5.17，ink-600 6.16，全过 AA。
+ * 改这三条要同步 spec 4.4 的 M5 修正记录二里那张表。
+ *
+ * 注释不加斜体：Noto Sans SC 没有意大利体，浏览器会给中文合成伪斜，
+ * 而这几个代码块的注释恰恰全是中文。靠色阶区分够了。
+ */
+.doc-pre .tk-k {
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.doc-pre .tk-s {
+  color: var(--sky-700);
+}
+
+.doc-pre .tk-c {
+  color: var(--ink-600);
+}
+
+/* -------------------------------------------------------------------------
+   HUD 表格
+   规格 4.4：表头 hud 字体、行分隔仅 --line-hair、无竖线、无斑马纹。
+   ------------------------------------------------------------------------- */
+
+.doc-table-wrap {
+  overflow-x: auto;
+}
+
+.doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-caption);
+}
+
+.doc-table th {
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-align: left;
+  white-space: nowrap;
+  color: var(--ink-600);
+  border-bottom: var(--hairline) solid var(--line-solid);
+}
+
+.doc-table td {
+  padding: var(--space-2) var(--space-3);
+  line-height: 1.7;
+  vertical-align: top;
+  color: var(--ink-900);
+  border-bottom: var(--hairline) solid var(--line-hair);
+}
+
+.doc-table td:first-child {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   翻页
+   ------------------------------------------------------------------------- */
+
+.doc-turn {
+  display: flex;
+  gap: var(--space-4);
+  margin-top: var(--space-7);
+  padding-top: var(--space-4);
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.doc-turn-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+  transition: box-shadow var(--dur-micro) var(--ease-out-expo);
+}
+
+.doc-turn-item[data-dir='next'] {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.doc-turn-item:hover {
+  box-shadow: inset 0 0 0 var(--hairline) var(--sky-500);
+}
+
+.doc-turn-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+}
+
+.doc-turn-title {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+/* -------------------------------------------------------------------------
+   索引页
+   ------------------------------------------------------------------------- */
+
+.doc-index-group {
+  margin-bottom: var(--space-6);
+}
+
+.doc-index-label {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--text-h3);
+  color: var(--ink-900);
+}
+
+.doc-index-code {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+}
+
+.doc-index-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.doc-card {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  text-decoration: none;
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+  transition:
+    box-shadow var(--dur-micro) var(--ease-out-expo),
+    translate var(--dur-micro) var(--ease-out-expo);
+}
+
+.doc-card:hover {
+  box-shadow: inset 0 0 0 var(--hairline) var(--sky-500);
+  translate: 3px 0;
+}
+
+.doc-card-index {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--sky-700);
+}
+
+.doc-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-card-title {
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--ink-900);
+}
+
+.doc-card-summary {
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--ink-600);
+}
+
+.doc-card-min {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  color: var(--ink-400);
+}
+
+/* -------------------------------------------------------------------------
+   lenis
+   库要求的两条。html 上那条 scroll-behavior: smooth 是我们自己在 global.css 里加的，
+   它会让 lenis 每帧的 window.scrollTo 再被浏览器缓动一次，两套动画打架。
+   挂载时 lenis 只往 html 上加一个 lenis 类（1.3 实测，不是文档里的 lenis-smooth），
+   用类选择器压过元素选择器关掉它，不动 !important。
+   ------------------------------------------------------------------------- */
+
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+
+html.lenis {
+  scroll-behavior: auto;
+}
+
+.lenis.lenis-stopped {
+  overflow: clip;
+}
+
+/* -------------------------------------------------------------------------
+   降级。规格第 6 节：reduced-motion 下关掉滚动聚焦与 lenis 惯性。
+   JS 侧已经不挂 hook，这里再兜一道，保证属性万一留在 DOM 上也不生效。
+   ------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .doc-body [data-focus='false'] {
+    filter: none;
+    opacity: 1;
+  }
+
+  .doc-body [data-focus-unit],
+  .doc-card,
+  .doc-turn-item,
+  .entry-go {
+    transition: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   窄屏
+   ------------------------------------------------------------------------- */
+
+@media (width < 1080px) {
+  .docs-inner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+
+  .docs-side {
+    position: static;
+  }
+
+  /*
+   * 目录树在窄屏摊成一条横向 HUD 走带：分类标签与篇目连排，当前项照旧是切角实心块。
+   * 竖着摆会在正文前压掉大半屏，读者要滚两下才看得见第一段。
+   */
+  .doc-tree {
+    flex-direction: row;
+    align-items: center;
+    gap: var(--space-3);
+    overflow-x: auto;
+    padding-bottom: var(--space-2);
+    scrollbar-width: thin;
+  }
+
+  .doc-tree-head {
+    display: none;
+  }
+
+  .doc-tree-group {
+    display: contents;
+  }
+
+  .doc-tree-label {
+    white-space: nowrap;
+  }
+
+  .doc-tree-list {
+    display: flex;
+    gap: var(--space-2);
+  }
+
+  .doc-tree-item {
+    white-space: nowrap;
+  }
+
+  .doc-tree-sub {
+    display: none;
+  }
+}
+
+@media (width < 640px) {
+  .doc-turn {
+    flex-direction: column;
+  }
+
+  .doc-turn-item[data-dir='next'] {
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .doc-card {
+    flex-wrap: wrap;
+  }
+
+  .doc-pre {
+    padding: var(--space-3) var(--space-4);
+  }
+}

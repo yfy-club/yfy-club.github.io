@@ -129,7 +129,13 @@
   --font-sans:
     'Noto Sans SC', ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
   --font-hud: 'Chakra Petch', 'Noto Sans SC', ui-sans-serif, sans-serif;
-  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', monospace;
+  /*
+   * 等宽。JetBrains Mono 只有拉丁，档案库的代码块里有中文（分支说明、目录树注解），
+   * 落到 monospace 会被系统随便挑一个字体接走，跟正文两个骨相。
+   * 显式把 Noto Sans SC 排在通用 monospace 前面，中文走我们自己那份子集。
+   */
+  --font-mono:
+    'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', 'Noto Sans SC', monospace;
 
   /* 字阶 · 流体 */
   --text-display: clamp(56px, 9vw, 132px);

@@ -9,10 +9,14 @@
  * 产物写入 src/assets/fonts/，配套生成 src/styles/fonts.css（含 unicode-range）。
  * 两者都要提交进仓库，否则拉下来的人跑 build 会缺字。
  *
- * 语料按作用域切成两份：
+ * 语料按作用域切成三份：
  *   ui   —— 首屏与常驻界面文本，随页面一起加载
- *   docs —— 仅 /docs 长文独有的字，靠 unicode-range 让浏览器按需下载
- * docs 分片的 range 是「docs 语料减去 ui 语料」的差集，首屏不会碰它。
+ *   lab  —— 只有 ?lab=1 的验收页会渲染的字
+ *   docs —— 只有 /docs 长文会渲染的字
+ * 后两份的 range 是「本作用域减去 ui」的差集，首屏不会碰它们。
+ *
+ * 另外切一份 JetBrains Mono（拉丁 ASCII）给 /docs 的代码块。它挂在 code/pre 上，
+ * 首页没有代码块，浏览器按 CSS 字体的惰性加载规则不会去下它，同样不压首屏。
  */
 import { readFile, writeFile, mkdir, readdir, stat, rm } from 'node:fs/promises'
 import { join, extname, relative } from 'node:path'
@@ -21,6 +25,10 @@ import subsetFont from 'subset-font'
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url))
 const FONTSOURCE = join(ROOT, 'node_modules/@fontsource/noto-sans-sc/files')
+const MONO_SRC = join(
+  ROOT,
+  'node_modules/@fontsource-variable/jetbrains-mono/files/jetbrains-mono-latin-wght-normal.woff2',
+)
 const OUT_DIR = join(ROOT, 'src/assets/fonts')
 const CSS_OUT = join(ROOT, 'src/styles/fonts.css')
 
@@ -63,7 +71,7 @@ const LATIN_BASE = (() => {
 const SCOPES = {
   ui: ['src', 'index.html'],
   lab: ['src/mascot-lab.tsx', 'src/components/mascot/expressions.ts', 'src/components/mascot/hair.ts'],
-  docs: ['docs/content-docs.md'],
+  docs: ['docs/content-docs.md', 'src/data/docs.ts'],
 } as const
 
 /**
@@ -75,7 +83,11 @@ const SCOPES = {
  */
 const LAB_OWNED = SCOPES.lab
 
-/** 这些文件属于 docs 作用域，扫 ui 时要跳过，否则长文语料会漏进首屏分片。 */
+/**
+ * 这些文件属于 docs 作用域，扫 ui 时要跳过，否则长文语料会漏进首屏分片。
+ * 同一份路径也列在 SCOPES.docs 里——跳过只是不算进 ui，字还是要有 face 兜着，
+ * 不然生成产物里那些只出现在 docs.ts 的字会渲染成豆腐块。
+ */
 const DOCS_OWNED = ['src/data/docs.ts']
 
 /**
@@ -307,6 +319,19 @@ async function main() {
   critical.push({ file: wordmarkFile, kb: wordmarkKb })
   faces.push(face(wordmarkFile, 900, toUnicodeRange(new Set([...WORDMARK]))))
 
+  /*
+   * 等宽字。只有 /docs 的代码块用，且用得到的只有 ASCII——
+   * 代码块里的中文走 --font-mono 里排在它后面的 Noto Sans SC，见 tokens.css。
+   *
+   * 不靠 unicode-range 隔离（拉丁区跟正文重叠，隔不开），靠的是字体的惰性加载：
+   * 首页没有 code/pre，没有元素解析到这个 family，浏览器就不会去下这份文件。
+   * 变量字体的 wght 轴整条留着：代码正文 400、高亮关键字 700 都从这一份里取。
+   */
+  const monoFile = 'jetbrains-mono-latin.woff2'
+  const monoKb = await subsetOne(MONO_SRC, join(OUT_DIR, monoFile), LATIN_BASE)
+  deferred.push({ file: monoFile, kb: monoKb })
+  faces.push(monoFace(monoFile))
+
   for (const [path, label, weight] of [
     ['chakra-petch/files/chakra-petch-latin-500-normal.woff2', 'Chakra Petch 500', 500],
     ['chakra-petch/files/chakra-petch-latin-600-normal.woff2', 'Chakra Petch 600', 600],
@@ -328,7 +353,7 @@ async function main() {
   console.log(`  ${'合计'.padEnd(width)}  ${total.toFixed(1).padStart(7)} KB  / 预算 ${BUDGET_KB} KB\n`)
 
   if (deferred.length) {
-    console.log('/docs 追加（unicode-range 按需下载，不计入首屏）')
+    console.log('/docs 追加（按需下载，不计入首屏）')
     deferred.forEach(line)
     console.log(`  ${'合计'.padEnd(width)}  ${deferred.reduce((s, r) => s + r.kb, 0).toFixed(1).padStart(7)} KB\n`)
   }
@@ -349,6 +374,18 @@ function face(file: string, weight: number, range: string) {
   font-display: swap;
   src: url('../assets/fonts/${file}') format('woff2');
   unicode-range: ${range};
+}`
+}
+
+/** 等宽变量字。整条 wght 轴留着，所以是 woff2-variations 而不是 woff2。 */
+function monoFace(file: string) {
+  return `@font-face {
+  font-family: 'JetBrains Mono Variable';
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url('../assets/fonts/${file}') format('woff2-variations');
+  unicode-range: ${LATIN_RANGE};
 }`
 }
 

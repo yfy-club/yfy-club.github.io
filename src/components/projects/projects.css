@@ -138,6 +138,17 @@
   opacity: 1;
 }
 
+/*
+ * 淡入是 React 的 onLoad 打上 data-loaded 才发生的，没有 JS 就永远停在 opacity: 0，
+ * 只剩 20px 的 LQIP 底图糊在那儿。首页自 M5 起是预渲染的静态页，
+ * img 的 src 与 srcset 都在静态 HTML 里，图本身能下下来，这里只把淡入的起始态取消掉。
+ */
+@media (scripting: none) {
+  .shot > img {
+    opacity: 1;
+  }
+}
+
 /* 拓扑微光流。悬停时沿抽象界面骨架游走，透明度 0.35（规格 4.3） */
 .stage-topo {
   position: absolute;
@@ -193,6 +204,16 @@
     translate: 0 calc(var(--par-copy) + 16px);
   }
   to {
+    opacity: 1;
+  }
+}
+
+/*
+ * 同 tracks.css：没有 JS 就没人来打 data-entered，文案会一直停在 opacity: 0。
+ * 首页自 M5 起是预渲染的静态页，规格第 6 节要求无 JS 时内容可读。
+ */
+@media (scripting: none) {
+  .stage-copy {
     opacity: 1;
   }
 }

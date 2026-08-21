@@ -1,38 +1,48 @@
 import { useEffect, useState } from 'react'
+import { Navigate, Route, Routes, useLocation, useSearchParams } from 'react-router'
 import { Hero } from './components/hero/hero'
 import { Nav } from './components/site/nav'
 import { Footer } from './components/site/footer'
 import { MascotDock } from './components/site/dock'
 import { Tracks } from './components/tracks/tracks'
 import { Projects } from './components/projects/projects'
-import { Rail, Reticle, Tag } from './components/hud'
+import { ArchiveEntry } from './components/docs/entry'
+import { DocPage, DocsIndex } from './components/docs/archive'
 import { TRACK_FX, stageFx, type MascotFx } from './components/mascot/fx'
 import type { MascotState } from './components/mascot/expressions'
 import type { TrackSlug } from './data/characters'
+import { pageTitle } from './lib/page-title'
+import { scrollToAnchor, scrollToTop } from './lib/smooth-scroll'
 import { MascotLab } from './mascot-lab'
 import './app.css'
 
 /**
- * 单页纵向叙事。规格第 4 节。
+ * 路由表。规格 4.4 定的两条档案库路由 + 首页。
  *
- * Hero（M3）、方向卡与项目展台（M4）已落地。档案库入口还是骨架，M5 的活。
+ * 三条路由全部在构建期预渲染成静态页（scripts/prerender.ts），
+ * 因为 GitHub Pages 没有 SPA fallback，/docs/git-flow 直接刷新会 404。
+ * 见 spec 第 8 节的 M5 修正记录。
  *
- * 立绘状态与联动特效的结论在这里算，算完传给向导挂件——
- * 挂件是 3.4 的唯一观看位（见 spec 3.4 的 M4 修正记录），
- * Hero 的立绘只演首屏那一段，滚出去就交给挂件。
- *
- * 立绘验收页搬到 ?lab=1，不再挂在首页。M2 定稿后删掉。
+ * 立绘验收页挂在 ?lab=1，不占路由，M2 定稿后删掉。
  */
+export default function App() {
+  useRouteScroll()
+  useDocumentTitle()
 
-/** 进区状态。规格 3.3：方向区 FOCUS，项目区 SMILE，文档库 THINK。 */
-const SECTION_STATE: Record<string, MascotState> = {
-  tracks: 'FOCUS',
-  projects: 'SMILE',
-  docs: 'THINK',
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/docs" element={<DocsIndex />} />
+      <Route path="/docs/:slug" element={<DocPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
 
-export default function App() {
-  if (new URLSearchParams(window.location.search).has('lab')) {
+function Home() {
+  const [params] = useSearchParams()
+
+  if (params.has('lab')) {
     return (
       <main className="grain">
         <MascotLab />
@@ -43,6 +53,58 @@ export default function App() {
   return <Portal />
 }
 
+/**
+ * 换路由后滚到哪。
+ *
+ * BrowserRouter 走 pushState，浏览器不会自己滚，也不会自己跳锚点：
+ * 从 /docs 点导航条的「方向」回到 /#tracks 时不处理的话，人还停在文档中段。
+ *
+ * 走 smooth-scroll 模块而不是直接 window.scrollTo：/docs 上挂着 lenis，
+ * 它会在下一帧把原生 scrollTo 的结果拽回去。
+ */
+function useRouteScroll() {
+  const { pathname, hash } = useLocation()
+
+  useEffect(() => {
+    if (hash) {
+      const el = document.getElementById(hash.slice(1))
+      if (el) {
+        scrollToAnchor(el)
+        return
+      }
+    }
+    scrollToTop()
+  }, [pathname, hash])
+}
+
+/**
+ * 逐页标题。预渲染已经把它写进静态页的 <title> 了，
+ * 这里补的是客户端换路由那一路：pushState 不会自己改标题。
+ */
+function useDocumentTitle() {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    document.title = pageTitle(pathname)
+  }, [pathname])
+}
+
+/* ====================================================================== */
+
+/** 进区状态。规格 3.3：方向区 FOCUS，项目区 SMILE，文档库 THINK。 */
+const SECTION_STATE: Record<string, MascotState> = {
+  tracks: 'FOCUS',
+  projects: 'SMILE',
+  docs: 'THINK',
+}
+
+/**
+ * 单页纵向叙事。规格第 4 节。
+ *
+ * 立绘状态与联动特效的结论在这里算，算完传给向导挂件——
+ * 挂件是 3.4 的唯一观看位（见 spec 3.4 的 M4 修正记录），
+ * Hero 的立绘只演首屏那一段，滚出去就交给挂件。
+ */
 function Portal() {
   const section = useCurrentSection()
   /** 悬停的方向卡。优先级高于展台——鼠标只可能在一个地方。 */
@@ -73,22 +135,7 @@ function Portal() {
         <Hero state={section === 'hero' ? 'NEUTRAL' : state} />
         <Tracks onHover={setTrack} />
         <Projects onHover={setStage} />
-
-        {/* M5 的档案库。这里只立锚点与分区骨架，不摆假内容。 */}
-        <section id="docs" className="slot">
-          <Rail />
-          <div className="slot-inner shell">
-            <div className="slot-head">
-              <Reticle size={22} />
-              <Tag tone="solid">SECTOR 03</Tag>
-              <Tag tone="ink">M5</Tag>
-            </div>
-            <h2 className="slot-title">开发者档案库</h2>
-            <p className="slot-note">
-              三个分类八篇长文。滚动时段落由虚焦聚为实焦，代码块走构建期高亮。
-            </p>
-          </div>
-        </section>
+        <ArchiveEntry />
       </main>
       <Footer />
 

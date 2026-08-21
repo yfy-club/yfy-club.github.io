@@ -3,6 +3,7 @@
  *
  * 事实性数据（获奖、成员规模、招新时间）不在本站维护，一律引导跳主站。
  */
+import { Link } from 'react-router'
 import { Rail } from '@/components/hud'
 import './site.css'
 
@@ -10,9 +11,9 @@ const COLUMNS = [
   {
     title: '本站',
     items: [
-      { label: '方向档案', href: '#tracks' },
-      { label: '项目展台', href: '#projects' },
-      { label: '开发者档案库', href: '#docs' },
+      { label: '方向档案', href: '/#tracks' },
+      { label: '项目展台', href: '/#projects' },
+      { label: '开发者档案库', href: '/docs' },
     ],
   },
   {
@@ -39,14 +40,13 @@ export function Footer() {
             <ul>
               {col.items.map((item) => (
                 <li key={item.href}>
-                  <a
-                    href={item.href}
-                    {...('out' in item && item.out
-                      ? { target: '_blank', rel: 'noreferrer' }
-                      : {})}
-                  >
-                    {item.label}
-                  </a>
+                  {'out' in item && item.out ? (
+                    <a href={item.href} target="_blank" rel="noreferrer">
+                      {item.label}
+                    </a>
+                  ) : (
+                    <Link to={item.href}>{item.label}</Link>
+                  )}
                 </li>
               ))}
             </ul>
