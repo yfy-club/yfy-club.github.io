@@ -7,7 +7,7 @@
  */
 import { useEffect, useState } from 'react'
 import { Rail, Reticle, Tag, TickScale } from '@/components/hud'
-import { Mascot } from '@/components/mascot'
+import { Mascot, type MascotState } from '@/components/mascot'
 import { NAVI } from '@/data/characters'
 import { ParticleField } from './particles'
 import { Wordmark } from './wordmark'
@@ -18,7 +18,16 @@ const TICKS = 20
 
 const CLUB_SITE = 'https://www.yunfeiyang.tech'
 
-export function Hero() {
+interface HeroProps {
+  /**
+   * 立绘状态。页面算好传进来。
+   * 首屏在视口里时是 NEUTRAL，滚出去后的进区状态主要由向导挂件演，
+   * 这里跟一份是为了反向滚回首屏时不会突然切回。
+   */
+  state?: MascotState
+}
+
+export function Hero({ state = 'NEUTRAL' }: HeroProps) {
   const active = useHeroProgress(TICKS)
 
   return (
@@ -55,7 +64,7 @@ export function Hero() {
         </div>
 
         <div className="hero-mascot">
-          <Mascot character={NAVI} state="NEUTRAL" />
+          <Mascot character={NAVI} state={state} />
           <figcaption className="hero-mascot-plate">
             <Tag tone="solid">{NAVI.codename}</Tag>
             <span className="hero-mascot-name">{NAVI.name}</span>

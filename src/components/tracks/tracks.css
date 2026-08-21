@@ -1,0 +1,537 @@
+/* =========================================================================
+   方向角色卡 · 五张
+   规格 4.2，栅格与能力条都照 M4 那两条修正记录。
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   分区抬头。三个分区共用这一套，写在这里，projects.css 不再抄一遍。
+   ------------------------------------------------------------------------- */
+
+.sector-head {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-6);
+}
+
+.sector-badges {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sector-title {
+  font-size: var(--text-h2);
+  font-weight: 700;
+  line-height: var(--leading-h2);
+  color: var(--ink-900);
+}
+
+.sector-note {
+  max-width: 52ch;
+  color: var(--ink-600);
+}
+
+/* -------------------------------------------------------------------------
+   非对称栅格。列位写死，不用 auto-fill——「拒绝等分网格」是规格的第一句话。
+
+   12 栅，gutter 24px。1440 视口内容宽 1144，单列 73.3px：
+     ORACLE  1 / span 5   宽 341   h 480
+     WEAVER  7 / span 5   宽 341   h 480     第 6 列空出来
+     VAULT   2 / span 4   宽 268   h 320
+     RELAY   6 / span 4   宽 268   h 320
+     FORGE  10 / span 3   宽 195   h 320     第 12 列空出来
+   ------------------------------------------------------------------------- */
+
+.tracks {
+  padding-bottom: var(--space-8);
+}
+
+.track-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  column-gap: var(--grid-gutter);
+  /* 行间要比 gutter 松一档，否则大卡与小卡挤成一堵墙 */
+  row-gap: var(--space-6);
+  /* 卡片要立在同一个透视里，否则每张卡自带一套灭点，倾斜方向会打架 */
+  perspective: 1200px;
+}
+
+.track-card[data-track='ai'] {
+  grid-column: 1 / span 5;
+  --card-h: 480px;
+}
+
+.track-card[data-track='software'] {
+  grid-column: 7 / span 5;
+  --card-h: 480px;
+}
+
+.track-card[data-track='database'] {
+  grid-column: 2 / span 4;
+  --card-h: 320px;
+}
+
+.track-card[data-track='cloud-iot'] {
+  grid-column: 6 / span 4;
+  --card-h: 320px;
+}
+
+.track-card[data-track='industrial'] {
+  grid-column: 10 / span 3;
+  --card-h: 320px;
+}
+
+
+/* -------------------------------------------------------------------------
+   卡片外壳。栅格位与 layout 动画归它，倾斜归内层 .track-tilt。
+   ------------------------------------------------------------------------- */
+
+.track-card {
+  position: relative;
+  /* 区块进入：位移 16px + 淡入，delay 由 staggerDelay() 算好写进 --enter-delay */
+  opacity: 0;
+  translate: 0 16px;
+}
+
+.tracks[data-entered='true'] .track-card {
+  animation: track-enter var(--dur-enter) var(--ease-out-expo) forwards;
+  animation-delay: var(--enter-delay);
+}
+
+@keyframes track-enter {
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+
+.track-tilt {
+  position: relative;
+  height: 100%;
+  transform-style: preserve-3d;
+  background: var(--bg-paper);
+  border-radius: var(--radius-card);
+  /* 描边走 inset shadow 而不是 border：clip-path 会把 border 一起切掉 */
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  overflow: hidden;
+  /* 左下 45° 切角。关键卡片切一角，这是碧蓝档案几何感最省力的一招 */
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel))
+  );
+  transition:
+    box-shadow var(--dur-micro) var(--ease-out-expo),
+    background var(--dur-micro) var(--ease-out-expo);
+}
+
+.track-card:hover .track-tilt,
+.track-card:focus-within .track-tilt {
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--pink-500),
+    var(--shadow-lift);
+}
+
+/* 500ms 光栅扫过。只在 hover 时跑一次，不做 infinite——静止画面里不该有光 */
+.track-raster {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(
+    100deg,
+    transparent 42%,
+    var(--pink-100) 50%,
+    transparent 58%
+  );
+  background-size: 300% 100%;
+  background-position: 100% 0;
+}
+
+.track-card:hover .track-raster,
+.track-card:focus-within .track-raster {
+  animation: track-raster 0.5s var(--ease-out-expo) 1;
+}
+
+@keyframes track-raster {
+  from {
+    opacity: 0.9;
+    background-position: 100% 0;
+  }
+  to {
+    opacity: 0;
+    background-position: 0 0;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   卡面。真实 button，键盘可达，Enter 展开（spec 第 6 节）。
+   ------------------------------------------------------------------------- */
+
+/*
+ * 卡面分两列：文字在左，立绘在右。
+ *
+ * 不把立绘绝对定位叠在文字下面：实测那样能力名会压到脸上 60–100px，
+ * 就算底下垫一道纸色渐变也是在拿可读性换构图。两列分栏后立绘仍然破右缘，
+ * 破框的意图一点不少。
+ */
+.track-face {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--portrait-col);
+  width: 100%;
+  min-height: var(--card-h);
+  /* 底部留出角标的位。角标绝对定位，不占栅格行。 */
+  padding: var(--space-4) var(--space-5) var(--space-6);
+  gap: var(--space-2) var(--space-3);
+  text-align: left;
+  align-content: start;
+}
+
+.track-card[data-size='large'] {
+  --portrait-col: 42%;
+}
+
+/*
+ * 小卡的右列窄一档。
+ * FORGE 只跳 3 列（宽 268），38% 的右列会把「产线数字孪生与工业 SCADA」
+ * 挤成两行，三张小卡高度就不齐（实测 328 vs 381）。
+ * 扫了一轮：38/34/30/26% 都是两行，22% 才回到一行。
+ */
+.track-card[data-size='small'] {
+  --portrait-col: 22%;
+}
+
+/* 顶部与角标横跨两列，其余文字一律待在左列 */
+.track-top,
+.track-notice {
+  grid-column: 1 / -1;
+}
+
+.track-id,
+.track-role,
+.track-abilities {
+  grid-column: 1;
+}
+
+.track-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.track-index {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 立绘分两件事做。
+ *
+ * .track-portrait 待在栅格里只干一件事：把右列宽度占住，把文字顶到左边。
+ * 立绘本体绝对定位在 .track-face 上，不在那个格子里——格子只有内容行那么高，
+ * 实测大卡的格子底边离卡片底边还差 80px，立绘就悬在半空中。
+ */
+.track-portrait {
+  grid-column: 2;
+  grid-row: 2 / span 3;
+}
+
+.track-portrait .mascot {
+  position: absolute;
+  height: auto;
+  z-index: 0;
+}
+
+/* 大卡出全身，底边沉到卡片下缘以下——BODY 在画框底部的闭合描边要切掉 */
+.track-card[data-size='large'] .track-portrait .mascot {
+  right: -12%;
+  bottom: -6%;
+  width: 60%;
+}
+
+/*
+ * 小卡只出头肩，bust 裁切的下缘本身就顶住画框。
+ * 右列只占 22%，立绘宽度不跟那一列——立绘是相对卡片定位的，
+ * 它可以比右列宽，少掉的那部分只叠在能力名的细导轨上，不碰文字。
+ */
+.track-card[data-size='small'] .track-portrait .mascot {
+  right: -6%;
+  top: var(--space-5);
+  width: 40%;
+}
+
+.track-id,
+.track-role,
+.track-abilities,
+.track-notice {
+  position: relative;
+  z-index: 1;
+}
+
+.track-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: var(--space-4);
+}
+
+.track-name {
+  font-size: var(--text-h3);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink-900);
+}
+
+.track-romaji {
+  font-family: var(--font-hud);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-600);
+  line-height: 1.2;
+}
+
+.track-role {
+  font-size: var(--text-body);
+  font-weight: 700;
+  color: var(--sky-700);
+  line-height: 1.3;
+}
+
+/* -------------------------------------------------------------------------
+   能力条。中文能力名 + hud 代号 + 一条细导轨，不填百分比。
+   大卡多出一行关键词，小卡只出标题——大小卡的信息密度差把非对称坐实。
+   ------------------------------------------------------------------------- */
+
+.track-abilities {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.track-abilities > li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.track-ability-head {
+  display: grid;
+  grid-template-columns: 4px 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.track-ability-zh {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--ink-900);
+}
+
+.track-ability-code {
+  padding-left: calc(4px + var(--space-3));
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--ink-400);
+  line-height: 1.2;
+}
+
+.track-ability-keys {
+  padding-left: calc(4px + var(--space-3));
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  line-height: 1.5;
+}
+
+/* 细导轨。只做排版分隔，不承载任何数值语义 */
+.track-ability-rail {
+  height: var(--hairline);
+  margin-top: var(--space-1);
+  background: var(--line-hair);
+}
+
+.track-notice {
+  /*
+   * 角标靠到卡片底部。
+   * 不用 margin-top: auto——.track-face 是 align-content: start 的栅格，
+   * auto 余量全归最后一行的话会把立绘那一列一起拉长。
+   */
+  position: absolute;
+  left: var(--space-5);
+  bottom: var(--space-4);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--ink-400);
+  line-height: 1.2;
+}
+
+/* -------------------------------------------------------------------------
+   展开档案。原地展开，不弹模态遮罩。
+   ------------------------------------------------------------------------- */
+
+.track-dossier {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+  background: var(--bg-sunk);
+  box-shadow: inset 0 var(--hairline) 0 var(--line-solid);
+}
+
+.track-tagline {
+  padding: var(--space-4) var(--space-5) 0;
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}
+
+.track-stages {
+  list-style: none;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  display: grid;
+  gap: var(--space-4);
+}
+
+.track-card[data-size='large'] .track-stages {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.track-stages > li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+  box-shadow: inset 3px 0 0 var(--pink-500);
+}
+
+.track-stage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.track-stage-code {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-400);
+}
+
+.track-stage-title {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.4;
+  color: var(--ink-900);
+}
+
+.track-stage-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-600);
+}
+
+/* -------------------------------------------------------------------------
+   窄屏。规格第 6 节：方向卡改单列但保留 8px 交替缩进以维持非对称感。
+   ------------------------------------------------------------------------- */
+
+@media (width < 1080px) {
+  .track-card[data-track='ai'],
+  .track-card[data-track='software'] {
+    grid-column: 1 / span 6;
+  }
+
+  .track-card[data-track='database'],
+  .track-card[data-track='cloud-iot'] {
+    grid-column: 1 / span 6;
+  }
+
+  .track-card[data-track='software'],
+  .track-card[data-track='cloud-iot'] {
+    grid-column: 7 / span 6;
+  }
+
+  .track-card[data-track='industrial'] {
+    grid-column: 4 / span 6;
+  }
+
+  .track-card[data-size='large'] .track-stages {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (width < 768px) {
+  .track-card[data-track] {
+    grid-column: 1 / -1;
+    --card-h: auto;
+  }
+
+  /* 单列也要错位，8px 交替缩进（规格第 6 节） */
+  .track-card:nth-child(even) {
+    margin-left: var(--space-2);
+  }
+
+  .track-card:nth-child(odd) {
+    margin-right: var(--space-2);
+  }
+
+  /* 窄屏立绘收窄右列。390 宽的屏幕没有富余可给。 */
+  .track-card[data-size='large'],
+  .track-card[data-size='small'] {
+    --portrait-col: 34%;
+  }
+
+  /* 窄屏不出全身，一律按小卡的头肩尺寸贴右上 */
+  .track-card[data-size='large'] .track-portrait .mascot,
+  .track-card[data-size='small'] .track-portrait .mascot {
+    right: -4%;
+    top: var(--space-5);
+    bottom: auto;
+    width: 40%;
+  }
+
+  .track-ability-keys {
+    display: none;
+  }
+}
+
+/* 关掉 3D 与光栅。规格第 6 节。 */
+@media (prefers-reduced-motion: reduce) {
+  .track-card {
+    opacity: 1;
+    translate: none;
+  }
+
+  .track-raster {
+    display: none;
+  }
+
+  .track-grid {
+    perspective: none;
+  }
+}

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- 观测站徽记。切角方框 + NAVI 的细环指针，取 tokens.css 的 --bg-sky / --sky-700 / --sky-500 / --pink-500。 -->
+  <path d="M0 0H25L32 7V32H7L0 25Z" fill="#f2f8fd"/>
+  <path d="M0.5 0.5H24.79L31.5 7.21V31.5H7.21L0.5 24.79Z" fill="none" stroke="#14699f" stroke-width="1"/>
+  <ellipse cx="16" cy="16" rx="9" ry="4.4" fill="none" stroke="#2892d8" stroke-width="1.6"/>
+  <path d="M16 16L22.4 12.9" stroke="#14699f" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="16" cy="16" r="2" fill="#f472b6"/>
+</svg>

@@ -51,14 +51,50 @@ const LATIN_BASE = (() => {
   return `${s}—–‘’“”…·↗×→←↑↓™€°±≤≥≠§¶`
 })()
 
-/** 上线文本的来源。内部规格文档（docs/design-spec.md 等）不在其中，它们不上线。 */
+/**
+ * 上线文本的来源。内部规格文档（docs/design-spec.md 等）不在其中，它们不上线。
+ *
+ * 三个作用域，产出三组分片，unicode-range 互不重叠：
+ *   ui   首屏与常驻界面，随页面一起加载
+ *   lab  只有 ?lab=1 的 M2 验收页会渲染的字，按需
+ *   docs 只有 /docs 长文会渲染的字，按需
+ * 后两组靠 unicode-range 让浏览器在首屏根本不去下载。
+ */
 const SCOPES = {
   ui: ['src', 'index.html'],
+  lab: ['src/mascot-lab.tsx', 'src/components/mascot/expressions.ts', 'src/components/mascot/hair.ts'],
   docs: ['docs/content-docs.md'],
 } as const
 
+/**
+ * 这些文件的中文不在首屏渲染，扫 ui 时要跳过。
+ *
+ * expressions.ts 的 `intent` 与 hair.ts 的 `silhouette` 是给验收页看的说明串，
+ * 它们跟着 mascot 模块进了 JS 包，但只有 ?lab=1 会把它们画到屏幕上。
+ * 算进 ui 分片等于为一个内部工具页在首屏多背 99 个字。
+ */
+const LAB_OWNED = SCOPES.lab
+
 /** 这些文件属于 docs 作用域，扫 ui 时要跳过，否则长文语料会漏进首屏分片。 */
 const DOCS_OWNED = ['src/data/docs.ts']
+
+/**
+ * 只在正文出现的字段。700 的语料把它们剔掉。
+ *
+ * 为什么要分：400 与 700 共用一份语料时，每个新字收两遍钱。
+ * 而能力关键词、项目简介、副标题这些字段全部走 400，从未用粗体渲染。
+ *
+ * 剔的只是「此字只在正文出现」的那部分：同一个字只要在任何标题字段里也出现过，
+ * 就仍然留在 700 语料里。真漏了会显示成豆腐块，看得见。
+ *
+ * 新增正文字段就往这里加一行，不要抬 BUDGET_KB。
+ */
+const BODY_ONLY_FIELDS: Record<string, readonly string[]> = {
+  'index.html': ['content'],
+  'src/App.tsx': ['note'],
+  'src/data/tracks.ts': ['keys', 'tagline'],
+  'src/data/projects.ts': ['brief'],
+}
 
 const SCAN_EXT = new Set(['.ts', '.tsx', '.md', '.html'])
 
@@ -90,9 +126,37 @@ async function* walk(dir: string): AsyncGenerator<string> {
   }
 }
 
-async function collect(roots: readonly string[], skip: readonly string[] = []) {
+/** 把一段文本里的汉字撑成集合。 */
+function cjkOf(text: string) {
+  const out = new Set<string>()
+  for (const ch of text) {
+    const cp = ch.codePointAt(0)
+    if (cp !== undefined && isCjk(cp)) out.add(ch)
+  }
+  return out
+}
+
+/**
+ * 正文字段的匹配。开头的 \b 防止 `note` 误匹 `footnote`。
+ * 只接单引号与反引号的单行字面量——本工程的文案全是这两种写法。
+ */
+const fieldPattern = (name: string) => new RegExp(`\\b${name}\\s*[:=]\\s*['\`]([^'\`]*)['\`]`, 'g')
+
+interface Corpus {
+  /** 该作用域的全部汉字。400 用这份。 */
+  chars: Set<string>
+  /** 只在正文字段里出现、从未在其他地方出现的字。700 不装这份。 */
+  bodyOnly: Set<string>
+  fileCount: number
+}
+
+async function collect(roots: readonly string[], skip: readonly string[] = []): Promise<Corpus> {
   const skipAbs = new Set(skip.map((p) => join(ROOT, p)))
   const chars = new Set<string>()
+  /** 正文字段里的字。 */
+  const body = new Set<string>()
+  /** 正文字段以外的字。两边都出现的字不算正文独有。 */
+  const rest = new Set<string>()
   let fileCount = 0
 
   const files: string[] = []
@@ -114,13 +178,27 @@ async function collect(roots: readonly string[], skip: readonly string[] = []) {
     if (skipAbs.has(file)) continue
     fileCount += 1
     const text = stripComments(await readFile(file, 'utf8'), extname(file))
-    for (const ch of text) {
-      const cp = ch.codePointAt(0)
-      if (cp !== undefined && isCjk(cp)) chars.add(ch)
+    for (const ch of cjkOf(text)) chars.add(ch)
+
+    const fields = BODY_ONLY_FIELDS[relative(ROOT, file).split('\\').join('/')]
+    if (!fields) {
+      for (const ch of cjkOf(text)) rest.add(ch)
+      continue
     }
+
+    // 正文字段敲下来单独统计，剔掉后剩下的那部分算非正文
+    let residue = text
+    for (const name of fields) {
+      for (const m of text.matchAll(fieldPattern(name))) {
+        for (const ch of cjkOf(m[1] ?? '')) body.add(ch)
+        residue = residue.split(m[0]).join(' ')
+      }
+    }
+    for (const ch of cjkOf(residue)) rest.add(ch)
   }
 
-  return { chars, fileCount }
+  const bodyOnly = new Set([...body].filter((c) => !rest.has(c)))
+  return { chars, bodyOnly, fileCount }
 }
 
 /** 把码点集合压成 CSS unicode-range，连续段合并，否则这行会有几千个字符。 */
@@ -159,17 +237,30 @@ const LATIN_RANGE =
   'U+2000-206F, U+2074, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD'
 
 async function main() {
-  const ui = await collect(SCOPES.ui, DOCS_OWNED)
+  const ui = await collect(SCOPES.ui, [...DOCS_OWNED, ...LAB_OWNED])
+  const lab = await collect(SCOPES.lab)
   const docs = await collect(SCOPES.docs)
 
-  // docs 只保留 ui 没有的字。重复的字留在 ui 分片里，首屏本来就要下。
-  const docsOnly = new Set([...docs.chars].filter((c) => !ui.chars.has(c)))
+  // 后两组只保留 ui 没有的字，且互不重叠——unicode-range 交叠会让浏览器拉两份。
+  const labOnly = new Set([...lab.chars].filter((c) => !ui.chars.has(c)))
+  const docsOnly = new Set(
+    [...docs.chars].filter((c) => !ui.chars.has(c) && !labOnly.has(c)),
+  )
+
+  /**
+   * 700 的语料。ui 全量减掉只在正文出现的字。
+   *
+   * 被剔掉的字在 700 没有对应的 face，浏览器会拿 400 那份上——
+   * 这些字本来就不会用粗体渲染，看不出差别。真漏了会变假粗体，看得见。
+   */
+  const uiBold = new Set([...ui.chars].filter((c) => !ui.bodyOnly.has(c)))
 
   // 先清空产物目录。字重或作用域调整后会留下孤儿文件，留着会被误当成还在用。
   await rm(OUT_DIR, { recursive: true, force: true })
   await mkdir(OUT_DIR, { recursive: true })
 
-  console.log(`ui   语料：${ui.fileCount} 个文件，${ui.chars.size} 字`)
+  console.log(`ui   语料：${ui.fileCount} 个文件，${ui.chars.size} 字，700 只装 ${uiBold.size} 字（剔掉 ${ui.bodyOnly.size} 个正文独有字）`)
+  console.log(`lab  语料：${lab.fileCount} 个文件，${lab.chars.size} 字，其中 ${labOnly.size} 字为 lab 独有`)
   console.log(`docs 语料：${docs.fileCount} 个文件，${docs.chars.size} 字，其中 ${docsOnly.size} 字为 docs 独有\n`)
 
   const faces: string[] = []
@@ -186,24 +277,23 @@ async function main() {
     critical.push({ file: latin, kb: latinKb })
     faces.push(face(latin, weight, LATIN_RANGE))
 
-    const cjkUi = `noto-sans-sc-cjk-${weight}-ui.woff2`
-    const cjkUiKb = await subsetOne(
-      join(FONTSOURCE, `noto-sans-sc-chinese-simplified-${weight}-normal.woff2`),
-      join(OUT_DIR, cjkUi),
-      [...ui.chars].sort().join(''),
-    )
-    critical.push({ file: cjkUi, kb: cjkUiKb })
-    faces.push(face(cjkUi, weight, toUnicodeRange(ui.chars)))
+    const cjkSrc = join(FONTSOURCE, `noto-sans-sc-chinese-simplified-${weight}-normal.woff2`)
 
-    if (docsOnly.size > 0) {
-      const cjkDocs = `noto-sans-sc-cjk-${weight}-docs.woff2`
-      const cjkDocsKb = await subsetOne(
-        join(FONTSOURCE, `noto-sans-sc-chinese-simplified-${weight}-normal.woff2`),
-        join(OUT_DIR, cjkDocs),
-        [...docsOnly].sort().join(''),
-      )
-      deferred.push({ file: cjkDocs, kb: cjkDocsKb })
-      faces.push(face(cjkDocs, weight, toUnicodeRange(docsOnly)))
+    const uiSet = weight === 700 ? uiBold : ui.chars
+    const cjkUi = `noto-sans-sc-cjk-${weight}-ui.woff2`
+    const cjkUiKb = await subsetOne(cjkSrc, join(OUT_DIR, cjkUi), [...uiSet].sort().join(''))
+    critical.push({ file: cjkUi, kb: cjkUiKb })
+    faces.push(face(cjkUi, weight, toUnicodeRange(uiSet)))
+
+    for (const [name, set] of [
+      ['lab', labOnly],
+      ['docs', docsOnly],
+    ] as const) {
+      if (set.size === 0) continue
+      const file = `noto-sans-sc-cjk-${weight}-${name}.woff2`
+      const kb = await subsetOne(cjkSrc, join(OUT_DIR, file), [...set].sort().join(''))
+      deferred.push({ file, kb })
+      faces.push(face(file, weight, toUnicodeRange(set)))
     }
   }
 

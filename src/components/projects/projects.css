@@ -1,0 +1,477 @@
+/* =========================================================================
+   项目视差展台 · 三个
+   规格 4.3。三色世界只作用于框线与光效，面积占比 < 8%。
+   ========================================================================= */
+
+.projects {
+  padding-bottom: var(--space-8);
+}
+
+/* -------------------------------------------------------------------------
+   一个展台。80vh，左右交替。
+   ------------------------------------------------------------------------- */
+
+.stage {
+  position: relative;
+  min-height: 80vh;
+  display: flex;
+  /* 竖向排：主体居中，展开的档案接在它下面往下顶。 */
+  /* 不用绝对定位压在主体上：那等于变相的模态遮罩，4.3 禁了。 */
+  flex-direction: column;
+  justify-content: center;
+  padding-block: var(--space-7);
+  /* 视差层的位移由 JS 写进来，这里给默认值，无 JS 时就是不动 */
+  --par-shot: 0px;
+  --par-copy: 0px;
+  --par-ticks: 0px;
+}
+
+/* 背景刻度线。最快的一层，+14%。用重复线性渐变，不摆 DOM */
+.stage-ticks {
+  position: absolute;
+  inset: -20% 0;
+  pointer-events: none;
+  translate: 0 var(--par-ticks);
+  background-image: repeating-linear-gradient(
+    to bottom,
+    var(--line-grid) 0 var(--hairline),
+    transparent var(--hairline) 56px
+  );
+  /* 只在文案那半边铺，另半边留给截图，否则线穿过截图像脏 */
+  background-size: 46% 100%;
+  background-repeat: no-repeat;
+  background-position: right center;
+}
+
+.stage[data-flip='true'] .stage-ticks {
+  background-position: left center;
+}
+
+.stage-inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  align-items: center;
+  gap: var(--space-7);
+}
+
+.stage[data-flip='true'] .stage-shot {
+  order: 2;
+}
+
+/* -------------------------------------------------------------------------
+   截图与取景框。Bracket 给四角 L 线，准星单独摆。
+   ------------------------------------------------------------------------- */
+
+.stage-shot {
+  position: relative;
+  translate: 0 var(--par-shot);
+}
+
+.stage-shot .hud-bracket {
+  display: block;
+}
+
+/* 四角准星。压在角线的交点上 */
+.stage-reticle {
+  position: absolute;
+  pointer-events: none;
+  color: var(--stage-tone);
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+.stage:hover .stage-reticle,
+.stage[data-open='true'] .stage-reticle {
+  opacity: 1;
+}
+
+.stage-reticle[data-corner='tl'] {
+  top: -23px;
+  left: -23px;
+}
+
+.stage-reticle[data-corner='tr'] {
+  top: -23px;
+  right: -23px;
+}
+
+.stage-reticle[data-corner='bl'] {
+  bottom: -23px;
+  left: -23px;
+}
+
+.stage-reticle[data-corner='br'] {
+  bottom: -23px;
+  right: -23px;
+}
+
+/* 准星色是展台主调，Reticle 原子默认走 --sky-500，要提特异性压过去 */
+.stage .stage-reticle .hud-reticle {
+  color: currentColor;
+}
+
+/* -------------------------------------------------------------------------
+   截图本体。aspect-ratio 锁版，LQIP 垫底。
+   ------------------------------------------------------------------------- */
+
+.shot {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  background-color: var(--bg-sunk);
+  background-image: var(--shot-lqip);
+  background-size: cover;
+  background-position: center;
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+}
+
+.shot > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity var(--dur-enter) var(--ease-out-expo);
+}
+
+.shot[data-loaded='true'] > img {
+  opacity: 1;
+}
+
+/* 拓扑微光流。悬停时沿抽象界面骨架游走，透明度 0.35（规格 4.3） */
+.stage-topo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+.stage-topo path {
+  stroke: var(--stage-tone);
+  stroke-width: 1.5;
+  stroke-dasharray: 26 74;
+  vector-effect: non-scaling-stroke;
+}
+
+.stage:hover .stage-topo {
+  opacity: 0.35;
+}
+
+.stage:hover .stage-topo path {
+  animation: stage-topo 3.2s linear infinite;
+}
+
+@keyframes stage-topo {
+  to {
+    stroke-dashoffset: -100;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   文案块。反向的一层视差 -4%。
+   ------------------------------------------------------------------------- */
+
+.stage-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  translate: 0 var(--par-copy);
+  opacity: 0;
+}
+
+.stage[data-entered='true'] .stage-copy {
+  animation: stage-enter var(--dur-enter) var(--ease-out-expo) forwards;
+}
+
+@keyframes stage-enter {
+  from {
+    opacity: 0;
+    translate: 0 calc(var(--par-copy) + 16px);
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.stage-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.stage-index {
+  font-family: var(--font-hud);
+  font-size: var(--text-h3);
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  color: var(--stage-tone);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Rail 原子里写了 width: 100%，单类选择器压不过它，要提特异性 */
+.stage .stage-head-rail {
+  flex: 1;
+  width: auto;
+}
+
+.stage-name-en {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--ink-400);
+}
+
+.stage-name {
+  font-size: var(--text-h2);
+  font-weight: 700;
+  line-height: var(--leading-h2);
+  color: var(--ink-900);
+}
+
+.stage-brief {
+  max-width: 42ch;
+  color: var(--ink-600);
+}
+
+/* 数据条。hud 字体 + Diamond 分隔，横向铺开 */
+.stage-metrics {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.stage-metrics > li {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+}
+
+.stage-metric-value {
+  font-family: var(--font-hud);
+  font-size: var(--text-body);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--ink-900);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-metric-label {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+}
+
+.stage-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* -------------------------------------------------------------------------
+   两枚操作。切角靠 clip-path，不靠圆角。
+   ------------------------------------------------------------------------- */
+
+.stage-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.stage-btn {
+  --btn-bevel: 12px;
+  padding: 10px var(--space-5);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--bg-paper);
+  background: var(--ink-900);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--btn-bevel)) 0,
+    100% var(--btn-bevel),
+    100% 100%,
+    var(--btn-bevel) 100%,
+    0 calc(100% - var(--btn-bevel))
+  );
+  transition: background var(--dur-micro) var(--ease-out-expo);
+}
+
+.stage-btn:hover {
+  background: var(--sky-700);
+}
+
+.stage-link {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--sky-700);
+  text-decoration: none;
+  box-shadow: inset 0 -1px 0 var(--sky-300);
+}
+
+.stage-link:hover {
+  box-shadow: inset 0 -1px 0 var(--sky-700);
+}
+
+/* -------------------------------------------------------------------------
+   展开档案。原地展开，不弹模态遮罩。
+   ------------------------------------------------------------------------- */
+
+.stage-dossier {
+  overflow: hidden;
+  margin-top: var(--space-5);
+  background: var(--bg-paper);
+  box-shadow: inset 0 var(--hairline) 0 var(--line-solid);
+}
+
+.stage-dossier-inner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  gap: var(--space-6);
+  padding-block: var(--space-5);
+}
+
+.stage-tiers {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--space-3);
+}
+
+.stage-tiers > li {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  padding-left: var(--space-3);
+  box-shadow: inset 3px 0 0 var(--stage-tone);
+}
+
+.stage-tier-code {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--ink-400);
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-tier-name {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--ink-900);
+}
+
+.stage-tier-tags {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-600);
+}
+
+.stage-gallery {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  align-content: start;
+}
+
+/* -------------------------------------------------------------------------
+   窄屏。截图与文案改上下叠，视差与光流关掉。
+   ------------------------------------------------------------------------- */
+
+@media (width < 900px) {
+  .stage {
+    min-height: auto;
+    padding-block: var(--space-6);
+  }
+
+  .stage-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  /* 上下叠的时候截图一律在上，翻面失去意义 */
+  .stage[data-flip='true'] .stage-shot {
+    order: 0;
+  }
+
+  .stage-ticks {
+    display: none;
+  }
+
+  /*
+   * 窄屏收取景框。
+   * 角线 gap 14 + 准星外向偏 23px 在 390 的屏幕上溢出 3px，完整开不下。
+   * 准星收到框内，角线的 gap 也跟着收。
+   */
+  .stage-shot .hud-bracket {
+    --bracket-gap: 6px;
+    --bracket-len: 22px;
+  }
+
+  .stage-reticle[data-corner='tl'],
+  .stage-reticle[data-corner='tr'] {
+    top: 4px;
+  }
+
+  .stage-reticle[data-corner='bl'],
+  .stage-reticle[data-corner='br'] {
+    bottom: 4px;
+  }
+
+  .stage-reticle[data-corner='tl'],
+  .stage-reticle[data-corner='bl'] {
+    left: 4px;
+  }
+
+  .stage-reticle[data-corner='tr'],
+  .stage-reticle[data-corner='br'] {
+    right: 4px;
+  }
+
+  .stage-dossier-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-brief {
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    --par-shot: 0px;
+    --par-copy: 0px;
+    --par-ticks: 0px;
+  }
+
+  .stage-copy {
+    opacity: 1;
+  }
+
+  .stage:hover .stage-topo {
+    opacity: 0;
+  }
+
+  .stage:hover .stage-topo path {
+    animation: none;
+  }
+}

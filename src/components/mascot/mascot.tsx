@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import type { Character } from '@/data/characters'
+import type { MascotFx } from './fx'
 import { HAIR } from './hair'
 import { HaloBack, HaloFront, Prop } from './emblem'
 import {
@@ -61,13 +62,26 @@ interface MascotProps {
   crop?: MascotCrop
   /** 关掉惯性与 halo 自转。静态截图和低端设备走这条。 */
   still?: boolean
+  /**
+   * 联动特效（spec 3.4）。谁在悬停、当前在哪个展台这些结论由调用方算好传进来。
+   * 传 null 就是没特效，此时反向播放回默认态，不留残留。
+   */
+  fx?: MascotFx | null
   className?: string
 }
 
-/** bust 裁到头肩。上缘留出呆毛与 halo，下缘切在锁骨。 */
+/**
+ * bust 裁到头肩。上缘留出呆毛与 halo，下缘切在领巾结下方。
+ *
+ * 边界不是拍的，是量出来的（getBBox 六人实测）：
+ *   呆毛最高 y 48（navi），halo 上缘 y 67 —— 上缘取 32，留 16 的余量
+ *   肩最宽 x 95 / 385 落在 y 466 —— 左右取 88 / 392，肩到底边正好顶住画框
+ *   锁骨 y 386，领巾结 y 386–415 —— 下缘取 472，头肩连着领巾一起收进来
+ * 早先那版 '78 32 324 372' 的下缘 404 切在领口中间，只剩一楔白布，读不出肩。
+ */
 const CROP_BOX: Record<MascotCrop, string> = {
   full: `0 0 ${VIEW_W} ${VIEW_H}`,
-  bust: '78 32 324 372',
+  bust: '88 32 304 440',
 }
 
 /** 眼睛的三种开合。CSS 靠它决定固定睫毛与眼球要不要淡出。 */
@@ -78,6 +92,7 @@ export function Mascot({
   state: base = 'NEUTRAL',
   crop = 'full',
   still = false,
+  fx = null,
   className,
 }: MascotProps) {
   const svg = useRef<SVGSVGElement>(null)
@@ -102,10 +117,19 @@ export function Mascot({
       data-eye-l={eyeMode(expr.eye)}
       data-eye-r={eyeMode(expr.eyeRight ?? expr.eye)}
       data-alive={alive}
+      // 联动特效三个通道。没传 fx 时属性全不在，CSS 里那几条规则自然不命中。
+      data-fx-halo={fx?.halo}
+      data-fx-scarf={fx?.scarf ? 'up' : undefined}
       // 装饰性图形，屏幕阅读器不该念。角色信息由外层卡片的真实文本承担。
       aria-hidden="true"
       onPointerDown={poke}
-      style={{ '--iris-scale': expr.irisScale } as React.CSSProperties}
+      style={
+        {
+          '--iris-scale': expr.irisScale,
+          // 瞳内映色。不传就不写，mascot.css 里的 --iris-color 继续生效。
+          ...(fx ? { '--fx-tone': fx.tone } : {}),
+        } as React.CSSProperties
+      }
     >
       <defs>
         {/* 瞳被裁在眼窝里，放大和跟随都跑不出去。右眼在镜像坐标系里复用同一个裁剪。 */}
@@ -208,7 +232,9 @@ export function Mascot({
         </g>
 
         {/* ---------------------------------------------------- 道具 */}
-        <Prop variant={character.prop} />
+        {/* 道具锚在 x 410，bust 的右缘在 392——出到小卡上只剩边缘一截碎线，像脏点。
+            小卡只出头肩与 halo，道具留给全身。 */}
+        {crop === 'full' && <Prop variant={character.prop} />}
       </g>
 
       {/* M6 的粒子 Canvas 覆盖层锚在这里，现在是空的。 */}

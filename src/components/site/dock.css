@@ -1,0 +1,91 @@
+/* =========================================================================
+   向导驻留挂件
+   规格 3.4 的 M4 修正记录。切角面板 + 1px 描边 + --bg-paper 实色。
+   不许圆头像、不许阴影、不许毛玻璃——那是客服气泡的语言，不是 HUD 的。
+   ========================================================================= */
+
+.dock {
+  position: fixed;
+  right: var(--space-4);
+  bottom: var(--space-6);
+  z-index: var(--z-mascot);
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  padding: var(--space-2);
+  pointer-events: none;
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  /* 右上切角。跟卡片同一套几何语言 */
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--bevel)) 0,
+    100% var(--bevel),
+    100% 100%,
+    0 100%
+  );
+  opacity: 0;
+  translate: 0 12px;
+  transition:
+    opacity var(--dur-micro) var(--ease-out-expo),
+    translate var(--dur-micro) var(--ease-out-expo);
+}
+
+.dock[data-visible='true'] {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/*
+ * 1360 以下直接不显示。
+ * 1280 视口左右只剩 64px 空槽，120px 的挂件会压到内容上。
+ * 只隐藏 DOM，状态机照常跑，宽屏一放大立刻看得见。
+ */
+@media (width < 1360px) {
+  .dock {
+    display: none;
+  }
+}
+
+.dock-code,
+.dock-romaji {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  line-height: 1.2;
+  text-align: center;
+}
+
+.dock-code {
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+}
+
+.dock-romaji {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  color: var(--ink-400);
+}
+
+/* 立绘槽。bust 裁切下缘顶住画框，这里再压一道凹陷底把它衬出来 */
+.dock-portrait {
+  display: block;
+  overflow: hidden;
+  background: var(--bg-sunk);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+}
+
+.dock-portrait .mascot {
+  width: 100%;
+  height: auto;
+  /* 挂件只有 104px 宽，2 用户单位的描边会糊成一团，收细一档 */
+  --mascot-stroke: 3.4;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dock {
+    transition: none;
+  }
+}

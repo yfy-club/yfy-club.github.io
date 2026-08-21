@@ -189,6 +189,8 @@
 .mascot .iris-body {
   fill: var(--iris-color);
   stroke: none;
+  /* 联动特效要在这条上改颜色，进出都走过渡，不硬切 */
+  transition: fill var(--dur-swap) var(--ease-out-expo);
 }
 
 /* 瞳底一圈亮。规格 3.1 只准两处渐变，这是其中之一（另一处在发丝）。 */
@@ -538,6 +540,118 @@
   50% {
     translate: 0 4px;
   }
+}
+
+/* -------------------------------------------------------------------------
+   联动特效（spec 3.4 + M4 修正记录）。
+
+   三个通道，不往骨架里加新 path：
+     --fx-tone      瞳内映色
+     data-fx-halo   halo 反应，五种各不相同
+     data-fx-scarf  领巾扬起，叠在惯性位移之上
+
+   全部 ≤ 500ms，属性一掉 transition 自己反向跑回去，不留残留。
+   ------------------------------------------------------------------------- */
+
+.mascot[data-fx-halo] .iris-body {
+  fill: var(--fx-tone);
+}
+
+/* 瞳孔跟着派细一点，否则映色上来之后黑块把颜色吃掉一半 */
+.mascot[data-fx-halo] .pupil {
+  scale: 0.86;
+  transform-box: fill-box;
+  transform-origin: center;
+  transition: scale var(--dur-micro) var(--ease-out-expo);
+}
+
+/* halo 一律提一档描边，不动用发光——发光就是弥散，2.5 禁了 */
+.mascot[data-fx-halo] .halo-ring path,
+.mascot[data-fx-halo] .halo-ring circle {
+  stroke: var(--fx-tone);
+  stroke-width: 4;
+  transition:
+    stroke var(--dur-micro) var(--ease-out-expo),
+    stroke-width var(--dur-micro) var(--ease-out-expo);
+}
+
+.mascot[data-fx-halo] .halo-solid {
+  fill: var(--fx-tone);
+  transition: fill var(--dur-micro) var(--ease-out-expo);
+}
+
+/* ORACLE 神经节点顺序点亮。把 2.2s 的闲置节奏提到 0.5s 一轮 */
+.mascot[data-fx-halo='node'] .halo-node {
+  animation-duration: 0.5s;
+}
+
+/* 本来没节点的 halo（NAVI 就没）靠指针加速表现 node */
+.mascot[data-fx-halo='node'] .halo-orbit,
+.mascot[data-fx-halo='spin'] .halo-orbit {
+  animation-duration: 1.1s;
+}
+
+/* WEAVER 齿轮转动 */
+.mascot[data-fx-halo='spin'] .halo-spin-cw {
+  animation-duration: 1.6s;
+}
+
+.mascot[data-fx-halo='spin'] .halo-spin-ccw {
+  animation-duration: 1.2s;
+}
+
+/* VAULT 三层同心环逐层沉降。没分层的 halo 整环下沉一次 */
+.mascot[data-fx-halo='sink'] .m-halo {
+  animation: mascot-sink 0.5s var(--ease-out-expo) 2;
+}
+
+.mascot[data-fx-halo='sink'] .halo-sink {
+  animation-duration: 0.5s;
+}
+
+/* RELAY 向外扰散三圈信号。没波纹层的 halo 用整环扩张代替 */
+.mascot[data-fx-halo='wave'] .halo-wave {
+  animation-duration: 0.5s;
+}
+
+.mascot[data-fx-halo='wave'] .m-halo-front {
+  animation: mascot-halo-pulse 0.5s var(--ease-out-expo) 1;
+}
+
+@keyframes mascot-halo-pulse {
+  from {
+    scale: 1;
+  }
+  50% {
+    scale: 1.12;
+  }
+  to {
+    scale: 1;
+  }
+}
+
+/* FORGE 琥珀火花。环上一道瞬时的强描边，不画新图层 */
+.mascot[data-fx-halo='spark'] .halo-ring path {
+  animation: mascot-halo-spark 0.5s linear 1;
+}
+
+@keyframes mascot-halo-spark {
+  0%,
+  100% {
+    stroke-width: 4;
+  }
+  40% {
+    stroke-width: 7;
+  }
+}
+
+/* 领巾扬起。叠在惯性旋转上，不抢惯性的控制权 */
+.mascot .scarf {
+  transition: rotate var(--dur-micro) var(--ease-out-expo);
+}
+
+.mascot[data-fx-scarf='up'] .scarf {
+  rotate: -9deg;
 }
 
 /* -------------------------------------------------------------------------
