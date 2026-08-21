@@ -1,0 +1,310 @@
+/* =========================================================================
+   Hero 全屏舞台
+   规格 4.1。层次靠三阶底色 + 1px 线立住，禁止毛玻璃，禁止大面积弥散。
+   ========================================================================= */
+
+.hero {
+  position: relative;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  padding-block: var(--space-8) var(--space-7);
+}
+
+/* 坐标网格。80px 一格，透明度由 --line-grid 控制，不能抢内容。 */
+.hero-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.particles {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-particles);
+  pointer-events: none;
+}
+
+/* -------------------------------------------------------------------------
+   左侧刻度尺。贴安全边，不进内容栅格。
+   ------------------------------------------------------------------------- */
+
+.hero-scale {
+  position: absolute;
+  left: clamp(10px, 2vw, 30px);
+  top: 50%;
+  translate: 0 -50%;
+  z-index: var(--z-content);
+}
+
+/* -------------------------------------------------------------------------
+   主体两栏。左文右人，不等分——右栏留给破框的立绘。
+   ------------------------------------------------------------------------- */
+
+.hero-body {
+  position: relative;
+  z-index: var(--z-content);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.86fr);
+  align-items: center;
+  gap: var(--space-6);
+}
+
+.hero-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-4);
+}
+
+/* -------------------------------------------------------------------------
+   竖排字标。900 微分片，一字一行。
+   ------------------------------------------------------------------------- */
+
+.wordmark {
+  display: flex;
+  flex-direction: column;
+  font-weight: 900;
+  font-size: var(--text-display);
+  line-height: var(--leading-display);
+  letter-spacing: var(--tracking-display);
+  color: var(--ink-900);
+  margin-bottom: var(--space-2);
+}
+
+.wordmark-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.wordmark-glyph {
+  display: block;
+  animation: wordmark-in var(--dur-enter) var(--ease-out-expo) backwards;
+  animation-delay: calc(var(--i) * var(--stagger));
+}
+
+/* 第二三字向右微退，形成一道 4px 的斜切，避免三个字砌成一堵墙。 */
+.wordmark-glyph:nth-child(3) {
+  margin-left: 0.06em;
+}
+
+.wordmark-glyph:nth-child(4) {
+  margin-left: 0.12em;
+}
+
+@keyframes wordmark-in {
+  from {
+    opacity: 0;
+    translate: 0 16px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   字标下的导轨与文案
+   ------------------------------------------------------------------------- */
+
+.hero .hero-rail {
+  width: clamp(180px, 26vw, 340px);
+}
+
+.hero-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--sky-700);
+  line-height: 1;
+}
+
+.hero-sub {
+  font-size: var(--text-body);
+  color: var(--ink-600);
+  max-width: 46ch;
+  text-wrap: nowrap;
+}
+
+/* -------------------------------------------------------------------------
+   两枚按钮。切角靠 clip-path，不靠圆角。
+   ------------------------------------------------------------------------- */
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.hero-btn {
+  --btn-bevel: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 12px var(--space-5);
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: 1.2;
+  text-decoration: none;
+  white-space: nowrap;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--btn-bevel)) 0,
+    100% var(--btn-bevel),
+    100% 100%,
+    var(--btn-bevel) 100%,
+    0 calc(100% - var(--btn-bevel))
+  );
+  transition:
+    background var(--dur-micro) var(--ease-out-expo),
+    color var(--dur-micro) var(--ease-out-expo),
+    translate var(--dur-micro) var(--ease-out-expo);
+}
+
+.hero-btn[data-kind='primary'] {
+  background: var(--sky-700);
+  color: var(--bg-paper);
+}
+
+.hero-btn[data-kind='ghost'] {
+  background: var(--bg-paper);
+  color: var(--ink-900);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+}
+
+.hero-btn:hover {
+  translate: 0 -2px;
+}
+
+.hero-btn[data-kind='primary']:hover {
+  background: var(--ink-900);
+}
+
+.hero-btn[data-kind='ghost']:hover {
+  color: var(--sky-700);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--sky-500),
+    var(--shadow-lift);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-btn:hover {
+    translate: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   立绘。右侧 42%，顶部与右侧溢出裁切边界，由 .hero 的 overflow 切掉。
+   ------------------------------------------------------------------------- */
+
+.hero-mascot {
+  position: relative;
+  justify-self: end;
+  /* 底边沉到裁切边界以下，否则 BODY 在画框底部的闭合描边会露成一条横线 */
+  align-self: end;
+  width: clamp(340px, 48vw, 700px);
+  margin-bottom: calc(var(--space-8) * -1);
+  margin-right: clamp(-190px, -11vw, -40px);
+}
+
+.hero-mascot .mascot {
+  width: 100%;
+  height: auto;
+}
+
+/* 名牌压在立绘左下，与立绘左缘错开一格，形成层叠。 */
+.hero-mascot-plate {
+  position: absolute;
+  left: -1%;
+  bottom: calc(var(--space-8) + var(--space-6));
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    0 100%
+  );
+}
+
+.hero-mascot-name {
+  font-size: var(--text-h3);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink-900);
+}
+
+.hero-mascot-romaji {
+  font-family: var(--font-hud);
+  font-size: var(--text-caption);
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  color: var(--ink-600);
+  line-height: 1.2;
+}
+
+/* -------------------------------------------------------------------------
+   底部锚点准星
+   ------------------------------------------------------------------------- */
+
+.hero-reticle {
+  position: absolute;
+  left: clamp(10px, 2vw, 30px);
+  bottom: var(--space-6);
+  z-index: var(--z-content);
+}
+
+/* -------------------------------------------------------------------------
+   移动端。规格 6：立绘缩到 40% 放标题下方，粒子关闭。
+   ------------------------------------------------------------------------- */
+
+@media (width < 768px) {
+  .hero {
+    padding-block: var(--space-7) var(--space-6);
+  }
+
+  .hero-body {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+
+  .hero-scale,
+  .particles,
+  .hero-reticle {
+    display: none;
+  }
+
+  .hero-mascot {
+    justify-self: center;
+    width: 40%;
+    min-width: 220px;
+    align-self: auto;
+    margin: 0;
+    order: 2;
+    /* 窄屏立绘不破框，底边那道闭合描边要自己切掉 */
+    clip-path: inset(0 0 5% 0);
+  }
+
+  /* 窄屏没有横向余量给名牌压在立绘上，直接落到立绘下方 */
+  .hero-mascot-plate {
+    position: static;
+    width: fit-content;
+    margin-top: var(--space-3);
+  }
+
+  /* 一行放不下就老实换行，别横向溢出 */
+  .hero-sub {
+    max-width: none;
+    text-wrap: pretty;
+  }
+}

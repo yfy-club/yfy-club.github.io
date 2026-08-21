@@ -25,13 +25,18 @@ const OUT_DIR = join(ROOT, 'src/assets/fonts')
 const CSS_OUT = join(ROOT, 'src/styles/fonts.css')
 
 /**
- * 只产 400 与 700 两档中文字重。
+ * 正文与标题只产 400 与 700 两档中文字重。
  *
- * 900 已砍掉：全站唯一需要 display 级重量的是首屏「云飞扬」三个字，
- * 走 SVG 轮廓路径（src/components/hero/wordmark.tsx），零字体开销，
- * 顺带让竖排排版能精确到锚点。为三个字背一整份 900 中文分片不划算。
+ * 900 不进这张表：全站唯一需要 display 级重量的是首屏「云飞扬」三个字，
+ * 单独切一份三字微分片（见 WORDMARK），不背整份 900 中文分片。
  */
 const WEIGHTS = [400, 700] as const
+
+/**
+ * 字标微分片的语料。只有这三个字用 900，别处一律 400 / 700。
+ * 改字标先改这里，再改 src/components/hero/wordmark.tsx，两边必须一致。
+ */
+const WORDMARK = '云飞扬'
 
 /**
  * 首屏字体预算，单位 KB。超了直接失败。
@@ -201,6 +206,16 @@ async function main() {
       faces.push(face(cjkDocs, weight, toUnicodeRange(docsOnly)))
     }
   }
+
+  // 字标微分片。三个字，unicode-range 也只开这三个码点，别处碰不到 900。
+  const wordmarkFile = 'noto-sans-sc-wordmark-900.woff2'
+  const wordmarkKb = await subsetOne(
+    join(FONTSOURCE, 'noto-sans-sc-chinese-simplified-900-normal.woff2'),
+    join(OUT_DIR, wordmarkFile),
+    WORDMARK,
+  )
+  critical.push({ file: wordmarkFile, kb: wordmarkKb })
+  faces.push(face(wordmarkFile, 900, toUnicodeRange(new Set([...WORDMARK]))))
 
   for (const [path, label, weight] of [
     ['chakra-petch/files/chakra-petch-latin-500-normal.woff2', 'Chakra Petch 500', 500],

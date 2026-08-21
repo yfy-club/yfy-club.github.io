@@ -1,0 +1,195 @@
+/* =========================================================================
+   站点骨架：导航条与页脚
+   ========================================================================= */
+
+/* -------------------------------------------------------------------------
+   导航条
+   backdrop-filter 只准出现在这里和弹幕输入浮层。规格 2.5。
+   ------------------------------------------------------------------------- */
+
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: var(--z-nav);
+  transition: background var(--dur-micro) var(--ease-out-expo);
+}
+
+.nav[data-lifted='true'] {
+  background: var(--nav-veil);
+  backdrop-filter: blur(12px);
+}
+
+.nav-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-6);
+  height: 62px;
+}
+
+.nav-rail {
+  height: var(--hairline);
+  background: var(--line-hair);
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+.nav[data-lifted='true'] .nav-rail {
+  opacity: 1;
+}
+
+.nav-brand {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  text-decoration: none;
+  color: var(--ink-900);
+}
+
+.nav-brand-zh {
+  font-size: var(--text-h3);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.nav-brand-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-600);
+}
+
+.nav-links {
+  display: flex;
+  gap: var(--space-5);
+  margin-right: auto;
+}
+
+.nav-links a {
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  color: var(--ink-600);
+  text-decoration: none;
+  padding-block: var(--space-2);
+  position: relative;
+}
+
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 100%;
+  bottom: 2px;
+  height: var(--hairline);
+  background: var(--pink-500);
+  transition: right var(--dur-micro) var(--ease-out-expo);
+}
+
+.nav-links a:hover {
+  color: var(--ink-900);
+}
+
+.nav-links a:hover::after {
+  right: 0;
+}
+
+.nav-side {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.nav-out {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+  text-decoration: none;
+}
+
+.nav-out:hover {
+  color: var(--pink-700);
+}
+
+@media (width < 768px) {
+  .nav-links,
+  .nav-side {
+    display: none;
+  }
+
+  .nav-inner {
+    height: 54px;
+  }
+}
+
+/* -------------------------------------------------------------------------
+   页脚
+   ------------------------------------------------------------------------- */
+
+.foot {
+  margin-top: var(--space-8);
+  padding-bottom: var(--space-6);
+}
+
+.foot-inner {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-6);
+  padding-block: var(--space-7) var(--space-6);
+}
+
+.foot-title {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-transform: uppercase;
+  color: var(--ink-600);
+  margin-bottom: var(--space-3);
+}
+
+.foot-col ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.foot-col a {
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  text-decoration: none;
+}
+
+.foot-col a:hover {
+  color: var(--sky-700);
+}
+
+.foot-base {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  font-size: var(--text-caption);
+  color: var(--ink-600);
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.foot-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-600);
+}
+
+@media (width < 768px) {
+  .foot-inner {
+    grid-template-columns: 1fr;
+    gap: var(--space-5);
+  }
+}
