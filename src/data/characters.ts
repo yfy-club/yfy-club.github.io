@@ -10,8 +10,11 @@ export type TrackSlug = 'ai' | 'software' | 'database' | 'cloud-iot' | 'industri
 
 export type CharacterId = 'navi' | 'oracle' | 'weaver' | 'vault' | 'relay' | 'forge'
 
-/** 发型变体键。骨架共用，只有这三组 path 和一套色板随人换。 */
-export type HairVariant = CharacterId
+/**
+ * halo 与道具的造型键。
+ * 老版本这里还有 HairVariant——发型随矢量骨架一起作废（spec M8 修正记录），
+ * 头发现在在 NovelAI 出的栅格立绘里，不是我们画的 path。
+ */
 export type HaloVariant = CharacterId
 export type PropVariant = CharacterId
 
@@ -24,10 +27,15 @@ export interface Character {
   name: string
   romaji: string
   codename: string
-  hair: HairVariant
   halo: HaloVariant
   prop: PropVariant
 }
+
+/*
+ * 立绘不在这张表里。文件名、三档宽度、实测的发顶 / 颅宽 / 头中线、LQIP
+ * 全部由 scripts/build-portraits.ts 量出来写进 src/data/portraits.generated.ts，
+ * 按 id 对上。写一条 avatarUrl 在这儿只会多一处能对不上的地方。
+ */
 
 /** 每张角色卡角标固定标注这一行，不允许改写成别的说法。 */
 export const FICTION_NOTICE = '虚构角色 · 化名'
@@ -40,7 +48,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '绫濑 云',
     romaji: 'Ayase Kumo',
     codename: 'NAVI',
-    hair: 'navi',
     halo: 'navi',
     prop: 'navi',
   },
@@ -51,7 +58,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '星见 澪',
     romaji: 'Hoshimi Mio',
     codename: 'ORACLE',
-    hair: 'oracle',
     halo: 'oracle',
     prop: 'oracle',
   },
@@ -62,7 +68,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '白岸 织',
     romaji: 'Shirakishi Ori',
     codename: 'WEAVER',
-    hair: 'weaver',
     halo: 'weaver',
     prop: 'weaver',
   },
@@ -73,7 +78,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '深守 蓝',
     romaji: 'Fukamori Ran',
     codename: 'VAULT',
-    hair: 'vault',
     halo: 'vault',
     prop: 'vault',
   },
@@ -84,7 +88,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '空乃 涟',
     romaji: 'Sorano Ren',
     codename: 'RELAY',
-    hair: 'relay',
     halo: 'relay',
     prop: 'relay',
   },
@@ -95,7 +98,6 @@ export const CHARACTERS: readonly Character[] = [
     name: '铁川 澄',
     romaji: 'Tetsukawa Sumi',
     codename: 'FORGE',
-    hair: 'forge',
     halo: 'forge',
     prop: 'forge',
   },

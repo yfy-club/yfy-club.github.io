@@ -2,14 +2,20 @@ import { useEffect, useRef } from 'react'
 import { MASCOT, MASCOT_MAX_OFFSET } from '@/lib/motion-tokens'
 
 /**
- * 立绘惯性。发丝、领巾、halo、身体跟着鼠标与滚动甩，各自一套弹簧。
+ * 立绘惯性。halo 与身体跟着鼠标与滚动甩，各自一套弹簧。
  *
  * 数值不在这里拍，全部来自 src/lib/motion-tokens.ts（规格 3.5）。
  * 这里只负责三件事：把输入归一化、积分弹簧、把结果写成 CSS 变量。
  *
  * 为什么不用 motion 的 useSpring：那会让每帧都过 React。
- * 首屏一个看板娘、方向区五个，加起来 36 条弹簧 60fps 重渲染整棵 SVG，不划算。
+ * 首屏一个看板娘、方向区五个，加起来 36 条弹簧 60fps 重渲染整棵树，不划算。
  * 这里全站共用一个 RAF，直接写 style property，React 全程不参与。
+ *
+ * M8：立绘从矢量骨架换成栅格图后只剩 halo 与身体两组还有作用对象——
+ * 一张 `<img>` 里的头发、领巾、瞳孔都不能单独摆。呆毛 / 后发 / 前发 / 领巾 / 视线
+ * 五组弹簧因此停积分（`ACTIVE_PARTS`）。spec 3.5 那张表原样留在 motion-tokens.ts 里
+ * 不动：它是规格的一部分，将来若补分层立绘要照它接回来。
+ * 每实例每帧的弹簧数从 12 降到 4，方向区五张卡合计 60 → 20。
  */
 
 /**
@@ -27,9 +33,6 @@ import { MASCOT, MASCOT_MAX_OFFSET } from '@/lib/motion-tokens'
  */
 const REACH = 90
 
-/** 视线跟随鼠标的幅度上限，规格 3.2 写死 ±3。 */
-const GAZE_REACH = 3
-
 /** 滚动速度并进纵向目标。停手时头发还在飘，纵深就是这么来的。 */
 const SCROLL_GAIN = 0.35
 const SCROLL_MAX = 1.2
@@ -45,12 +48,11 @@ interface Axis {
 }
 
 interface Node {
-  el: SVGSVGElement
+  el: HTMLElement
   /** 立绘中心在视口里的位置，resize 与滚动时重算。 */
   cx: number
   cy: number
-  parts: Record<PartKey, { x: Axis; y: Axis }>
-  gaze: { x: Axis; y: Axis }
+  parts: Record<(typeof ACTIVE_PARTS)[number], { x: Axis; y: Axis }>
   /** 外部关掉惯性时（例如卡片没进视口）保持归零。 */
   enabled: boolean
 }
@@ -64,7 +66,8 @@ let scrollV = 0
 let lastScrollY = 0
 let lastTime = 0
 
-const PART_KEYS = Object.keys(MASCOT) as PartKey[]
+/** 还有作用对象的部件。其余的见文件头注释。 */
+const ACTIVE_PARTS = ['halo', 'body'] as const satisfies readonly PartKey[]
 
 const axis = (): Axis => ({ x: 0, v: 0 })
 
@@ -103,7 +106,7 @@ function tick(now: number) {
     const ny = node.enabled && pointerSeen ? clamp((pointerY - node.cy) / (vh / 2), 1) : 0
     const scroll = node.enabled ? clamp(scrollV * SCROLL_GAIN, SCROLL_MAX) : 0
 
-    for (const key of PART_KEYS) {
+    for (const key of ACTIVE_PARTS) {
       const cfg = MASCOT[key]
       const part = node.parts[key]
       const tx = clamp(nx * REACH * cfg.gain, MASCOT_MAX_OFFSET)
@@ -123,22 +126,11 @@ function tick(now: number) {
       }
     }
 
-    // 视线用最快那档弹簧，眼睛要比头发跟得紧
-    integrate(node.gaze.x, nx * GAZE_REACH, 260, 26, 1, dt)
-    integrate(node.gaze.y, ny * GAZE_REACH, 260, 26, 1, dt)
-
     const s = node.el.style
-    s.setProperty('--sway-ahoge', node.parts.ahoge.x.x.toFixed(3))
-    s.setProperty('--sway-ahoge-y', node.parts.ahoge.y.x.toFixed(3))
-    s.setProperty('--sway-hair-b', node.parts.hairBack.x.x.toFixed(3))
-    s.setProperty('--sway-hair-f', node.parts.hairFront.x.x.toFixed(3))
-    s.setProperty('--sway-scarf', node.parts.scarf.x.x.toFixed(3))
     s.setProperty('--sway-halo-x', node.parts.halo.x.x.toFixed(3))
     s.setProperty('--sway-halo-y', node.parts.halo.y.x.toFixed(3))
     s.setProperty('--sway-body-x', node.parts.body.x.x.toFixed(3))
     s.setProperty('--sway-body-y', node.parts.body.y.x.toFixed(3))
-    s.setProperty('--gaze-x', node.gaze.x.x.toFixed(3))
-    s.setProperty('--gaze-y', node.gaze.y.x.toFixed(3))
   }
 
   if (moving || Math.abs(scrollV) > REST) {
@@ -198,7 +190,7 @@ function detach() {
  * enabled 传 false 就归零并退出——prefers-reduced-motion 与静态截图都走这条路。
  */
 export function useMascotInertia(
-  ref: React.RefObject<SVGSVGElement | null>,
+  ref: React.RefObject<HTMLElement | null>,
   enabled: boolean,
 ) {
   const nodeRef = useRef<Node | null>(null)
@@ -209,29 +201,17 @@ export function useMascotInertia(
 
     if (!enabled) {
       // 关掉时把变量清成 0，否则会停在上一帧的姿态上
-      for (const name of [
-        '--sway-ahoge',
-        '--sway-ahoge-y',
-        '--sway-hair-b',
-        '--sway-hair-f',
-        '--sway-scarf',
-        '--sway-halo-x',
-        '--sway-halo-y',
-        '--sway-body-x',
-        '--sway-body-y',
-        '--gaze-x',
-        '--gaze-y',
-      ]) {
+      for (const name of ['--sway-halo-x', '--sway-halo-y', '--sway-body-x', '--sway-body-y']) {
         el.style.setProperty(name, '0')
       }
       return
     }
 
     const parts = Object.fromEntries(
-      PART_KEYS.map((k) => [k, { x: axis(), y: axis() }]),
+      ACTIVE_PARTS.map((k) => [k, { x: axis(), y: axis() }]),
     ) as Node['parts']
 
-    const node: Node = { el, cx: 0, cy: 0, parts, gaze: { x: axis(), y: axis() }, enabled: true }
+    const node: Node = { el, cx: 0, cy: 0, parts, enabled: true }
     nodeRef.current = node
     measure(node)
 

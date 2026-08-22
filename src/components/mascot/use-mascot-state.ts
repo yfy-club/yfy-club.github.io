@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { MascotState } from './expressions'
+import type { MascotState } from './states'
 
 /**
  * 差分状态机。规格 3.3 那张触发表就是这个文件。
@@ -8,13 +8,11 @@ import type { MascotState } from './expressions'
  * 同一时刻只有一个状态生效，新触发抢占旧状态——不做状态叠加，叠加只会互相打架。
  *
  * 滚动进区（FOCUS / SMILE / THINK）与悬停卡片这些由页面决定的触发不在这里，
- * 页面把结论算好从 base 传进来。这个 hook 只管立绘自己知道的事：
- * 眨眼、发呆、被戳。
+ * 页面把结论算好从 base 传进来。这个 hook 只管立绘自己知道的事：发呆、被戳。
+ *
+ * M8：眨眼拆掉了。表情烘在栅格立绘里，眼睛睁闭不再是我们能控制的东西，
+ * 而定时器照跑的话方向区五张卡就是五个每 4~7s 空转一次的 setTimeout。
  */
-
-/** 眨眼间隔。规格 3.3 写的 4–7s。 */
-const BLINK_MIN = 4000
-const BLINK_MAX = 7000
 
 /** SURPRISE 持续 400ms 后回落至 SMILE。 */
 const SURPRISE_HOLD = 400
@@ -31,16 +29,13 @@ const IDLE_AFTER = 20000
 const IDLE_RECOVER = 300
 
 export interface MascotBehavior {
-  /** 当前生效的状态，直接喂给差分渲染。 */
+  /** 当前生效的状态。驱动整体动作，不再驱动五官。 */
   state: MascotState
-  /** 眨眼是叠加层不是状态：它不走 120ms 交叉淡入，自己 90ms 闭 60ms 张。 */
-  blinking: boolean
   /** 立绘被点一下就调它。连点三次进 POUT。 */
   poke: () => void
 }
 
 export function useMascotState(base: MascotState = 'NEUTRAL', enabled = true): MascotBehavior {
-  const [blinking, setBlinking] = useState(false)
   const [pouting, setPouting] = useState(false)
   const [dazed, setDazed] = useState(false)
   const [surpriseDone, setSurpriseDone] = useState(false)
@@ -57,39 +52,7 @@ export function useMascotState(base: MascotState = 'NEUTRAL', enabled = true): M
     return () => clearTimeout(id)
   }, [base])
 
-  /* ------------------------------------------------------------ 眨眼 */
-
-  useEffect(() => {
-    if (!enabled) {
-      setBlinking(false)
-      return
-    }
-    let close: ReturnType<typeof setTimeout>
-    let open: ReturnType<typeof setTimeout>
-
-    const schedule = () => {
-      close = setTimeout(
-        () => {
-          setBlinking(true)
-          // 90ms 闭合走 CSS，这里只负责多留 40ms 再张开，免得看起来像抽搐
-          open = setTimeout(() => {
-            setBlinking(false)
-            schedule()
-          }, 130)
-        },
-        BLINK_MIN + Math.random() * (BLINK_MAX - BLINK_MIN),
-      )
-    }
-    schedule()
-
-    return () => {
-      clearTimeout(close)
-      clearTimeout(open)
-      setBlinking(false)
-    }
-  }, [enabled])
-
-  /* ------------------------------------------------------ 20s 发呆 */
+  /* ------------------------------------------------------------ 20s 发呆 */
 
   useEffect(() => {
     if (!enabled) {
@@ -157,5 +120,5 @@ export function useMascotState(base: MascotState = 'NEUTRAL', enabled = true): M
   if (dazed) state = 'IDLE_DAZE'
   if (pouting) state = 'POUT'
 
-  return { state, blinking: blinking && !dazed && !pouting, poke }
+  return { state, poke }
 }

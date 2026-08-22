@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Mascot } from '@/components/mascot'
-import { MASCOT_STATES, type MascotState } from '@/components/mascot/expressions'
-import { EXPRESSIONS } from '@/components/mascot/expressions'
-import { HAIR } from '@/components/mascot/hair'
+import { MASCOT_STATES, STATE_INTENT, type MascotState } from '@/components/mascot/states'
 import { CHARACTERS, FICTION_NOTICE } from '@/data/characters'
 import { Rail, Tag, Reticle } from '@/components/hud'
 import './mascot-lab.css'
@@ -10,6 +8,9 @@ import './mascot-lab.css'
 /* -------------------------------------------------------------------------
    M2 验收页。六人 × 七态全部摆出来，肉眼比对 spec 第 3 节。
    M3 起被真正的首屏替换掉。
+
+   M8：立绘换成栅格图后这一页的用途变了。七态不再是七张脸，是七个整体姿态；
+   「小卡裁切」那一排仍然是方向卡上会看到的样子，用来核 bust 取景有没有削到头发。
    ------------------------------------------------------------------------- */
 
 export function MascotLab() {
@@ -28,7 +29,7 @@ export function MascotLab() {
         </div>
         <h2 className="mlab-title">六位角色 · 七态差分</h2>
         <p className="mlab-sub">
-          六人共用一套骨架，只换色板、发型、halo 与道具。
+          立绘是六张独立的栅格原画，共用的是 halo、道具与这一整套动效。
           鼠标在页面上移动看惯性，点立绘三下看鼓脸，放着不动二十秒看发呆。
         </p>
       </header>
@@ -40,7 +41,7 @@ export function MascotLab() {
             className="mlab-key"
             data-on={s === state}
             onClick={() => setState(s)}
-            title={EXPRESSIONS[s].intent}
+            title={STATE_INTENT[s]}
           >
             {s}
           </button>
@@ -62,7 +63,6 @@ export function MascotLab() {
               <span className="mlab-name">{c.name}</span>
               <span className="mlab-romaji">{c.romaji}</span>
               <span className="mlab-role">{c.role}</span>
-              <span className="mlab-note">{HAIR[c.hair]!.silhouette}</span>
             </figcaption>
           </figure>
         ))}
@@ -71,7 +71,7 @@ export function MascotLab() {
       <Rail ticks={false} />
 
       {/* 七态矩阵。固定一个人，把七个状态并排，差分对不对一眼就看出来。 */}
-      <h3 className="mlab-h3">七态矩阵</h3>
+      <h3 className="mlab-h3">七态姿态</h3>
       <div className="mlab-matrix">
         {MASCOT_STATES.map((s) => (
           <figure key={s} className="mlab-face">
@@ -80,7 +80,7 @@ export function MascotLab() {
             </div>
             <figcaption>
               <span className="mlab-state">{s}</span>
-              <span className="mlab-note">{EXPRESSIONS[s].intent}</span>
+              <span className="mlab-note">{STATE_INTENT[s]}</span>
             </figcaption>
           </figure>
         ))}

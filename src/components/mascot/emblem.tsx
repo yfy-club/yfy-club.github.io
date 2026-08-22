@@ -1,15 +1,23 @@
-import { HALO } from './geometry'
-
 /**
  * halo 与方向道具。六套，全部按 spec 1.3 的造型描述画。
  *
- * halo 拆上下两段弧：上弧进 g#halo-back 会被头发压住，下弧进 g#halo-front 压在头发上。
- * 这样环是"穿过头顶"而不是"浮在头上的贴纸"——这一层纵深是整个二次元感的地基。
+ * halo 拆上下两段弧：上弧进 .m-halo-back 画在立绘之下，下弧进 .m-halo-front 画在立绘之上。
+ * 老骨架靠头发压住上弧来给出纵深；换成栅格立绘后头顶的位置由 layout.ts 实测决定，
+ * 环整体浮在发顶之上，压住上弧的改成**呆毛**——呆毛尖普遍高过环上缘 19~48 单位，
+ * 穿过环的那一段就是纵深。做不到用头发压：这批立绘是 Q 版比例，
+ * 头发要张到环那么宽得下探到眼睛高度，那时候环已经不是 halo 是项圈了。
+ *
+ * 这里画的是 authoring 坐标系，不是最终坐标系。六个人的头顶位置与颅宽各不相同，
+ * 由 layout.ts 的 `placement()` 出一个仿射变换把整组搬过去。
+ * 所以下面的 HALO 常量只是"画在哪儿方便"，不要拿它当真实摆位。
  *
  * 环上的装饰要跟着椭圆走，不能直接绕中心转（那样会跑出环外）。
  * 统一做法：先把坐标系压扁成 ry/rx，在圆里转，再让压扁把它变回椭圆。
  * 压扁会连描边一起压，所以环上所有描边都挂 vector-effect="non-scaling-stroke"。
  */
+
+/** halo 的 authoring 空间。真实摆位见 layout.ts，那里按实测发顶与颅宽做仿射。 */
+export const HALO = { cx: 240, cy: 88, rx: 78, ry: 20 } as const
 
 /** 把圆坐标系压成 halo 椭圆的变换。装饰画在半径 rx 的圆上即可。 */
 const RING_SPACE = `translate(${HALO.cx} ${HALO.cy}) scale(1 ${(HALO.ry / HALO.rx).toFixed(4)})`
@@ -226,21 +234,15 @@ export function HaloFront({ variant }: { variant: string }) {
 /* ====================================================================== */
 
 /**
- * 六件道具都画在原点附近的 ±34 方框内，靠外层 transform 摆位。
- * RELAY 是双马尾，右上被辫子占了，只有她要往上让一格。
+ * 六件道具都画在原点附近的 ±34 方框内，摆位由调用方给。
+ *
+ * 老代码这里是一张写死的锚点表（五个人 `translate(410 172)`，RELAY 因为双马尾单独让一格）。
+ * 那张表是对着老矢量剪影调的。换栅格立绘后改成按实测颅宽外推（layout.ts 的 `prop`），
+ * 谁头发大谁的道具就自动往外站，不用再逐人手调。
  */
-const PROP_ANCHOR: Record<string, string> = {
-  navi: 'translate(410 172)',
-  oracle: 'translate(410 172)',
-  weaver: 'translate(410 172)',
-  vault: 'translate(410 172)',
-  relay: 'translate(432 108)',
-  forge: 'translate(410 172)',
-}
-
-export function Prop({ variant }: { variant: string }) {
+export function Prop({ variant, at }: { variant: string; at: { x: number; y: number; scale: number } }) {
   return (
-    <g className="mascot-prop" transform={PROP_ANCHOR[variant] ?? PROP_ANCHOR['navi']}>
+    <g className="mascot-prop" transform={`translate(${at.x.toFixed(1)} ${at.y.toFixed(1)}) scale(${at.scale})`}>
       <g className="prop-float">{propBody(variant)}</g>
     </g>
   )

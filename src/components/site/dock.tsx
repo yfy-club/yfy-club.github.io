@@ -14,7 +14,7 @@
  */
 import { Mascot } from '@/components/mascot'
 import type { MascotFx } from '@/components/mascot/fx'
-import type { MascotState } from '@/components/mascot/expressions'
+import type { MascotState } from '@/components/mascot/states'
 import { NAVI } from '@/data/characters'
 import './dock.css'
 

@@ -17,7 +17,7 @@ import { AnimatePresence, motion, useMotionValue, useSpring, type MotionStyle } 
 import { Diamond, Rail, Reticle, Tag } from '@/components/hud'
 import { Mascot } from '@/components/mascot'
 import { characterByTrack, FICTION_NOTICE, type TrackSlug } from '@/data/characters'
-import { isFeature, TRACKS, type Track } from '@/data/tracks'
+import { TRACKS, type Track } from '@/data/tracks'
 import { usePrefersReducedMotion } from '@/components/mascot/mascot'
 import { SPRING, staggerDelay } from '@/lib/motion-tokens'
 import { useInView } from '@/lib/use-in-view'
@@ -90,7 +90,6 @@ interface TrackCardProps {
 
 function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
   const character = characterByTrack(track.slug)
-  const feature = isFeature(track.slug)
   const card = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
 
@@ -102,7 +101,6 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
     // 跟自己写的 rotateX/rotateY 会互相覆盖。
     <motion.div
       className="track-card"
-      data-size={feature ? 'large' : 'small'}
       data-track={track.slug}
       data-open={open}
       layout
@@ -140,7 +138,7 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
           </span>
 
           <span className="track-portrait">
-            <Mascot character={character} crop={feature ? 'full' : 'bust'} state="NEUTRAL" />
+            <Mascot character={character} crop="full" state="NEUTRAL" />
           </span>
 
           <span className="track-id">
@@ -158,7 +156,7 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
                   <span className="track-ability-zh">{ability.zh}</span>
                 </span>
                 <span className="track-ability-code">{ability.code}</span>
-                {feature && <span className="track-ability-keys">{ability.keys}</span>}
+                <span className="track-ability-keys">{ability.keys}</span>
                 {/* 细导轨。不填百分比——没有可用的数值，编一个就是假数据 */}
                 <span className="track-ability-rail" aria-hidden="true" />
               </li>

@@ -70,16 +70,18 @@ const LATIN_BASE = (() => {
  */
 const SCOPES = {
   ui: ['src', 'index.html'],
-  lab: ['src/mascot-lab.tsx', 'src/components/mascot/expressions.ts', 'src/components/mascot/hair.ts'],
+  lab: ['src/mascot-lab.tsx', 'src/components/mascot/states.ts'],
   docs: ['docs/content-docs.md', 'src/data/docs.ts'],
 } as const
 
 /**
  * 这些文件的中文不在首屏渲染，扫 ui 时要跳过。
  *
- * expressions.ts 的 `intent` 与 hair.ts 的 `silhouette` 是给验收页看的说明串，
- * 它们跟着 mascot 模块进了 JS 包，但只有 ?lab=1 会把它们画到屏幕上。
- * 算进 ui 分片等于为一个内部工具页在首屏多背 99 个字。
+ * states.ts 的 `STATE_INTENT` 是给验收页看的说明串，
+ * 它跟着 mascot 模块进了 JS 包，但只有 ?lab=1 会把它画到屏幕上。
+ * 算进 ui 分片等于为一个内部工具页在首屏多背几十个字。
+ * （M8 之前这里还有 expressions.ts 的 `intent` 与 hair.ts 的 `silhouette`，
+ *   两个文件随矢量骨架一起删了。）
  */
 const LAB_OWNED = SCOPES.lab
 
@@ -134,9 +136,14 @@ const isCjk = (cp: number) =>
 /**
  * 去掉注释再取字。注释里的中文不会上线，算进语料会白白多背几十 KB。
  * 代价是字符串里出现 `//` 的极端情况会误删——真漏了字会显示成豆腐块，看得见。
+ *
+ * M8：补上 HTML 注释。原先 .html 是整份原样进语料的，
+ * 往 index.html 写一段中文维护说明就白背 6.9 KB 首屏字体（实测），
+ * 而 `<!-- -->` 里的字一个都不渲染。
  */
 function stripComments(source: string, ext: string) {
-  if (ext === '.md' || ext === '.html') return source
+  if (ext === '.md') return source
+  if (ext === '.html') return source.replace(/<!--[\s\S]*?-->/g, ' ')
   return source.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/(^|[^:])\/\/.*$/gm, '$1 ')
 }
 

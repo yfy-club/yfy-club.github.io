@@ -80,8 +80,12 @@
 .dock-portrait .mascot {
   width: 100%;
   height: auto;
-  /* 挂件只有 104px 宽，2 用户单位的描边会糊成一团，收细一档 */
-  --mascot-stroke: 3.4;
+  /*
+   * 挂件只有 104px 宽。halo 描边挂了 vector-effect="non-scaling-stroke"，
+   * 粗细不随缩放走，3 在 Hero 上是细线，在这里就是糊成一团的粗杠，收细一档。
+   */
+  --halo-stroke: 1.6;
+  --prop-stroke: 1.4;
 }
 
 @media (prefers-reduced-motion: reduce) {

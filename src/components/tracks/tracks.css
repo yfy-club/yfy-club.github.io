@@ -35,14 +35,11 @@
 }
 
 /* -------------------------------------------------------------------------
-   非对称栅格。列位写死，不用 auto-fill——「拒绝等分网格」是规格的第一句话。
-
-   12 栅，gutter 24px。1440 视口内容宽 1144，单列 73.3px：
-     ORACLE  1 / span 5   宽 341   h 480
-     WEAVER  7 / span 5   宽 341   h 480     第 6 列空出来
-     VAULT   2 / span 4   宽 268   h 320
-     RELAY   6 / span 4   宽 268   h 320
-     FORGE  10 / span 3   宽 195   h 320     第 12 列空出来
+   方向卡栅格。五张卡同等规格，大尺寸全身展示。
+   12 栅双列排版（2 + 2 + 1 居中），单卡 span 6（宽 560px，高 460px）：
+     ORACLE  1 / span 6   h 460      WEAVER  7 / span 6  h 460
+     VAULT   1 / span 6   h 460      RELAY   7 / span 6  h 460
+     FORGE   4 / span 6   h 460      （末张居中对称）
    ------------------------------------------------------------------------- */
 
 .tracks {
@@ -59,29 +56,28 @@
   perspective: 1200px;
 }
 
+.track-card {
+  --card-h: 460px;
+}
+
 .track-card[data-track='ai'] {
-  grid-column: 1 / span 5;
-  --card-h: 480px;
+  grid-column: 1 / span 6;
 }
 
 .track-card[data-track='software'] {
-  grid-column: 7 / span 5;
-  --card-h: 480px;
+  grid-column: 7 / span 6;
 }
 
 .track-card[data-track='database'] {
-  grid-column: 2 / span 4;
-  --card-h: 320px;
+  grid-column: 1 / span 6;
 }
 
 .track-card[data-track='cloud-iot'] {
-  grid-column: 6 / span 4;
-  --card-h: 320px;
+  grid-column: 7 / span 6;
 }
 
 .track-card[data-track='industrial'] {
-  grid-column: 10 / span 3;
-  --card-h: 320px;
+  grid-column: 4 / span 6;
 }
 
 
@@ -202,23 +198,10 @@
   min-height: var(--card-h);
   /* 底部留出角标的位。角标绝对定位，不占栅格行。 */
   padding: var(--space-4) var(--space-5) var(--space-6);
-  gap: var(--space-2) var(--space-3);
+  gap: var(--space-2) var(--space-4);
   text-align: left;
   align-content: start;
-}
-
-.track-card[data-size='large'] {
-  --portrait-col: 42%;
-}
-
-/*
- * 小卡的右列窄一档。
- * FORGE 只跳 3 列（宽 268），38% 的右列会把「产线数字孪生与工业 SCADA」
- * 挤成两行，三张小卡高度就不齐（实测 328 vs 381）。
- * 扫了一轮：38/34/30/26% 都是两行，22% 才回到一行。
- */
-.track-card[data-size='small'] {
-  --portrait-col: 22%;
+  --portrait-col: 44%;
 }
 
 /* 顶部与角标横跨两列，其余文字一律待在左列 */
@@ -259,44 +242,18 @@
 .track-portrait {
   grid-column: 2;
   grid-row: 2 / span 3;
+  pointer-events: none;
 }
 
 .track-portrait .mascot {
   position: absolute;
+  right: 2%;
+  top: 36px;
+  width: 44%;
   height: auto;
   z-index: 0;
-  /*
-   * 离屏时跳过渲染。
-   *
-   * 每张立绘是 70 条 path 加 12 个动画节点，五张卡合起来 350 条。
-   * M7 实测移动端 CPU×4：主线程 styleLayout 2041ms → 617ms，
-   * paint 1330ms → 580ms，展开卡片的 click 事件 p50 从 168ms 降到 128ms。
-   *
-   * 估值给足 350px：立绘绝对定位在卡片上，右侧与底部刻意溢出（overR 最大 57px），
-   * 估小了浏览器会先按估值排一次再按真值排一次。实测桌面与移动五张卡的
-   * cardH / svgH / 溢出量在开关这条前后完全一致，截图逐块比过，最大像素差 0.05%
-   * （那是 halo 自转的相位差，不是版面差）。
-   */
   content-visibility: auto;
-  contain-intrinsic-size: auto 300px 350px;
-}
-
-/* 大卡出全身，底边沉到卡片下缘以下——BODY 在画框底部的闭合描边要切掉 */
-.track-card[data-size='large'] .track-portrait .mascot {
-  right: -12%;
-  bottom: -6%;
-  width: 60%;
-}
-
-/*
- * 小卡只出头肩，bust 裁切的下缘本身就顶住画框。
- * 右列只占 22%，立绘宽度不跟那一列——立绘是相对卡片定位的，
- * 它可以比右列宽，少掉的那部分只叠在能力名的细导轨上，不碰文字。
- */
-.track-card[data-size='small'] .track-portrait .mascot {
-  right: -6%;
-  top: var(--space-5);
-  width: 40%;
+  contain-intrinsic-size: auto 240px 280px;
 }
 
 .track-id,
@@ -435,11 +392,8 @@
   list-style: none;
   padding: var(--space-4) var(--space-5) var(--space-5);
   display: grid;
-  gap: var(--space-4);
-}
-
-.track-card[data-size='large'] .track-stages {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .track-stages > li {
@@ -487,23 +441,8 @@
    ------------------------------------------------------------------------- */
 
 @media (width < 1080px) {
-  .track-card[data-track='ai'],
-  .track-card[data-track='software'] {
-    grid-column: 1 / span 6;
-  }
-
-  .track-card[data-track='database'],
-  .track-card[data-track='cloud-iot'] {
-    grid-column: 1 / span 6;
-  }
-
-  .track-card[data-track='software'],
-  .track-card[data-track='cloud-iot'] {
-    grid-column: 7 / span 6;
-  }
-
-  .track-card[data-track='industrial'] {
-    grid-column: 4 / span 6;
+  .track-stages {
+    grid-template-columns: 1fr;
   }
 
   .track-card[data-size='large'] .track-stages {
@@ -527,18 +466,14 @@
   }
 
   /* 窄屏立绘收窄右列。390 宽的屏幕没有富余可给。 */
-  .track-card[data-size='large'],
-  .track-card[data-size='small'] {
+  .track-face {
     --portrait-col: 34%;
   }
 
-  /* 窄屏不出全身，一律按小卡的头肩尺寸贴右上 */
-  .track-card[data-size='large'] .track-portrait .mascot,
-  .track-card[data-size='small'] .track-portrait .mascot {
-    right: -4%;
-    top: var(--space-5);
-    bottom: auto;
-    width: 40%;
+  .track-portrait .mascot {
+    right: 0%;
+    top: 32px;
+    width: 36%;
   }
 
   .track-ability-keys {

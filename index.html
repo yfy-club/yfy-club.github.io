@@ -10,6 +10,23 @@
       content="云飞扬社团的开源项目矩阵与开发者档案库。五个技术方向，三个开源项目，一座观测站。"
     />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!--
+      Hero 的 NAVI 立绘是首屏 LCP 元素。它在 React 挂载后才出现在 DOM 里，
+      不预载的话要等主包解析完才开始下载。spec 7.3 记着 LCP 2.87s / 预算 2.0s 不达标，
+      这条是其中一枚杠杆。只预载最大档：Hero 的 clamp() 上限 700px，2× DPR 下取 800w。
+      产物由 scripts/build-portraits.ts 生成，改档位要一起改这里。
+    -->
+    <link
+      rel="preload"
+      as="image"
+      imagesrcset="
+        /images/characters/navi-800.webp 800w,
+        /images/characters/navi-512.webp 512w,
+        /images/characters/navi-256.webp 256w
+      "
+      imagesizes="(max-width: 768px) 46vw, min(48vw, 700px)"
+      fetchpriority="high"
+    />
   </head>
   <body>
     <div id="root"></div>

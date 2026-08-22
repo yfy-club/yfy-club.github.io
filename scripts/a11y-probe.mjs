@@ -17,7 +17,7 @@
  *              check:contrast 只扫令牌两两组合，扫不到真实配对，
  *              也扫不到硬编码在 src/data/docs.ts 产物里的 Shiki 高亮色。
  *   keyboard   Tab 序覆盖全部卡片，焦点环 2px + 2px 外偏移，Enter 展开 Esc 收起。
- *   aria       装饰性 HUD 与立绘 SVG 全部 aria-hidden，卡片是真实 button aria-expanded。
+ *   aria       装饰性 HUD 与立绘全部 aria-hidden，卡片是真实 button aria-expanded。
  *   reduced    粒子 / 视差 / 立绘惯性 / 滚动聚焦 / lenis 惯性 / 弹幕，六样逐个验。
  *   nojs       无 JS 时正文可读。
  *   forbidden  全站禁令：backdrop-filter 只准两处，box-shadow 负 spread，blur ≤ 8px。
@@ -420,7 +420,9 @@ async function probeAria(browser) {
 
   const r = await page.evaluate(() => {
     const svgs = [...document.querySelectorAll('svg')]
-    const mascots = svgs.filter((s) => s.classList.contains('mascot'))
+    // M8：立绘根从 <svg class=mascot> 换成 <div class=mascot>（栅格图 + 两层 halo SVG），
+    // 按 class 查根节点，不再按 svg 查。
+    const mascots = [...document.querySelectorAll('.mascot')]
     const unhidden = svgs.filter((s) => !s.closest('[aria-hidden="true"]'))
 
     const hudSel = [
@@ -471,7 +473,7 @@ async function probeAria(browser) {
     }
   })
 
-  assert(g, r.mascotCount > 0 && r.mascotHidden, `立绘 SVG ${r.mascotCount} 个全部 aria-hidden`)
+  assert(g, r.mascotCount > 0 && r.mascotHidden, `立绘 ${r.mascotCount} 层全部 aria-hidden`)
   assert(g, r.unhidden.length === 0, `装饰 SVG 无遗漏${r.unhidden.length ? `：${r.unhidden.join(' / ')}` : ''}`)
   assert(g, r.hudLeaks.length === 0, `HUD 原子 ${r.hudCount} 个全部 aria-hidden${r.hudLeaks.length ? `：漏 ${r.hudLeaks.join(' / ')}` : ''}`)
   assert(g, r.dockHidden, '向导挂件整层 aria-hidden')

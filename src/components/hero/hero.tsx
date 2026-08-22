@@ -66,7 +66,8 @@ export function Hero({ state = 'NEUTRAL' }: HeroProps) {
         </div>
 
         <div className="hero-mascot">
-          <Mascot character={NAVI} state={state} />
+          {/* 首屏 LCP 元素：eager + fetchpriority=high，并在 index.html 预载 */}
+          <Mascot character={NAVI} state={state} priority />
           <figcaption className="hero-mascot-plate">
             <Tag tone="solid">{NAVI.codename}</Tag>
             <span className="hero-mascot-name">{NAVI.name}</span>

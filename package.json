@@ -12,6 +12,7 @@
     "check": "npm run typecheck && npm run check:contrast && npm run fonts:subset && npm run build",
     "fonts:subset": "node --experimental-strip-types scripts/subset-fonts.ts",
     "shots:build": "node --experimental-strip-types scripts/build-shots.ts",
+    "portraits:build": "node --experimental-strip-types scripts/build-portraits.ts",
     "docs:build": "node --experimental-strip-types scripts/build-docs.ts",
     "prerender": "node --experimental-strip-types scripts/prerender.ts"
   },

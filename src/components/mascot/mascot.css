@@ -1,89 +1,213 @@
 /* =========================================================================
-   半身矢量看板娘
-   色值一律取令牌，这里不出现 #hex。几何在 geometry.ts，表情在 expressions.ts。
+   角色立绘
+
+   结构见 mascot.tsx。三层：svg.m-halo-back → img.m-portrait → svg.m-halo-front。
+   三层共用一套 viewBox 坐标：SVG 走 viewBox，HTML 走「viewBox 单位 ÷ --frame-* × 100%」。
+   位移一律用百分比而不是 px——立绘从 104px 的挂件到 700px 的 Hero 都是同一份 CSS，
+   写 px 的话挂件上的幅度会是 Hero 的七倍。
+
+   色值一律取令牌，这里不出现 #hex。摆位在 layout.ts，halo 造型在 emblem.tsx。
    ========================================================================= */
 
 .mascot {
+  position: relative;
+  display: block;
   width: 100%;
-  height: auto;
+  aspect-ratio: var(--frame-w) / var(--frame-h);
+  /* halo 与道具刻意探出取景框，由外层容器决定要不要裁 */
   overflow: visible;
-  /* 空白处不吃点击，只有画到的地方能被戳。SVG 的 visiblePainted 语义。 */
+  /* 空白处不吃点击，只有立绘本体能被戳 */
   pointer-events: none;
 
-  /* 惯性写进来的量，全部无量纲，在下面各自换算成 px 或 deg */
-  --sway-ahoge: 0;
-  --sway-ahoge-y: 0;
-  --sway-hair-b: 0;
-  --sway-hair-f: 0;
-  --sway-scarf: 0;
+  /* 惯性写进来的量，无量纲，单位是 viewBox 用户单位 */
   --sway-halo-x: 0;
   --sway-halo-y: 0;
   --sway-body-x: 0;
   --sway-body-y: 0;
-  --gaze-x: 0;
-  --gaze-y: 0;
-  --gaze-flip: 1;
-  --iris-scale: 1;
-}
 
-.mascot .m-parallax {
-  pointer-events: auto;
+  /* halo 与道具的描边。挂件那种尺寸要单独收细，见 dock.css */
+  --halo-stroke: 3;
+  --prop-stroke: 2.6;
 }
 
 /* -------------------------------------------------------------------------
-   六人色板。人与人的差别只有这五个变量 + 发型 path + halo/道具变体。
+   六人色板。栅格立绘自带配色，这里只剩 halo 与道具要用的主调一个变量。
+   （老骨架还要 --hair / --hair-deep / --hair-line / --iris-color，
+     那四个随矢量五官一起作废，见 spec M8 修正记录。）
    ------------------------------------------------------------------------- */
 
 .mascot[data-char='navi'] {
-  --hair: var(--char-navi-main);
-  --hair-deep: var(--char-navi-deep);
-  --hair-line: var(--char-navi-line);
-  --iris-color: var(--char-navi-iris);
   --accent: var(--char-navi-accent);
 }
-
 .mascot[data-char='oracle'] {
-  --hair: var(--char-oracle-main);
-  --hair-deep: var(--char-oracle-deep);
-  --hair-line: var(--char-oracle-line);
-  --iris-color: var(--char-oracle-iris);
   --accent: var(--char-oracle-accent);
 }
-
 .mascot[data-char='weaver'] {
-  --hair: var(--char-weaver-main);
-  --hair-deep: var(--char-weaver-deep);
-  --hair-line: var(--char-weaver-line);
-  --iris-color: var(--char-weaver-iris);
   --accent: var(--char-weaver-accent);
 }
-
 .mascot[data-char='vault'] {
-  --hair: var(--char-vault-main);
-  --hair-deep: var(--char-vault-deep);
-  --hair-line: var(--char-vault-line);
-  --iris-color: var(--char-vault-iris);
   --accent: var(--char-vault-accent);
 }
-
 .mascot[data-char='relay'] {
-  --hair: var(--char-relay-main);
-  --hair-deep: var(--char-relay-deep);
-  --hair-line: var(--char-relay-line);
-  --iris-color: var(--char-relay-iris);
   --accent: var(--char-relay-accent);
 }
-
 .mascot[data-char='forge'] {
-  --hair: var(--char-forge-main);
-  --hair-deep: var(--char-forge-deep);
-  --hair-line: var(--char-forge-line);
-  --iris-color: var(--char-forge-iris);
   --accent: var(--char-forge-accent);
 }
 
 /* -------------------------------------------------------------------------
-   材质。扁平色块 + 同色系深色描边，不做厚涂（spec 3.1）。
+   图层
+   ------------------------------------------------------------------------- */
+
+.mascot .m-parallax,
+.mascot .m-pose,
+.mascot .m-breathe,
+.mascot .m-layer {
+  position: absolute;
+  inset: 0;
+}
+
+.mascot .m-layer {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.mascot .m-portrait {
+  position: absolute;
+  left: var(--img-x);
+  top: var(--img-y);
+  width: var(--img-w);
+  /* 高度交给图片自身比例。写死高度等于赌六张图比例完全一致，它们差 2%。 */
+  height: auto;
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+  /* 20px 的 LQIP 由 inline style 给，撑满并保持比例，图到了就被盖住 */
+  background-size: 100% 100%;
+  background-repeat: no-repeat;
+}
+
+/* -------------------------------------------------------------------------
+   惯性。弹簧算好的位移写成变量，这里只做「用户单位 → 取景框百分比」的换算。
+   身体与 halo 各一套弹簧，halo 的刚度低、增益高，所以永远慢半拍——
+   矢量骨架时代的纵深靠头发分层，现在靠这半拍。
+   ------------------------------------------------------------------------- */
+
+.mascot .m-parallax {
+  transform: translate(
+    calc(var(--sway-body-x) / var(--frame-w) * 100%),
+    calc(var(--sway-body-y) / var(--frame-h) * 100%)
+  );
+}
+
+/*
+ * halo 用 translate 属性而不是 transform：
+ * 下面的呼吸浮动与 POUT 抖动分别占用 translate 与 rotate，
+ * 三样写进同一个 transform 会互相整条覆盖（transform 不叠加）。
+ */
+.mascot .m-halo {
+  translate: calc(var(--sway-halo-x) / var(--frame-w) * 100%)
+    calc(var(--sway-halo-y) / var(--frame-h) * 100%);
+}
+
+/* -------------------------------------------------------------------------
+   呼吸。栅格立绘没有可单独摆的部件，静止时的「活着」全靠这一条。
+   以脚下为轴，纵向 0.6% 的位移 + 0.6% 的拉伸，4.6s 一轮。
+   幅度再大就成了浮空，小于这个数在 104px 的挂件上看不出来。
+   ------------------------------------------------------------------------- */
+
+.mascot .m-breathe {
+  transform-origin: 50% 100%;
+  animation: mascot-breathe 4.6s ease-in-out infinite;
+}
+
+@keyframes mascot-breathe {
+  0%,
+  100% {
+    transform: translateY(0) scaleY(1);
+  }
+  50% {
+    transform: translateY(-0.6%) scaleY(1.006);
+  }
+}
+
+/* halo 比身体晚 0.9s 起呼吸，两条曲线错开才有前后层，同相位就是一整块贴纸在动 */
+.mascot .m-halo {
+  animation: mascot-halo-float 4.6s ease-in-out -0.9s infinite;
+}
+
+@keyframes mascot-halo-float {
+  0%,
+  100% {
+    transform: translateY(0.35%);
+  }
+  50% {
+    transform: translateY(-0.35%);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   七态。表情烘死在图里，状态改的是整体姿态（spec M8 修正记录 / states.ts）。
+   位移全部用百分比，幅度按取景框走，挂件与 Hero 观感一致。
+   ------------------------------------------------------------------------- */
+
+.mascot .m-pose {
+  transform-origin: 50% 88%;
+  transition: transform var(--dur-enter) var(--ease-out-expo);
+}
+
+.mascot[data-state='FOCUS'] .m-pose {
+  transform: translateY(0.7%) scale(1.004);
+}
+
+.mascot[data-state='SMILE'] .m-pose {
+  transform: translateY(-0.5%) scale(1.014);
+}
+
+.mascot[data-state='THINK'] .m-pose {
+  transform: rotate(-1.5deg);
+}
+
+.mascot[data-state='SURPRISE'] .m-pose {
+  transform: translateY(-1.4%) scale(1.022);
+}
+
+.mascot[data-state='IDLE_DAZE'] .m-pose {
+  transform: translateY(0.9%) scale(0.996);
+}
+
+/* 发呆时呼吸拉长放轻，读作走神 */
+.mascot[data-state='IDLE_DAZE'] .m-breathe {
+  animation-duration: 7.4s;
+}
+
+/* 被连点三次。一次性弹性形变，5s 的 POUT 里只在开头演这 0.5s。 */
+.mascot[data-state='POUT'] .m-pose {
+  animation: mascot-pout 0.5s var(--ease-out-expo);
+}
+
+@keyframes mascot-pout {
+  0% {
+    transform: translateY(0) scale(1, 1);
+  }
+  22% {
+    transform: translateY(1.2%) scale(1.05, 0.94);
+  }
+  55% {
+    transform: translateY(-1.6%) scale(0.97, 1.05);
+  }
+  78% {
+    transform: translateY(0.4%) scale(1.02, 0.98);
+  }
+  100% {
+    transform: translateY(0) scale(1, 1);
+  }
+}
+
+/* -------------------------------------------------------------------------
+   halo 与道具。线条走角色主调，全部 ≥3:1（check:contrast 里卡着）。
    ------------------------------------------------------------------------- */
 
 .mascot path,
@@ -93,308 +217,15 @@
   stroke-linecap: round;
 }
 
-.mascot .skin {
-  fill: var(--skin-base);
-  stroke: var(--skin-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-/* 不描边的皮肤色。眨眼遮罩用，描了边会在脸上多出一圈眼窝轮廓。 */
-.mascot .skin-flat {
-  fill: var(--skin-base);
-}
-
-.mascot .skin-shade {
-  fill: var(--skin-shade);
-  stroke: none;
-  opacity: 0.75;
-}
-
-.mascot .skin-line {
-  fill: none;
-  stroke: var(--skin-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-.mascot .hair-mass {
-  fill: var(--hair);
-  stroke: var(--hair-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-/* 惯性组比主体暗一档，头发才有前后层，不是一块色板 */
-.mascot .strand-b,
-.mascot .strand-f {
-  fill: var(--hair-deep);
-}
-
-.mascot .ornament {
-  fill: var(--accent);
-  stroke: var(--hair-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-.mascot .cloth {
-  fill: var(--uniform-base);
-  stroke: var(--uniform-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-.mascot .cloth-sunk {
-  fill: var(--uniform-shade);
-  stroke: var(--uniform-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-/* 锁骨。肩不能是一整块白。 */
-.mascot .cloth-line {
-  fill: none;
-  stroke: var(--uniform-line);
-  stroke-width: var(--mascot-stroke);
-  opacity: 0.6;
-}
-
-/* 制服六人同款，只有这两道镶边与领巾换成各自主调 */
-.mascot .trim {
-  fill: none;
-  stroke: var(--accent);
-  stroke-width: var(--mascot-stroke);
-}
-
-.mascot .trim-fill {
-  fill: var(--accent);
-  stroke: var(--uniform-line);
-  stroke-width: var(--mascot-stroke);
-}
-
-/* ---------------------------------------------------------------- 眼 */
-
-.mascot .sclera {
-  fill: var(--sclera);
-  stroke: none;
-}
-
-.mascot .sclera-shade {
-  fill: var(--sclera-shade);
-  stroke: none;
-}
-
-.mascot .socket-line {
-  fill: none;
-  stroke: var(--hair-line);
-  stroke-width: var(--mascot-stroke);
-  opacity: 0.55;
-}
-
-.mascot .iris-body {
-  fill: var(--iris-color);
-  stroke: none;
-  /* 联动特效要在这条上改颜色，进出都走过渡，不硬切 */
-  transition: fill var(--dur-swap) var(--ease-out-expo);
-}
-
-/* 瞳底一圈亮。规格 3.1 只准两处渐变，这是其中之一（另一处在发丝）。 */
-.mascot .iris-glow {
-  fill: var(--sclera);
-  stroke: none;
-  opacity: 0.42;
-}
-
-.mascot .pupil {
-  fill: var(--ink-900);
-  stroke: none;
-}
-
-.mascot .shine {
-  fill: var(--sclera);
-  stroke: none;
-}
-
-.mascot .shine-sub {
-  opacity: 0.6;
-}
-
-.mascot .lash,
-.mascot .lid-line {
-  fill: none;
-  stroke: var(--hair-line);
-  stroke-width: calc(var(--mascot-stroke) * 3.2);
-}
-
-.mascot .lash-flick {
-  fill: none;
-  stroke: var(--hair-line);
-  stroke-width: calc(var(--mascot-stroke) * 2);
-}
-
-.mascot .brow {
-  fill: none;
-  stroke: var(--hair-line);
-  stroke-width: calc(var(--mascot-stroke) * 2.5);
-}
-
-.mascot .mouth {
-  fill: none;
-  stroke: var(--mouth-line);
-  stroke-width: calc(var(--mascot-stroke) * 1.6);
-}
-
-.mascot .mouth-open {
-  fill: var(--mouth-fill);
-}
-
-.mascot .blush {
-  fill: var(--pink-300);
-  stroke: none;
-}
-
-/* 瞳跟着鼠标走 ±3 用户单位，放大缩小以瞳心为轴。裁在眼窝里，跑不出去。 */
-.mascot .iris {
-  transform: translate(
-      calc((var(--gaze-x) + var(--gaze-bias-x, 0)) * var(--gaze-flip) * 1px),
-      calc((var(--gaze-y) + var(--gaze-bias-y, 0)) * 1px)
-    )
-    scale(var(--iris-scale));
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: scale var(--dur-swap) var(--ease-out-expo);
-}
-
-/* 右眼在镜像坐标系里，横向跟随要反号才和左眼看同一个方向 */
-.mascot .eye-unit[data-side='r'] {
-  --gaze-flip: -1;
-}
-
-/*
- * 闭眼 → 眼球淡出，闭眼弧线在差分层里同步淡入。
- * 压睑 → 固定睫毛淡出，睑缘线接手。睫毛留在原位不动的话，
- * 半睁的眼会变成脸上糊了一块肉色，试过，很吓人。
- */
-.mascot .eyeball,
-.mascot .lashes {
-  transition: opacity var(--dur-swap) var(--ease-out-expo);
-}
-
-.mascot[data-eye-l='shut'] .eye-unit[data-side='l'] .eyeball,
-.mascot[data-eye-r='shut'] .eye-unit[data-side='r'] .eyeball,
-.mascot[data-eye-l='shut'] .eye-unit[data-side='l'] .lashes,
-.mascot[data-eye-r='shut'] .eye-unit[data-side='r'] .lashes,
-.mascot[data-eye-l='lid'] .eye-unit[data-side='l'] .lashes,
-.mascot[data-eye-r='lid'] .eye-unit[data-side='r'] .lashes {
-  opacity: 0;
-}
-
-/* 眨眼。闭 90ms 张 60ms，规格 3.3 写死。 */
-.mascot .m-blink {
-  opacity: 0;
-  transition: opacity 60ms linear;
-}
-
-.mascot .m-blink[data-on='true'] {
-  opacity: 1;
-  transition-duration: 90ms;
-}
-
-/* -------------------------------------------------------------------------
-   差分交叉淡入。120ms，opacity + 3px 位移，不允许硬切（spec 3.3）。
-   ------------------------------------------------------------------------- */
-
-.mascot .m-diff {
-  animation: mascot-diff-in var(--dur-swap) var(--ease-out-expo) both;
-}
-
-.mascot .m-diff[data-phase='out'] {
-  animation-name: mascot-diff-out;
-  pointer-events: none;
-}
-
-@keyframes mascot-diff-in {
-  from {
-    opacity: 0;
-    translate: 0 3px;
-  }
-  to {
-    opacity: 1;
-    translate: 0 0;
-  }
-}
-
-@keyframes mascot-diff-out {
-  from {
-    opacity: 1;
-    translate: 0 0;
-  }
-  to {
-    opacity: 0;
-    translate: 0 -3px;
-  }
-}
-
-/* -------------------------------------------------------------------------
-   惯性。位移由弹簧算好写成变量，这里只做「位移 → 角度」的换算。
-
-   换算系数 = 目标位移 / 部件长度，单位 deg/单位：
-     后发  9.0 / 250 rad ≈ 2.06°  → 0.24
-     前发  6.3 / 130 rad ≈ 2.78°  → 0.44
-     呆毛 14.0 /  60 rad ≈ 13.4°  → 0.90
-     领巾 10.8 /  95 rad ≈  6.5°  → 0.60
-   halo 与身体是整体平移，不转，直接用位移。
-   ------------------------------------------------------------------------- */
-
-.mascot .m-parallax {
-  transform: translate(calc(var(--sway-body-x) * 1px), calc(var(--sway-body-y) * 1px));
-}
-
-.mascot .strand-b {
-  transform: rotate(calc(var(--sway-hair-b) * 0.24deg));
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
-}
-
-.mascot .strand-f {
-  transform: rotate(calc(var(--sway-hair-f) * 0.44deg));
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
-}
-
-/* 呆毛从发根往上翘，轴心在下端 */
-.mascot .ahoge {
-  transform: rotate(calc(var(--sway-ahoge) * 0.9deg + var(--ahoge-droop, 0deg)));
-  transform-box: fill-box;
-  transform-origin: 50% 100%;
-}
-
-/* 领巾轴心在结上，不在尾巴中间 */
-.mascot .scarf {
-  transform: rotate(calc(var(--sway-scarf) * 0.6deg));
-  transform-box: fill-box;
-  transform-origin: 50% 0%;
-}
-
-/* halo 延迟跟随头部，比身体多走一点 */
-.mascot .m-halo {
-  transform: translate(calc(var(--sway-halo-x) * 1px), calc(var(--sway-halo-y) * 1px));
-}
-
-/* THINK 呆毛下垂（spec 3.3） */
-.mascot[data-state='THINK'] {
-  --ahoge-droop: 26deg;
-}
-
-.mascot .ahoge {
-  transition: rotate var(--dur-enter) var(--ease-out-expo);
-}
-
-/* -------------------------------------------------------------------------
-   halo 与道具。线条走角色主调，全部 ≥3:1（check:contrast 里卡着）。
-   ------------------------------------------------------------------------- */
-
 .mascot .halo-ring path,
 .mascot .halo-ring circle {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 3;
-  /* 环上的装饰是在压扁过的坐标系里画的，描边不能跟着压 */
+  stroke-width: var(--halo-stroke);
+  /*
+   * 环上的装饰画在压扁过的坐标系里，外层还套着 layout.ts 按实测颅宽给的等比放大。
+   * 两层缩放都不该动描边粗细，一并靠这条挡掉。
+   */
   vector-effect: non-scaling-stroke;
 }
 
@@ -431,6 +262,13 @@
   animation: mascot-wave 2.1s ease-out infinite;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+/* 发呆时环也慢下来。转速是这套 halo 唯一能表达「精神状态」的通道。 */
+.mascot[data-state='IDLE_DAZE'] .halo-orbit,
+.mascot[data-state='IDLE_DAZE'] .halo-spin-cw,
+.mascot[data-state='IDLE_DAZE'] .halo-spin-ccw {
+  animation-duration: 40s;
 }
 
 @keyframes mascot-spin {
@@ -477,7 +315,10 @@
 
 /* POUT 时 halo 抖（spec 3.3） */
 .mascot[data-state='POUT'] .m-halo {
-  animation: mascot-shake 0.24s linear infinite;
+  rotate: -1.4deg;
+  animation:
+    mascot-halo-float 4.6s ease-in-out -0.9s infinite,
+    mascot-shake 0.24s linear infinite;
 }
 
 @keyframes mascot-shake {
@@ -495,7 +336,7 @@
 .mascot .prop-line {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2.6;
+  stroke-width: var(--prop-stroke);
 }
 
 .mascot .prop-solid {
@@ -513,7 +354,7 @@
 .mascot .prop-wave {
   fill: none;
   stroke: var(--accent);
-  stroke-width: 2.6;
+  stroke-width: var(--prop-stroke);
   animation: mascot-wave 1.35s ease-out infinite;
   transform-box: fill-box;
   transform-origin: 50% 100%;
@@ -543,75 +384,74 @@
 }
 
 /* -------------------------------------------------------------------------
-   联动特效（spec 3.4 + M4 修正记录）。
+   联动特效（spec 3.4 + M4/M8 修正记录）。
 
-   三个通道，不往骨架里加新 path：
-     --fx-tone      瞳内映色
-     data-fx-halo   halo 反应，五种各不相同
-     data-fx-scarf  领巾扬起，叠在惯性位移之上
+   老版本三个通道里的两个随矢量骨架一起没了：
+     瞳内映色 —— 瞳孔在图里，改不了
+     领巾扬起 —— 领巾在图里，摆不动
+   映色改挂到 halo 上：向导的环染上被悬停方向的主调，同样读得出「她在看那边」，
+   而且挂件只有 104px，环比瞳孔看得清得多。领巾那一路直接取消。
 
-   全部 ≤ 500ms，属性一掉 transition 自己反向跑回去，不留残留。
+   halo 反应五种各不相同，全部 ≤ 500ms，属性一掉自己反向跑回去，不留残留。
    ------------------------------------------------------------------------- */
 
-.mascot[data-fx-halo] .iris-body {
-  fill: var(--fx-tone);
-}
-
-/* 瞳孔跟着派细一点，否则映色上来之后黑块把颜色吃掉一半 */
-.mascot[data-fx-halo] .pupil {
-  scale: 0.86;
-  transform-box: fill-box;
-  transform-origin: center;
-  transition: scale var(--dur-micro) var(--ease-out-expo);
+.mascot .halo-ring path,
+.mascot .halo-ring circle,
+.mascot .halo-solid {
+  transition:
+    stroke var(--dur-swap) var(--ease-out-expo),
+    fill var(--dur-swap) var(--ease-out-expo);
 }
 
 /* halo 一律提一档描边，不动用发光——发光就是弥散，2.5 禁了 */
 .mascot[data-fx-halo] .halo-ring path,
 .mascot[data-fx-halo] .halo-ring circle {
-  stroke: var(--fx-tone);
-  stroke-width: 4;
-  transition:
-    stroke var(--dur-micro) var(--ease-out-expo),
-    stroke-width var(--dur-micro) var(--ease-out-expo);
+  stroke: var(--fx-tone, var(--accent));
+  stroke-width: calc(var(--halo-stroke) + 1);
 }
 
 .mascot[data-fx-halo] .halo-solid {
-  fill: var(--fx-tone);
-  transition: fill var(--dur-micro) var(--ease-out-expo);
+  fill: var(--fx-tone, var(--accent));
 }
 
-/* ORACLE 神经节点顺序点亮。把 2.2s 的闲置节奏提到 0.5s 一轮 */
 .mascot[data-fx-halo='node'] .halo-node {
-  animation-duration: 0.5s;
+  animation-duration: 0.9s;
 }
 
 /* 本来没节点的 halo（NAVI 就没）靠指针加速表现 node */
 .mascot[data-fx-halo='node'] .halo-orbit,
 .mascot[data-fx-halo='spin'] .halo-orbit {
-  animation-duration: 1.1s;
+  animation-duration: 2.4s;
 }
 
-/* WEAVER 齿轮转动 */
 .mascot[data-fx-halo='spin'] .halo-spin-cw {
-  animation-duration: 1.6s;
+  animation-duration: 3.2s;
 }
 
 .mascot[data-fx-halo='spin'] .halo-spin-ccw {
-  animation-duration: 1.2s;
+  animation-duration: 2.4s;
 }
 
 /* VAULT 三层同心环逐层沉降。没分层的 halo 整环下沉一次 */
 .mascot[data-fx-halo='sink'] .m-halo {
-  animation: mascot-sink 0.5s var(--ease-out-expo) 2;
+  animation:
+    mascot-halo-float 4.6s ease-in-out -0.9s infinite,
+    mascot-halo-dip 0.5s var(--ease-out-expo) 1;
 }
 
 .mascot[data-fx-halo='sink'] .halo-sink {
-  animation-duration: 0.5s;
+  animation-duration: 1.1s;
 }
 
-/* RELAY 向外扰散三圈信号。没波纹层的 halo 用整环扩张代替 */
+@keyframes mascot-halo-dip {
+  50% {
+    translate: 0 2.4%;
+  }
+}
+
+/* RELAY 向外扩散三圈信号。没波纹层的 halo 用整环扩张代替 */
 .mascot[data-fx-halo='wave'] .halo-wave {
-  animation-duration: 0.5s;
+  animation-duration: 0.85s;
 }
 
 .mascot[data-fx-halo='wave'] .m-halo-front {
@@ -619,18 +459,12 @@
 }
 
 @keyframes mascot-halo-pulse {
-  from {
-    scale: 1;
-  }
   50% {
-    scale: 1.12;
-  }
-  to {
-    scale: 1;
+    scale: 1.08;
   }
 }
 
-/* FORGE 琥珀火花。环上一道瞬时的强描边，不画新图层 */
+/* FORGE 琥珀火花。环上所有线条闪一次 */
 .mascot[data-fx-halo='spark'] .halo-ring path {
   animation: mascot-halo-spark 0.5s linear 1;
 }
@@ -638,20 +472,28 @@
 @keyframes mascot-halo-spark {
   0%,
   100% {
-    stroke-width: 4;
+    opacity: 1;
   }
-  40% {
-    stroke-width: 7;
+  30%,
+  70% {
+    opacity: 0.35;
   }
 }
 
-/* 领巾扬起。叠在惯性旋转上，不抢惯性的控制权 */
-.mascot .scarf {
-  transition: rotate var(--dur-micro) var(--ease-out-expo);
+/*
+ * 轮廓光。栅格立绘唯一能整体强调的通道：drop-shadow 吃 alpha，
+ * 沿着人物剪影描一圈主调，不是矩形外发光。
+ *
+ * 只在交互时出现，静止画面里没有光（规格 2.5 第 4 条），
+ * 半径 5px 也在第 2 条的上限之内。
+ */
+.mascot .m-portrait {
+  transition: filter var(--dur-micro) var(--ease-out-expo);
 }
 
-.mascot[data-fx-scarf='up'] .scarf {
-  rotate: -9deg;
+.mascot:hover .m-portrait,
+.mascot[data-fx-halo] .m-portrait {
+  filter: drop-shadow(0 0 5px var(--fx-tone, var(--accent)));
 }
 
 /* -------------------------------------------------------------------------
@@ -670,12 +512,29 @@
 .mascot[data-alive='false'] .prop-stack,
 .mascot[data-alive='false'] .prop-float,
 .mascot[data-alive='false'] .prop-needle,
+.mascot[data-alive='false'] .m-breathe,
 .mascot[data-alive='false'] .m-halo {
   animation: none;
 }
 
+/*
+ * reduce 下不只是关动画，姿态位移也要一起关。
+ * 进区状态照常切（FOCUS / SMILE / THINK 由滚动位置决定），
+ * 只关掉 .m-pose 的话立绘会跟着滚动倾斜缩放——那就是把动画换了个写法而已。
+ */
 @media (prefers-reduced-motion: reduce) {
   .mascot * {
     animation: none !important;
+    transition: none !important;
+  }
+
+  .mascot .m-pose,
+  .mascot .m-breathe {
+    transform: none !important;
+  }
+
+  .mascot .m-halo {
+    translate: none !important;
+    rotate: none !important;
   }
 }
