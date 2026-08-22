@@ -25,10 +25,17 @@ export function DocTree({ current, section = null }: TreeProps) {
 
       {DOC_CATEGORIES.map((cat) => (
         <section key={cat.id} className="doc-tree-group">
-          <h2 className="doc-tree-label">
+          {/*
+            分类名不是标题，是导航分组的标签。
+
+            原本写成 h2，而目录树在 DOM 里排在 <main> 的 h1 之前——
+            整页第一个标题就成了 h2，标题层级从 h2 起跳。a11y 探针实测抓到。
+            这一层的语义由外层 nav[aria-label] 承担，不需要标题元素。
+          */}
+          <p className="doc-tree-label">
             <span className="doc-tree-code">{cat.code}</span>
             {cat.label}
-          </h2>
+          </p>
 
           <ul className="doc-tree-list">
             {DOCS.filter((d) => d.category === cat.id).map((doc) => {

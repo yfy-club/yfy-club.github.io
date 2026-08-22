@@ -10,6 +10,7 @@
  * 滚出视口暂停 RAF。prefers-reduced-motion 下整个组件不挂载画布。
  */
 import { useEffect, useRef } from 'react'
+import { useReducedMotion } from '@/lib/use-reduced-motion'
 
 const AREA_PER_PARTICLE = 22000
 const MIN_COUNT = 40
@@ -58,11 +59,19 @@ interface ParticleFieldProps {
 
 export function ParticleField({ className }: ParticleFieldProps) {
   const canvas = useRef<HTMLCanvasElement>(null)
+  /*
+   * 减弱动效下连 <canvas> 一起不出。
+   *
+   * 原本只是在 effect 里提前 return，画布留在 DOM 里空着——文件头注释写的是
+   * 「整个组件不挂载画布」，实现没跟上，a11y 探针实测抓到。
+   * 首帧一律 false（见 use-reduced-motion.ts），预渲染产物与注水首帧一致。
+   */
+  const reduced = useReducedMotion()
 
   useEffect(() => {
     const el = canvas.current
     if (!el) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (reduced) return
 
     const ctx = el.getContext('2d', { alpha: true })
     if (!ctx) return
@@ -246,7 +255,9 @@ export function ParticleField({ className }: ParticleFieldProps) {
       window.removeEventListener('pointermove', onPointer)
       window.removeEventListener('pointerleave', onLeave)
     }
-  }, [])
+  }, [reduced])
+
+  if (reduced) return null
 
   return <canvas ref={canvas} className={['particles', className].filter(Boolean).join(' ')} aria-hidden="true" />
 }

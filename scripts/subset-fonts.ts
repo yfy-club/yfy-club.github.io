@@ -91,6 +91,15 @@ const LAB_OWNED = SCOPES.lab
 const DOCS_OWNED = ['src/data/docs.ts']
 
 /**
+ * 这些文件的中文一个字都不上屏，三个作用域一起跳过。
+ *
+ * page-title.ts 里的 title 归浏览器标签栏，meta description 只进 head——
+ * 两样都由系统 UI 或搜索引擎渲染，不经过我们的 @font-face。
+ * 算进语料等于为搜索结果摘要背首屏字体，M7 实测这一份就是 47 个字。
+ */
+const HEAD_OWNED = ['src/lib/page-title.ts']
+
+/**
  * 只在正文出现的字段。700 的语料把它们剔掉。
  *
  * 为什么要分：400 与 700 共用一份语料时，每个新字收两遍钱。
@@ -251,14 +260,21 @@ const LATIN_RANGE =
   'U+2000-206F, U+2074, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD'
 
 async function main() {
-  const ui = await collect(SCOPES.ui, [...DOCS_OWNED, ...LAB_OWNED])
-  const lab = await collect(SCOPES.lab)
-  const docs = await collect(SCOPES.docs)
+  const ui = await collect(SCOPES.ui, [...DOCS_OWNED, ...LAB_OWNED, ...HEAD_OWNED])
+  const lab = await collect(SCOPES.lab, HEAD_OWNED)
+  const docs = await collect(SCOPES.docs, HEAD_OWNED)
 
-  // 后两组只保留 ui 没有的字，且互不重叠——unicode-range 交叠会让浏览器拉两份。
-  const labOnly = new Set([...lab.chars].filter((c) => !ui.chars.has(c)))
-  const docsOnly = new Set(
-    [...docs.chars].filter((c) => !ui.chars.has(c) && !labOnly.has(c)),
+  /*
+   * 后两组只保留 ui 没有的字，且互不重叠——unicode-range 交叠会让浏览器拉两份。
+   *
+   * docs 优先于 lab：两组有 30 个字重叠，谁在前谁独占那份 face。
+   * 排在后面的那一组要用这些字就得连带下前一组的分片。
+   * /docs 是给所有人看的正式路由，?lab=1 是内部验收页——让验收页多下 30 KB
+   * 换 /docs 少下一份，是唯一说得通的方向。
+   */
+  const docsOnly = new Set([...docs.chars].filter((c) => !ui.chars.has(c)))
+  const labOnly = new Set(
+    [...lab.chars].filter((c) => !ui.chars.has(c) && !docsOnly.has(c)),
   )
 
   /**
@@ -300,8 +316,8 @@ async function main() {
     faces.push(face(cjkUi, weight, toUnicodeRange(uiSet)))
 
     for (const [name, set] of [
-      ['lab', labOnly],
       ['docs', docsOnly],
+      ['lab', labOnly],
     ] as const) {
       if (set.size === 0) continue
       const file = `noto-sans-sc-cjk-${weight}-${name}.woff2`

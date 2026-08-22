@@ -1,0 +1,67 @@
+# 构建并发布到 GitHub Pages。
+#
+# 现在不启用：只有 workflow_dispatch，没有 push 触发。
+# 本工程全程本地开发，仓库没有 remote，这个文件是留给接手的人的部署说明，
+# 不是现在要跑的流水线。真要上线时按下面三步做：
+#
+#   1. 仓库 Settings → Pages → Source 选 "GitHub Actions"
+#   2. 在这个文件的 on: 下面加回 push: branches: [main]
+#   3. 推一次 main
+#
+# 组织站点 yfy-club.github.io 部署在根路径，vite.config.ts 的 base 保持 '/'，不用改。
+
+name: Deploy
+
+on:
+  workflow_dispatch:
+
+# GITHUB_TOKEN 的最小权限。pages 与 id-token 是 deploy-pages 要的，缺一个就 403。
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同时只跑一个部署。排队而不是取消——取消正在发布的那次会让 Pages 停在半成品上。
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # 四道门禁跟本地同一条命令：typecheck → 对比度 → 字体子集与预算 → 生产构建（含预渲染）。
+      # 字体产物已提交进仓库，这一步会重切一遍并核对预算，改了文案没跑 fonts:subset 会在这里红。
+      - run: npm run check
+
+      # 字体子集是确定性输出。重切后有 diff 说明提交的产物过期了，
+      # 让它红在这里，别让线上跟仓库里的字体不一致。
+      - name: 校验字体产物是最新的
+        run: git diff --exit-code -- src/assets/fonts src/styles/fonts.css
+
+      - uses: actions/configure-pages@v5
+
+      # dist/ 里已经有 .nojekyll（从 public/ 复制），否则 Pages 会吃掉 _ 开头的资源目录。
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

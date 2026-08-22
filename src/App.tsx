@@ -11,7 +11,7 @@ import { DocPage, DocsIndex } from './components/docs/archive'
 import { TRACK_FX, stageFx, type MascotFx } from './components/mascot/fx'
 import type { MascotState } from './components/mascot/expressions'
 import type { TrackSlug } from './data/characters'
-import { pageTitle } from './lib/page-title'
+import { pageDescription, pageTitle } from './lib/page-title'
 import { scrollToAnchor, scrollToTop } from './lib/smooth-scroll'
 import { MascotLab } from './mascot-lab'
 import './app.css'
@@ -27,7 +27,7 @@ import './app.css'
  */
 export default function App() {
   useRouteScroll()
-  useDocumentTitle()
+  useDocumentHead()
 
   return (
     <Routes>
@@ -78,14 +78,22 @@ function useRouteScroll() {
 }
 
 /**
- * 逐页标题。预渲染已经把它写进静态页的 <title> 了，
- * 这里补的是客户端换路由那一路：pushState 不会自己改标题。
+ * 逐页 title 与 meta description。
+ *
+ * 预渲染已经把两样都写进静态页的 head 了（scripts/prerender.ts），
+ * 这里补的是客户端换路由那一路：pushState 既不改标题也不改 meta。
+ *
+ * description 在客户端换路由后其实没人读——爬虫拿的是静态页那一份。
+ * 跟一份是为了让 DOM 与地址栏始终自洽：调试时 F12 看到的 head 就是这条路由的 head。
  */
-function useDocumentTitle() {
+function useDocumentHead() {
   const { pathname } = useLocation()
 
   useEffect(() => {
     document.title = pageTitle(pathname)
+
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="description"]')
+    if (meta) meta.content = pageDescription(pathname)
   }, [pathname])
 }
 

@@ -93,8 +93,8 @@
    ------------------------------------------------------------------------- */
 
 .docs {
-  /* 导航条固定高 63px，长文顶不能压在它下面 */
-  padding-top: calc(63px + var(--space-6));
+  /* 导航条固定高，长文顶不能压在它下面。写死 63px 会跟 --nav-h-sm 脱钩 */
+  padding-top: calc(var(--nav-h) + var(--space-6));
   padding-bottom: var(--space-7);
 }
 
@@ -108,7 +108,7 @@
 
 .docs-side {
   position: sticky;
-  top: calc(63px + var(--space-4));
+  top: calc(var(--nav-h) + var(--space-4));
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
@@ -179,7 +179,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 .doc-tree-list,
@@ -239,11 +239,15 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
+/*
+ * 当前项的序号。--pink-300 被 2.1 明令禁止承载文字，且对 --sky-700 只有 3.53:1。
+ * 换 --pink-100，4.95:1，粉味还在。见 spec 2.1 的 M7 修正记录。
+ */
 .doc-tree-item[data-current='true'] .doc-tree-index {
-  color: var(--pink-300);
+  color: var(--pink-100);
 }
 
 .doc-tree-title {
@@ -321,10 +325,16 @@
 }
 
 .doc-h3 {
-  /* 导航条固定高 63px，锚点跳过来不留量的话标题正好被盖住 */
-  scroll-margin-top: calc(63px + var(--space-4));
+  /* 锚点跳过来要给导航条留量，否则标题正好被盖住。与 app.css 的分区同一个令牌 */
+  scroll-margin-top: calc(var(--nav-h) + var(--space-4));
   margin-top: var(--space-4);
   color: var(--ink-900);
+  /*
+   * 标签是 h2（h1 是篇名，中间不能跳级），字号仍按 h3 阶。
+   * 长文里的节标题上到 --text-h2 的 26-36px 会跟篇名抢，读起来像每节都是新页。
+   */
+  font-size: var(--text-h3);
+  line-height: var(--leading-h3);
 }
 
 .doc-para {
@@ -395,7 +405,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
-  color: var(--ink-400);
+  color: var(--ink-500);
   pointer-events: none;
 }
 
@@ -506,7 +516,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 .doc-turn-title {
@@ -537,7 +547,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 .doc-index-list {
@@ -598,7 +608,7 @@
   font-weight: 600;
   letter-spacing: 0.08em;
   white-space: nowrap;
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 /* -------------------------------------------------------------------------

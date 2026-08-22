@@ -122,7 +122,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
-  color: var(--ink-400);
+  color: var(--ink-500);
   font-variant-numeric: tabular-nums;
 }
 

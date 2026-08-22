@@ -67,7 +67,8 @@
   /* 墨色 —— 带蓝的深墨，保持通透，禁止 #000 */
   --ink-900:     #12283A;  /* 主标题 / 正文 */
   --ink-600:     #3D5C74;  /* 次级正文 */
-  --ink-400:     #6E8BA1;  /* 辅助说明 / 刻度数字 */
+  --ink-500:     #4D6C84;  /* HUD 小字 / caption（M7 新增，见修正记录） */
+  --ink-400:     #6E8BA1;  /* 仅非文本图形，任何字号的文本都不许用 */
 
   /* 主色 天蓝 */
   --sky-700:     #14699F;  /* 可承载正文与链接 */
@@ -89,7 +90,7 @@
 }
 ```
 
-**对比度**：`npm run check:contrast` 直接从 `tokens.css` 读色值实测，20 项规则，改色改坏了会失败。当前实测：
+**对比度**：`npm run check:contrast` 直接从 `tokens.css` 读色值实测，27 项规则，改色改坏了会失败。当前实测：
 
 | 前景 on 背景 | 实测 | 阈值 | 用途 |
 |---|---|---|---|
@@ -97,19 +98,47 @@
 | `--ink-900` on `--bg-paper` | **14.69** | 7 | 卡片内正文 |
 | `--ink-600` on `--bg-sky` | 6.58 | 4.5 | 次级正文 |
 | `--ink-600` on `--bg-paper` | 6.85 | 4.5 | 卡片内次级正文 |
-| `--ink-400` on `--bg-sky` | 3.34 | 3 | 仅限非文本图形与 ≥18.66px 粗体 |
+| `--ink-500` on `--bg-sky` | 5.17 | 4.5 | HUD 小字与 caption |
+| `--ink-500` on `--bg-paper` | 5.38 | 4.5 | 卡片内 HUD 小字 |
+| `--ink-500` on `--bg-sunk` | 4.84 | 4.5 | 凹陷底上的 HUD 小字（代码块语言角标） |
+| `--ink-400` on `--bg-sky` | 3.34 | 3 | 仅非文本图形。任何字号的文本都不许用 |
 | `--sky-700` on `--bg-sky` | 5.53 | 4.5 | 正文与链接 |
 | `--sky-700` on `--sky-100` | 4.84 | 4.5 | Tag sky 底上的文字 |
 | `--sky-500` on `--bg-sky` | 3.17 | 3 | 仅限图形、边框、≥24px 大字 |
 | `--pink-700` on `--bg-sky` | 5.79 | 4.5 | 粉色文案 |
 | `--pink-700` on `--pink-100` | 5.18 | 4.5 | Tag pink 底上的文字 |
 | `--bg-paper` on `--sky-700` | 5.75 | 4.5 | Tag solid 反白文字 |
+| `--pink-100` on `--sky-700` | 4.95 | 4.5 | 目录树当前项的序号 |
 | `--stage-*` on `--bg-sky` | 3.96–4.49 | 3 | 三个展台的框线（WCAG 1.4.11 非文本对比度） |
 | `--char-*-accent` on `--bg-sky` | 3.17–4.65 | 3 | 六位角色的 halo 与道具线条（同 1.4.11） |
 
-**禁止承载文字**：`--pink-500`、`--pink-300`、`--sky-300`、`--sky-100`。这条规则写进了 `check-contrast.ts`，不是口头约定。
+**禁止承载文字**：`--ink-400`、`--pink-500`、`--pink-300`、`--sky-300`、`--sky-100`。这条规则写进了 `check-contrast.ts`，不是口头约定。
 
 > M1 修正记录：`--sky-700` 由 `#166FA8` 调深为 `#14699F`、`--sky-500` 由 `#2E9BE0` 调深为 `#2892D8`、新增 `--pink-100`。原因是规格初稿只验了对 `--bg-sky` 的对比度，漏了标签底色上的组合，实测有三项不达标。改的是色值，不是阈值。
+
+> M7 修正记录一：**新增 `--ink-500: #4D6C84`，`--ink-400` 转为纯图形令牌，禁止承载任何文本。**
+>
+> 原值 `--ink-400` 的用途写着「辅助说明 / 刻度数字」，后来在 2.1 表里收紧成「≥18.66px 粗体或非文本图形」。
+> M7 的 a11y 探针遍历 `body *` 读 `getComputedStyle` 实算落地配对，抓到 **17 处文本落在它上面**：
+>
+> | 落地处 | 字号 / 字重 | 实测 |
+> |---|---|---|
+> | `.track-index` `.track-ability-code` `.track-stage-code` | 11px / 600 | 3.48:1 on `--bg-paper` |
+> | `.track-notice` | 11px / 500 | 3.48:1 on `--bg-paper` |
+> | `.doc-tree-code` `.doc-tree-index` `.doc-index-code` `.doc-code-lang` `.doc-turn-hud` `.doc-card-min` | 11px / 600 | 3.34:1 on `--bg-sky` |
+> | `.stage-name-en` `.stage-tier-code` `.hud-scale-num` `.dock-romaji` `.mlab-note` | 11–13px | 3.34–3.48:1 |
+>
+> 那条「≥18.66px 粗体」的例外从来没有真实用例——HUD 字阶是 11px，caption 是 13px，
+> **11px 无论多粗都不是 WCAG 口径的大字**，走 4.5:1。例外只是给违规留了个后门，M7 删掉。
+>
+> 新令牌 `--ink-500: #4D6C84` 对三种底分别 5.17 / 5.38 / 4.84，全部过 AA。
+> 15 处文本改指它；`Reticle` 与 `Diamond` 的 `ink` 色调那两处是纯图形，留在 `--ink-400`。
+> 层次没塌：`--ink-900` 14.11 → `--ink-600` 6.58 → `--ink-500` 5.17 仍是三档递进。
+>
+> 连带一条：目录树当前项的序号原本是 `--pink-300`（对 `--sky-700` 只有 3.53:1，且它本来就在禁令表里），
+> 改 `--pink-100`，4.95:1，粉味不减。
+>
+> `check:contrast` 从 23 项加到 27 项，`--ink-400` 进禁令表。改色先回来改这张表。
 
 ### 2.2 字体与字阶
 
@@ -549,9 +578,49 @@ g#fx               交互粒子挂载点（Canvas 覆盖层锚定于此）
 | `prefers-reduced-motion` | 关闭：粒子光场、视差、立绘惯性、滚动聚焦、弹幕（连开关一并不出，见 5.4 修正记录三）。保留：淡入与展开（缩短至 150ms 线性） |
 | 键盘 | 全部卡片可 `Tab` 聚焦，`Enter` 展开，`Esc` 收起；焦点环 2px `--line-focus` + 2px 外偏移 |
 | 屏幕阅读器 | 立绘 SVG `aria-hidden="true"`；装饰性 HUD 全部 `aria-hidden`；卡片用真实 `<button aria-expanded>`；弹幕轨道整层 `aria-hidden`，自发那条的回执由 `role="status"` 的 toast 负责 |
-| 对比度 | 全部文本 ≥ AA（见 2.1 表），CI 中用 axe 做回归 |
+| 对比度 | 全部文本 ≥ AA（见 2.1 表）。回归靠 `scripts/a11y-probe.mjs` 的落地实算探针，不接 axe，见修正记录一 |
 | 无 JS | 输出静态 HTML 骨架，内容可读（Vite SSG 预渲染） |
 | 移动端 | < 768px：立绘缩至 40% 置于标题下方；方向卡改单列但保留 8px 交替左右缩进以维持非对称感；粒子关闭 |
+
+> M7 修正记录一：**对比度回归不接 axe，改用落地实算探针 `scripts/a11y-probe.mjs`，且不进 `npm run check`。**
+>
+> 规格原文写「CI 中用 axe 做回归」。两处对不上：
+>
+> 1. **axe 查不到本工程的真实缺口。** `npm run check:contrast` 只扫 `tokens.css` 的两两组合，
+>    axe 扫的是渲染后的 DOM——两者之间有一块谁都不管的地带：**令牌用对了但用错了场合**。
+>    `--ink-400` 那 17 处就在这里，axe 会把 11px/600 判成"小字"照样报，但它报不出
+>    「这个令牌在 2.1 表里被限死在非文本图形」这条本工程自己的规矩。
+> 2. **装 playwright 的代价。** 本工程没装，前三个里程碑都借主站的 `node_modules/.bin/playwright`。
+>    `@axe-core/playwright` + `playwright` 进 devDependencies 会让 `npm ci` 多下一整套浏览器。
+>
+> 落地：`scripts/a11y-probe.mjs`，借主站的 playwright 跑（`PW_ROOT` 指过去），**71 条断言**，六组：
+>
+> | 组 | 查什么 |
+> |---|---|
+> | `contrast` | 遍历 `body *`，沿祖先链合成 rgba alpha 与 opacity，实算前景/背景比，按 WCAG 大字规则取 3 或 4.5 |
+> | `keyboard` | 焦点环实测 `outlineWidth` / `outlineOffset`；连按 Tab 核对五张方向卡与三个展台全部可达；Enter 展开 Esc 收起 |
+> | `aria` | 立绘 SVG 与 92 个 HUD 原子全部在 `aria-hidden` 子树内；卡片是真实 `button[aria-expanded]`；标题层级不跳级 |
+> | `reduced` | 粒子、视差、立绘惯性、滚动聚焦、lenis、弹幕六样逐个验，另查 `--dur-enter` 收到 150ms、`--stagger` 归零、缓动改 linear |
+> | `forbidden` | `backdrop-filter` 只准两处（要先滚一段，导航条不到 `data-lifted` 不上毛玻璃）、`box-shadow` 负 spread、装饰 blur ≤ 8px |
+> | `console` | 每轮挂 `console` / `pageerror` / `requestfailed` / `response>=400` |
+>
+> **不进 `npm run check`**：它依赖外部仓库的 playwright 与一个跑着的 dev server，塞进门禁会让
+> 换机器的人第一条命令就红。四道门禁保持 typecheck / 对比度 / 字体 / 构建不变。改了交互层手动跑。
+
+> M7 修正记录二：**四项实测缺口，全部由探针抓出，已修。**
+>
+> 第 6 节这张表在 M6 之前只有「弹幕」「屏幕阅读器」两行验过，其余是历次里程碑顺手做的。系统性回归后：
+>
+> | 缺口 | 规格要求 | 实测 | 修法 |
+> |---|---|---|---|
+> | 展台不响应 Esc | 全部卡片 Esc 收起 | 方向卡有，三个展台漏了 | `projects.tsx` 加 `keydown` 监听，挂 window 而不是 article——展开后焦点可能已在分层列表里 |
+> | 粒子画布留在 DOM | reduce 下关闭粒子 | effect 里提前 return，`<canvas>` 空着挂在那儿 | 组件级 `if (reduced) return null`，改走 `useReducedMotion()`，首帧一律 false 不破注水 |
+> | `/docs` 标题从 h2 起跳 | 读屏可按标题导航 | 目录树的分类名是 `h2` 且 DOM 序在 `<main>` 的 `h1` 之前，整页第一个标题成了 h2 | 分类名改 `<p>`（它是导航分组标签，语义由 `nav[aria-label]` 承担）；长文节标题 `h3` → `h2`，class 与 id 不动 |
+> | 毛玻璃计数永远是 0 | 全站只准两处 | 探针在页首查，而导航条只在 `data-lifted='true'` 时才上 blur | 探针先滚 400px 再查，并且断言 ≥1——数出 0 说明探针本身失效了 |
+>
+> 顺带查清两件本来以为是问题的：
+> **触控目标 19–20px 的六处**全在页脚与导航条的文字链上，圆心距 38–86px，走 WCAG 2.5.8 的间距豁免，不是缺口。
+> **`.wordmark-sr` 的 `scrollWidth 377 / clientWidth 1`** 是给读屏用的视觉隐藏层（`clip-path: inset(50%)`），本来就该这样。
 
 ---
 
@@ -614,6 +683,18 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 > 两条加起来从 170.2 降到 133.5 KB，余量 26.5 KB。
 > 新增正文字段往 `scripts/subset-fonts.ts` 的 `BODY_ONLY_FIELDS` 加一行，不要抬 `BUDGET_KB`。
 
+> M7 记录：**`docs` 分片的优先级抬到 `lab` 之前**，且 `src/lib/page-title.ts` 三个作用域一起跳过。
+>
+> 两组作用域有 30 个字重叠（`小随着两注单独飘红口七贴六只直长短切外静具处移带身满超意尾由`）。
+> `unicode-range` 不许交叠，谁排在前谁独占那份 face，排在后的那组要用这些字就得连带下前一组整份分片。
+> 原先 `lab` 在前，于是**每个访问 `/docs` 的人都要多下 23 KB 的 lab 分片**，只为那 30 个字。
+> `/docs` 是给所有人看的正式路由，`?lab=1` 是内部验收页——换过来之后 docsOnly 193 → 223 字，
+> labOnly 95 → 65 字，`/docs` 少下一份，验收页多下一份。首屏 141.5 KB 不变（两组都不进首屏）。
+>
+> 另外 `src/lib/page-title.ts` 进 `HEAD_OWNED`：里面的逐页 `title` 与 `meta description`
+> 一个字都不上屏（标签栏与搜索结果摘要都不经过我们的 `@font-face`）。
+> M7 给它加了 `pageDescription()` 共 47 个中文字，不跳过的话就是白背 6 KB 首屏字体。
+
 > M5 记录：首屏 JS 从 124.2 涨到 150.7 KB（gzip），来源是 `react-router` 8、`lenis` 1 与 `src/data/docs.ts` 的长文数据。
 > 三者都在主包里，没有做懒加载——`renderToString` 撑不住 `React.lazy`，而预渲染是 M5 拿「刷新可用 + 无 JS 可读」的前提。
 > 余量还有 29.3 KB。M6 的弹幕与声音再涨的话，先把 `docs.ts` 拆成按 slug 的分片，别动预算。
@@ -622,24 +703,138 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 
 ### 7.3 运行时预算（Lighthouse 移动端）
 
-| 指标 | 目标 | M5 实测 |
-|---|---|---|
-| 首屏 JS（gzip） | ≤ 180 KB | 150.7 KB |
-| 首屏 CSS（gzip） | ≤ 20 KB | 16.5 KB |
-| 展台图片（仓内产物） | — | 395 KB / 12 个文件，主图 1600w 最大 97 KB |
-| LCP | ≤ 2.0s | 待 M7 |
-| CLS | ≤ 0.02 | 待 M7（截图已用 aspect-ratio 锁版） |
-| INP | ≤ 200ms | 待 M7 |
-| Performance / A11y / Best Practices / SEO | ≥ 95 / 100 / 100 / 100 | 待 M7 |
+量法：`npm run build` 出产物，起一个**没有 SPA fallback 的静态服务器**（对文本资源开 gzip，
+`/assets/` 给长缓存，HTML 给短缓存——照抄 GitHub Pages 的响应头，否则量到的是 469 KB 原始 JS
+而不是 153.7 KB 的实际传输量），再跑 `lighthouse --form-factor=mobile --throttling-method=simulate`。
+**不要用 `vite preview`**：它的 SPA fallback 会把 404 那条掩盖掉。
+
+| 指标 | 目标 | M7 实测（`/`） | `/docs` | `/docs/:id` |
+|---|---|---|---|---|
+| 首屏 JS（gzip） | ≤ 180 KB | **153.7 KB** | 同一个包 | 同一个包 |
+| 首屏 CSS（gzip） | ≤ 20 KB | **17.5 KB** | 同一份 | 同一份 |
+| 首屏字体 | ≤ 160 KB | **141.5 KB** | +67 KB 按需 | +67 KB 按需 |
+| 预渲染 HTML | — | 86.7 KB | 18.4 KB | 17.7–18.6 KB |
+| 展台图片（仓内产物） | — | 395 KB / 12 个文件，主图 1600w 最大 97 KB | | |
+| FCP | — | **0.91s** | 0.92s | 0.91s |
+| LCP | ≤ 2.0s | **2.87s** ✗ | 3.34s ✗ | 3.32s ✗ |
+| CLS | ≤ 0.02 | **0.0000** | 0.0000 | 0.0000 |
+| TBT | — | 12ms | 2ms | 0ms |
+| INP（真实交互实测，非 Lighthouse） | ≤ 200ms | p50 **136ms** / p75 216ms / p95 264ms | — | — |
+| Performance | ≥ 95 | **95** | 92 | 92 |
+| A11y / Best Practices / SEO | 100 / 100 / 100 | **100 / 100 / 100** | 100 / 100 / 100 | 100 / 100 / 100 |
+
+> M7 记录一：**LCP 三条路由全部超 2.0s，超的那部分是 Lighthouse 模拟节流的固定开销，不是页面的。**
+>
+> 同一次运行里两套数并存：
+>
+> | | 模拟口径（计分用） | 浏览器实际观测 |
+> |---|---|---|
+> | `/` FCP | 911ms | **295ms** |
+> | `/` LCP | 2863ms | **332ms** |
+> | TTFB | 455ms | 2.4ms |
+>
+> 模拟口径把 150ms RTT、1.6 Mbps 带宽、CPU×4 套在实测的资源图上重算一遍。
+> 拿一张**没有任何外部资源的纯 HTML** 在同一台机器上量，下限就是 TTFB 457ms / FCP 636ms / LCP 765ms——
+> 也就是说这套节流参数下 LCP 的地板接近 0.8s，而本站首屏要下 149 KB JS + 17 KB CSS + 141 KB 字体。
+>
+> 交叉验证过三条：
+>
+> 1. **抽掉 `<script>` 标签**（内容全在预渲染 HTML 里，不注水也能读）：Performance 99，FCP 915ms，LCP 2113ms。
+>    LCP 仍然 2.1s，而这时页面已经不含任何 JS——剩下的就是节流本身。
+> 2. **CSS 内联进 HTML**：LCP 2951ms，比外链的 2865ms 还差一点（HTML 从 86 KB 涨到 160 KB）。
+> 3. **关掉全站 CSS 动画 / 删掉 grain 噪点层 / 删掉 hero 立绘 / 首屏文案改系统字**：LCP 全部落在 2.86–2.91s，动都不动。
+>
+> 结论：**不为了这个数字动设计**。LCP 元素是 `.hero-sub` 那句副标题，它在预渲染 HTML 的首屏位置，
+> 浏览器 332ms 就画出来了。真实网络下的 CWV 要等上线后看 CrUX，本地模拟节流量不出来。
+>
+> 记下来的三条不做的优化：**代码分割**（`renderToString` 撑不住 `React.lazy`，而预渲染是「刷新可用 + 无 JS 可读」的前提）、
+> **`font-display: optional`**（首屏中文会闪一下系统字，LCP 只改 5ms）、**图片预载**（首屏没有图片进 LCP）。
+
+> M7 记录二：**四条真做了的优化，Performance 88 → 95。**
+>
+> | 优化 | 依据 | 效果 |
+> |---|---|---|
+> | 首屏字体 `<link rel=preload>` | 字体在关键请求链第三层（HTML → CSS → `@font-face` 解析 → woff2），120ms 才发出 | FCP 2859 → 1960ms，Performance 88 → 92 |
+> | 注水脚本 `fetchpriority="low"` | `type=module` 默认 High，149 KB 的包把字体挤到后面 | FCP 1960 → 911ms，而 TTI 2918 → 2919ms（一毫秒没退） |
+> | 首屏之下的分区 `content-visibility: auto` | 首页 HTML 有 1230 个节点 / 481 条 SVG 路径，LCP 的 85% 是 Render Delay | 移动端 FCP 620 → 308ms（页内实测） |
+> | 五张卡的立绘 `content-visibility: auto` | 主线程 styleLayout 2041ms + paint 1330ms | styleLayout → 617ms，paint → 580ms，展开卡片 INP p50 232 → 136ms |
+>
+> 预载分两批：首页六份（ui 的 400/700、latin 的 400/700、Chakra Petch 500/600），
+> `/docs` 那几页额外三份（docs 的 400/700 + JetBrains Mono）。无差别预载会让首页凭空多下 92 KB，
+> 把 7.2 按作用域切片省下来的量原封不动还回去。
+> `noto-sans-sc-wordmark-900` 不预载：1.2 KB 低于 `assetsInlineLimit`，Vite 已经内联成 data URI 了。
+>
+> 两条 `content-visibility` 都验过版面无变化：立绘那条逐张滚到视口正中量 `cardH` / `svgH` / 溢出量，
+> 桌面与移动五张卡开关前后完全一致；冻结动画后逐块截图比像素，最大差 0.05%（halo 自转的相位差）。
+> `contain-intrinsic-size` 都写 `auto`，让浏览器记住上次真实高度，只有第一次滚过去用估值。
+
+> M7 记录三：**INP 用真实交互实测，不用 Lighthouse 的代理指标。**
+>
+> Lighthouse 是冷启动跑分，没有交互，`INP` 那一格永远空着，只有 `maxPotentialFID` 这个代理值。
+> 直接挂 `PerformanceObserver({ type: 'event', durationThreshold: 0 })`，在 CPU×4 下走完
+> 五张方向卡各开各收 + 三个展台各开各收 + 弹幕四步，取 `click` 事件时长：
+>
+> | CPU 节流 | n | p50 | p75 | p95 | max |
+> |---|---|---|---|---|---|
+> | ×1 | 32 | 48ms | 48ms | 48ms | 48ms |
+> | ×2 | 32 | 56ms | 96ms | 128ms | 128ms |
+> | ×4 | 32 | **136ms** | 216ms | 264ms | 264ms |
+>
+> p50 过线，p75 起超。拆开看：**慢的全是「展开」，收起只有一半**（卡1开 256ms / 卡1收 128ms），
+> 且 216ms 里输入延迟占 82ms、处理占 51ms、呈现占 85ms——处理逻辑本身不慢，慢在那一帧的样式与绘制。
+>
+> 试过四条都没用：拆掉 motion 的 `layout` / `layoutId`（264ms，没变）、`contain: layout paint` 加在
+> `.track-tilt` 或 `.track-portrait` 上（168–224ms，没变）、停掉立绘的 halo 与 prop 动画（216ms，没变）、
+> 停掉全站 CSS 动画（224ms，没变）。有用的只有那条 `content-visibility`（232 → 136ms）。
+> `reducedMotion: reduce` 下 p50 40ms / max 128ms，全程达标。
+>
+> **CPU×4 是 Lighthouse 模拟中端手机的节流倍率，不是真机。** 真实设备落在 ×1 到 ×4 之间，
+> ×2 的 p75 96ms 距上限还有一倍余量。留在这里当基线，上线后看 CrUX 的真实分布再决定要不要继续压。
 
 ---
 
 ## 8. 部署
 
 - 目标仓库 `yfy-club/yfy-club.github.io`（组织站点），`base: '/'`。
-- 产物走 GitHub Actions 构建 `dist/` 后发布到 `gh-pages` 分支（或 Pages Artifact）。
-- **本阶段仅本地开发，不添加 remote、不推送。** 部署工作流文件会写好但保持未启用状态。
-- 需在仓库根放 `.nojekyll`。
+- 产物走 GitHub Actions 构建 `dist/` 后发布（Pages Artifact，不建 `gh-pages` 分支）。
+- **本阶段仅本地开发，不添加 remote、不推送。** 部署工作流文件写好但保持未启用状态。
+- `public/.nojekyll` 已放，随 `dist/` 一起发布——没有它 GitHub Pages 会吃掉 `_` 开头的资源。
+
+M7 落地的 head 与站点文件：
+
+| 产物 | 来源 | 说明 |
+|---|---|---|
+| 逐页 `<title>` | `src/lib/page-title.ts` 的 `pageTitle()` | M5 已有，预渲染与客户端换路由共用一份 |
+| 逐页 `meta description` | 同文件的 `pageDescription()` | 长文直接用成稿的 `summary`，不另写摘要——另写必然跟正文漂移 |
+| `<link rel=canonical>` | `scripts/prerender.ts` | 绝对地址，目录带尾斜杠 |
+| Open Graph 五项 | 同上 | `og:type` `og:site_name` `og:url` `og:title` `og:description` |
+| Twitter card 三项 | 同上 | `summary`，不是 `summary_large_image` |
+| `sitemap.xml` | 同上 | 十条路由，`lastmod` 取构建日期 |
+| `robots.txt` | 同上 | 全站放开，只指一条 sitemap |
+
+> M7 记录一：**不出 `og:image`，`twitter:card` 取 `summary` 而不是 `summary_large_image`。**
+>
+> 本站没有 1200×630 的社交配图。没有配图时有三条路：不出 `og:image`（抓取端退化为纯文本卡片）、
+> 指向 `favicon.svg`（多数抓取端不接 SVG，接了也是一张 1:1 小图当主视觉）、
+> 或者拿一张展台截图凑（那些图是项目界面，跟站点主题对不上，且都不是 1200×630）。
+> 取第一条。`summary_large_image` 明确要求 ≥300×157 的图，没图就声明它等于自己给自己挖坑。
+> 要做大图卡先做配图，那是设计工作，不是构建脚本能变出来的。
+
+> M7 记录二：**`sitemap.xml` 不写 `changefreq` 与 `priority`。**
+>
+> Google 早就公开说这两个字段一律忽略。填了只是给自己多一份要维护的假数据——
+> 站点改版后没人会回来把 `changefreq: weekly` 改成 `monthly`。只留 `loc` 与 `lastmod`。
+
+> M7 记录三：**验预渲染产物必须用「像 GitHub Pages 那样的静态服务器」，不能用 `vite preview`。**
+>
+> `vite preview` 有 SPA fallback：`/docs/nope/` 也会返回 200 加首页 HTML，
+> 于是「这条路由真的出了静态页」和「被 fallback 兜住了」两种情况在它上面长得一模一样。
+> 写一个 40 行的 `node http.createServer`：目录取 `index.html`，无尾斜杠的目录发 301，
+> 找不到就 404 不回退。另外要对文本资源开 gzip 并给出 `cache-control`，否则 Lighthouse
+> 量到的是 469 KB 原始 JS 而不是 153.7 KB 的实际传输量，模拟节流下 FCP 直接虚高两秒。
+>
+> 实测：`/` 200、`/docs` 301 → `/docs/` 200、`/docs/git-flow/` 200、`/sitemap.xml` 200、
+> `/robots.txt` 200、`/.nojekyll` 200、`/docs/nope/` **404**。最后那条才是这套验法的意义。
 
 > M5 修正记录：**`/docs/:id` 在构建期出静态页，SSG 预渲染从 M7 提前一部分到 M5。**
 >
@@ -669,6 +864,7 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 1. ~~**项目截图素材**~~ ✅ 已定：复用主站 `public/images/works/`，选片见 4.3.1。
 2. ~~**文档库内容**~~ ✅ 已定：推翻旧稿重写，成稿见 [content-docs.md](content-docs.md)。
 3. **BGM 文件**：你从 [music-sources.md](music-sources.md) 里选定后放入 `public/audio/`。不阻塞开发。
+   放进去要**重启 dev server** 才认——存在性是构建期扫的，见 5.5 的 M6 修正记录。
 4. **工程目录名**：当前为 `G:\Code\Other\yfy-club.github.io`（与目标仓库同名，最省心）。要改说一声。
 5. **角色化名**：如需替换为其他名字，直接说，我改 `characters.ts`。
 
@@ -685,4 +881,6 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 | M4 | ✅ | 方向角色卡 + 项目视差展台 + 向导驻留挂件 + 图片流水线 |
 | M5 | ✅ | `/docs` 路由 + 聚焦滚动 + Shiki 构建期高亮 + 十条路由预渲染 |
 | M6 | ✅ | 弹幕系统（四轨 + 输入浮层 + localStorage）+ BGM 开关（文件缺席自动隐藏）|
-| M7 | 收口 | 可访问性、性能预算达标、SSG 预渲染、部署工作流（不启用） |
+| M7 | ✅ | 可访问性回归（71 条断言探针）+ 性能预算（Performance 95 / A11y 100 / BP 100 / SEO 100）+ SSG 补 head 与 sitemap + 部署工作流（不启用） |
+
+M7 之后没有排期。立绘造型由你自行重做——`hair.ts` / `geometry.ts` / `expressions.ts` 的路径数据没人动过。

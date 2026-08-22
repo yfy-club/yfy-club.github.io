@@ -66,6 +66,22 @@ function Stage({ project, flip, onHover }: StageProps) {
   const reduced = usePrefersReducedMotion()
   useParallax(ref, reduced)
 
+  /*
+   * Esc 收起。规格第 6 节要求全部卡片 Enter 展开 Esc 收起，
+   * M4 只给方向卡做了，展台漏了——a11y 探针实测抓到的。
+   *
+   * 挂 window 而不是 article：展开后焦点可能已经移到分层列表或图库里，
+   * 那些元素不在按钮的冒泡路径上。
+   */
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open])
+
   return (
     <article
       className="stage"

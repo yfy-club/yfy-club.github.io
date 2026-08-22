@@ -66,7 +66,7 @@
 .dock-romaji {
   font-weight: 500;
   letter-spacing: 0.06em;
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 /* 立绘槽。bust 裁切下缘顶住画框，这里再压一道凹陷底把它衬出来 */

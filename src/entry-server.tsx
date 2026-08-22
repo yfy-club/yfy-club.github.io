@@ -13,7 +13,7 @@ import { renderToString } from 'react-dom/server'
 import { StaticRouter } from 'react-router'
 import App from './App'
 import { DOCS } from './data/docs'
-import { pageTitle } from './lib/page-title'
+import { pageDescription, pageTitle } from './lib/page-title'
 
 /** 要出静态页的路由。/ 与 /docs 各一张，八篇各一张。 */
 export const ROUTES: readonly string[] = ['/', '/docs', ...DOCS.map((d) => `/docs/${d.slug}`)]
@@ -27,5 +27,5 @@ export function render(url: string) {
     </StrictMode>,
   )
 
-  return { html, title: pageTitle(url) }
+  return { html, title: pageTitle(url), description: pageDescription(url) }
 }

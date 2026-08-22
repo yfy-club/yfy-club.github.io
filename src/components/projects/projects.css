@@ -247,7 +247,7 @@
   font-weight: 600;
   letter-spacing: var(--tracking-hud);
   text-transform: uppercase;
-  color: var(--ink-400);
+  color: var(--ink-500);
 }
 
 .stage-name {
@@ -385,7 +385,7 @@
   font-size: var(--text-hud);
   font-weight: 600;
   letter-spacing: 0.08em;
-  color: var(--ink-400);
+  color: var(--ink-500);
   font-variant-numeric: tabular-nums;
 }
 

@@ -21,10 +21,18 @@ export function DocBlocks({ blocks }: { blocks: readonly DocBlock[] }) {
 function Block({ block }: { block: DocBlock }) {
   switch (block.kind) {
     case 'h3':
+      /*
+       * 块类型叫 h3（成稿里是三级标题），渲染成 h2。
+       *
+       * 页面里唯一的 h1 是篇名，这些是它的直接下级，中间没有 h2——
+       * 从 h1 跳到 h3 是跳级，读屏用户按标题导航时会以为漏了一层。
+       * class 与 id 保持 doc-h3 / sec-N 不变：目录树的第三层、锚点、
+       * 聚焦滚动、scroll-margin 全都按这两个名字挂着。
+       */
       return (
-        <h3 className="doc-h3" id={block.id} data-focus-unit="">
+        <h2 className="doc-h3" id={block.id} data-focus-unit="">
           {block.text}
-        </h3>
+        </h2>
       )
 
     case 'para':

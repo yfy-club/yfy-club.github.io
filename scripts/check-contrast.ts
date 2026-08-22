@@ -39,7 +39,11 @@ const RULES = [
   { fg: '--ink-900', bg: '--bg-paper', min: 7, usage: '卡片内正文' },
   { fg: '--ink-600', bg: '--bg-sky', min: 4.5, usage: '次级正文' },
   { fg: '--ink-600', bg: '--bg-paper', min: 4.5, usage: '卡片内次级正文' },
-  { fg: '--ink-400', bg: '--bg-sky', min: 3, usage: '仅限非文本图形与 ≥18.66px 粗体' },
+  // M7 新增：HUD 小字与 caption 的唯一墨色。三种底都要过 4.5，长文与卡片都用它
+  { fg: '--ink-500', bg: '--bg-sky', min: 4.5, usage: 'HUD 小字与 caption' },
+  { fg: '--ink-500', bg: '--bg-paper', min: 4.5, usage: '卡片内 HUD 小字' },
+  { fg: '--ink-500', bg: '--bg-sunk', min: 4.5, usage: '凹陷底上的 HUD 小字（代码块语言角标）' },
+  { fg: '--ink-400', bg: '--bg-sky', min: 3, usage: '仅限非文本图形。任何字号的文本都不许用' },
   { fg: '--sky-700', bg: '--bg-sky', min: 4.5, usage: '正文与链接' },
   { fg: '--sky-700', bg: '--sky-100', min: 4.5, usage: 'Tag sky 底上的文字' },
   { fg: '--sky-500', bg: '--bg-sky', min: 3, usage: '仅限图形、边框、≥24px 大字' },
@@ -50,6 +54,8 @@ const RULES = [
   { fg: '--pink-700', bg: '--bg-paper', min: 4.5, usage: '弹幕浮层与回执里的粉色说明' },
   { fg: '--sky-700', bg: '--bg-paper', min: 4.5, usage: '回执标题' },
   { fg: '--ink-600', bg: '--bg-sunk', min: 4.5, usage: '凹陷底上的次级文字' },
+  // 目录树当前项：切角实心块压 --sky-700，序号原本是 --pink-300（3.53:1，且禁止承载文字）
+  { fg: '--pink-100', bg: '--sky-700', min: 4.5, usage: '目录树当前项的序号' },
   // 展台主调只画框线与光效，按 WCAG 1.4.11 非文本对比度要求 ≥ 3:1
   { fg: '--stage-zgyc', bg: '--bg-sky', min: 3, usage: '智光耀城展台框线' },
   { fg: '--stage-zhixueban', bg: '--bg-sky', min: 3, usage: '智学伴展台框线' },
@@ -63,8 +69,14 @@ const RULES = [
   { fg: '--char-forge-accent', bg: '--bg-sky', min: 3, usage: 'FORGE halo 与道具线条' },
 ] as const
 
-/** 明确禁止承载文字的令牌。写进代码，免得三个月后有人"顺手"用了。 */
-const TEXT_FORBIDDEN = ['--pink-500', '--pink-300', '--sky-300', '--sky-100']
+/**
+ * 明确禁止承载文字的令牌。写进代码，免得三个月后有人"顺手"用了。
+ *
+ * M7 把 --ink-400 加进来。原本它的用途写着「≥18.66px 粗体或非文本图形」，
+ * 而实际落地的 17 处全是 11px HUD 小字与 13px 说明——11px 无论多粗都不算 WCAG 的大字，
+ * 那条例外从来没有真实用例，只是给违规留了个后门。文本一律走 --ink-500。
+ */
+const TEXT_FORBIDDEN = ['--ink-400', '--pink-500', '--pink-300', '--sky-300', '--sky-100']
 
 async function main() {
   const css = await readFile(TOKENS, 'utf8')

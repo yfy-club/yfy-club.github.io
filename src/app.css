@@ -14,3 +14,27 @@
 main > section[id] {
   scroll-margin-top: var(--nav-h);
 }
+
+/*
+ * 首屏之下的分区跳过渲染，直到滚近了才算样式与布局。
+ *
+ * 预渲染把十条路由的全文都写进静态页，首页那张 HTML 里有 1230 个节点、
+ * 481 条立绘 SVG 路径、54 个 clip-path。M7 实测：LCP 3.1s 里有 85% 是 Render Delay，
+ * 主线程 styleLayout 2140ms + paintCompositeRender 1628ms——首屏那句副标题要等
+ * 五张方向卡、三个展台、六份立绘全部算完布局才能上屏，而它们一个都不在视口里。
+ *
+ * 移动端 390x844 实测 FCP 620ms → 308ms。
+ *
+ * contain-intrinsic-size 的 auto 让浏览器记住上次真实高度，
+ * 只有第一次滚过去用 900px 估值——不写 auto 的话每次滚动都按估值重排，滚动条会跳。
+ * 900px 是三类分区的量级中位数，估偏一点只影响滚动条长度，不影响版面。
+ *
+ * 不加在 #hero 上：它就是首屏，跳过它等于什么都没画。
+ */
+main > section#tracks,
+main > section#projects,
+main > section#docs,
+.page > .foot {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
