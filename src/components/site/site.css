@@ -25,7 +25,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-6);
-  height: 62px;
+  height: calc(var(--nav-h) - var(--hairline));
 }
 
 .nav-rail {
@@ -113,14 +113,52 @@
   color: var(--pink-700);
 }
 
+/* -------------------------------------------------------------------------
+   弹幕与声音开关
+   浮层挂在这一层上（position: relative），别挪。
+   ------------------------------------------------------------------------- */
+
+.nav-tools {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.nav-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-2);
+  font-size: var(--text-caption);
+  letter-spacing: 0.04em;
+  line-height: 1.4;
+  color: var(--ink-600);
+  transition: color var(--dur-micro) var(--ease-out-expo);
+}
+
+.nav-toggle:hover {
+  color: var(--ink-900);
+}
+
+.nav-toggle[aria-pressed='true'] {
+  color: var(--pink-700);
+}
+
 @media (width < 768px) {
   .nav-links,
   .nav-side {
     display: none;
   }
 
+  /* .nav-links 的 margin-right: auto 跟着一起没了，开关得自己顶到右边 */
+  .nav-tools {
+    margin-left: auto;
+    gap: var(--space-2);
+  }
+
   .nav-inner {
-    height: 54px;
+    height: calc(var(--nav-h-sm) - var(--hairline));
   }
 }
 

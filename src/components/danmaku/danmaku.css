@@ -1,0 +1,240 @@
+/* =========================================================================
+   弹幕
+   规格 5.4。轨道沉在内容之下（--z-danmaku），从字标与立绘背后穿过。
+   ========================================================================= */
+
+.danmaku {
+  /* 四条轨道的行高。13px 正文配 30px 行距，上下留白足够，不会贴成一堵墙 */
+  --dm-pitch: 30px;
+  --dm-tracks: 4;
+
+  position: absolute;
+  /* 起点贴着导航条下沿。再往下就顶到字标了，实测自由带只有 125px */
+  top: calc(var(--nav-h) + var(--space-3));
+  left: 0;
+  right: 0;
+  height: calc(var(--dm-tracks) * var(--dm-pitch));
+  z-index: var(--z-danmaku);
+  pointer-events: none;
+}
+
+.danmaku-item {
+  position: absolute;
+  top: calc(var(--dm-track) * var(--dm-pitch));
+  left: 0;
+  height: var(--dm-pitch);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+  font-size: var(--text-caption);
+  line-height: 1;
+  /*
+   * 规格 5.4 原写 --ink-400 + opacity .5。M6 实测推翻，见 spec 5.4 修正记录二：
+   * --ink-400 对 --bg-sky 只有 3.6:1，且 2.1 明令它不承载 13px 常规字重的文本；
+   * 而 .5 不透明度下任何前景色的上限是纯黑的 3.92:1，「.5 + AA」在这张底色上无解。
+   * 层次改由色阶（--ink-600 对正文的 --ink-900）与 z 序承担。
+   */
+  color: var(--ink-600);
+  /*
+   * backwards 不能省：自己发的那条排期在几秒后，没有它的话这几秒里
+   * 元素停在 left: 0 的原位——一条弹幕直挺挺钉在屏幕左上角。实测过。
+   */
+  animation: danmaku-cross var(--dm-dur) linear var(--dm-delay) infinite backwards;
+}
+
+.danmaku-item[data-own='true'] {
+  color: var(--pink-700);
+}
+
+/*
+ * 从右侧屏外进、左侧屏外出。
+ * 100vw 是容器外的起点，-100% 是自身宽度——两端都保证完全出画。
+ * 同轨恒速，所以起跑一旦拉开就永远不会追尾，见 store.ts 的排期规则。
+ */
+@keyframes danmaku-cross {
+  from {
+    translate: 100vw 0;
+  }
+
+  to {
+    translate: -100% 0;
+  }
+}
+
+/* 规格第 6 节：减弱动效下弹幕关掉。JS 已经不渲染了，这里是第二道闸 */
+@media (prefers-reduced-motion: reduce) {
+  .danmaku {
+    display: none;
+  }
+}
+
+@media (width < 768px) {
+  .danmaku {
+    --dm-pitch: 26px;
+    top: calc(var(--nav-h-sm) + var(--space-2));
+  }
+}
+
+/* -------------------------------------------------------------------------
+   输入浮层
+   全站唯二允许 backdrop-filter 的地方之二。规格 2.5 第 1 条。
+   ------------------------------------------------------------------------- */
+
+.dm-composer {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-4);
+  background: var(--nav-veil);
+  backdrop-filter: blur(12px);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    0 100%
+  );
+  animation: dm-pop var(--dur-micro) var(--ease-out-expo) backwards;
+}
+
+@keyframes dm-pop {
+  from {
+    opacity: 0;
+    translate: 0 -6px;
+  }
+}
+
+.dm-composer form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dm-label {
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink-900);
+}
+
+.dm-field {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.dm-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-badge);
+}
+
+.dm-input::placeholder {
+  color: var(--ink-600);
+}
+
+.dm-input:focus-visible {
+  outline: 2px solid var(--line-focus);
+  outline-offset: 1px;
+}
+
+.dm-send {
+  --btn-bevel: 10px;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: nowrap;
+  color: var(--bg-paper);
+  background: var(--sky-700);
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--btn-bevel)) 0,
+    100% var(--btn-bevel),
+    100% 100%,
+    var(--btn-bevel) 100%,
+    0 calc(100% - var(--btn-bevel))
+  );
+  transition: background var(--dur-micro) var(--ease-out-expo);
+}
+
+.dm-send:hover:not(:disabled) {
+  background: var(--ink-900);
+}
+
+.dm-send:disabled {
+  cursor: not-allowed;
+  color: var(--ink-600);
+  background: var(--bg-sunk);
+}
+
+.dm-meta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--text-hud);
+  line-height: 1.5;
+  color: var(--ink-600);
+}
+
+.dm-note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--pink-700);
+}
+
+/* -------------------------------------------------------------------------
+   提交回执
+   跟浮层同一个挂点，但不许用毛玻璃——那是唯二两处之外的第三处。
+   ------------------------------------------------------------------------- */
+
+.dm-toast {
+  position: absolute;
+  top: calc(100% + var(--space-2));
+  right: 0;
+  width: min(320px, calc(100vw - 2 * var(--space-4)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--bevel)),
+    calc(100% - var(--bevel)) 100%,
+    0 100%
+  );
+  animation: dm-pop var(--dur-micro) var(--ease-out-expo) backwards;
+}
+
+.dm-toast-head {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+  line-height: 1.4;
+}
+
+.dm-toast-body {
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  color: var(--ink-900);
+  overflow-wrap: anywhere;
+}
+
+.dm-toast-note {
+  font-size: var(--text-hud);
+  line-height: 1.5;
+  color: var(--pink-700);
+}

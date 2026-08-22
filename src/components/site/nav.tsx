@@ -1,12 +1,13 @@
 /**
  * 顶部导航条。
  *
- * 全站唯二允许 backdrop-filter 的地方之一（另一处是 M6 的弹幕输入浮层）。
+ * 全站唯二允许 backdrop-filter 的地方之一（另一处是弹幕输入浮层，见 danmaku.css）。
  * 规格 2.5 第 1 条，别往别处抄。
  */
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Diamond } from '@/components/hud'
+import { NavTools } from './nav-tools'
 import './site.css'
 
 const CLUB_SITE = 'https://www.yunfeiyang.tech'
@@ -51,6 +52,8 @@ export function Nav() {
             官网 ↗
           </a>
         </div>
+
+        <NavTools />
       </div>
       <div className="nav-rail" aria-hidden="true" />
     </header>

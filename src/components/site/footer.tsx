@@ -5,6 +5,7 @@
  */
 import { Link } from 'react-router'
 import { Rail } from '@/components/hud'
+import { BGM_CREDIT } from '@/data/credits'
 import './site.css'
 
 const COLUMNS = [
@@ -56,6 +57,8 @@ export function Footer() {
 
       <div className="foot-base shell">
         <span>本站角色均为虚构化名，不指代任何真实社员。</span>
+        {/* 曲子要求署名才出现这一行。空着就没有，见 src/data/credits.ts */}
+        {BGM_CREDIT && <span>{BGM_CREDIT}</span>}
         <span className="foot-hud">YFY OPEN SOURCE PORTAL</span>
       </div>
     </footer>

@@ -4,7 +4,7 @@
 
 ## 当前状态
 
-**M5 · 档案库完成。** 全屏舞台、五张方向角色卡、三个项目视差展台、向导驻留挂件、`/docs` 开发者档案库均已落地。
+**M6 · 氛围层完成。** 全屏舞台、五张方向角色卡、三个项目视差展台、向导驻留挂件、`/docs` 开发者档案库、弹幕与 BGM 开关均已落地。
 
 ```bash
 npm ci
@@ -19,7 +19,7 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 | 命令 | 卡什么 |
 |---|---|
 | `npm run typecheck` | TypeScript strict |
-| `npm run check:contrast` | 20 项色彩对比度，直接从 `tokens.css` 读色值实测 |
+| `npm run check:contrast` | 23 项色彩对比度，直接从 `tokens.css` 读色值实测 |
 | `npm run fonts:subset` | 重切中文子集并核对首屏字体预算（160 KB） |
 | `npm run build` | 生产构建 + 十条路由预渲染 |
 
@@ -28,6 +28,7 @@ npm run check    # typecheck → 对比度 → 字体子集与预算 → 生产�
 - [docs/design-spec.md](docs/design-spec.md) — 设计规格书（色彩令牌、字阶、角色系统、差分状态机、页面结构、动效参数、性能预算）
 - [docs/content-docs.md](docs/content-docs.md) — 开发者档案库内容成稿（3 分类 8 篇）
 - [docs/music-sources.md](docs/music-sources.md) — 合规 BGM 音源渠道清单
+- [docs/CREDITS.md](docs/CREDITS.md) — 第三方素材署名登记
 
 ### 档案库内容
 
@@ -38,6 +39,22 @@ npm run docs:build
 `src/data/docs.ts` 由 `scripts/build-docs.ts` 从 `docs/content-docs.md` 生成，**已提交进仓库，不要手改**。改内容改成稿再跑这条命令。
 
 代码块的语法高亮是构建期用 Shiki 出的：产物 HTML 里只有 `tk-k` / `tk-s` / `tk-c` 三个 class，颜色留在 `docs.css` 里引令牌。`shiki` 只在 `devDependencies`，运行时零成本，不进包。高亮色是硬编码在产物里的，`check:contrast` 扫不到，对 `--bg-sunk` 的实测值记在 spec 4.4 的 M5 修正记录二，改色先回去改那张表。
+
+### 弹幕与声音
+
+弹幕**只存 `localStorage`，没有后端**。输入框 placeholder 与提交回执都必须写着「仅保存在你的浏览器，别人看不到」——这是防"假互动"的硬要求，别改措辞。默认关闭，开关在导航条右侧，只在首页出现。
+
+四条轨道沉在内容之下（`--z-danmaku: 5`），从字标与立绘背后穿过。规格原本排在立绘之上，实测在移动端必然横穿字标，已推翻，见 spec 5.4 的 M6 修正记录。同轨恒速，所以起跑时刻一旦按 `MIN_GAP` 拉开就永远不会追尾，排期算法在 `src/components/danmaku/store.ts`。
+
+预置文案在 `src/data/danmaku.ts`，字段 `text` 列在 `BODY_ONLY_FIELDS` 里——弹幕从不粗体渲染，700 那份子集把它的独有字整个剔掉，每个新汉字只收半价。加词条前先看字体余量。
+
+BGM 走 `public/audio/bgm.ogg`（+ `bgm.mp3` 兜底），说明见 [public/audio/README.md](public/audio/README.md)。**本仓库不自带任何音频文件**，两个都不在时开关自动隐藏。
+
+文件在不在是**构建期**扫的（`vite.config.ts` 注入 `__BGM_SOURCES__`），运行时零请求——运行时探会在文件缺席时给每位访客的控制台留两条 404，那就是规格 5.5 明令禁止的"报错"。**新放进音频文件后要重启 dev server 才认。**
+
+要求署名的曲子填 `docs/CREDITS.md` 与 `src/data/credits.ts` 的 `BGM_CREDIT`，页脚那一行由后者控制。
+
+减弱动效下弹幕整个关掉，连开关一并不出。
 
 ### 路由与预渲染
 

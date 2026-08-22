@@ -106,6 +106,8 @@ const BODY_ONLY_FIELDS: Record<string, readonly string[]> = {
   'src/App.tsx': ['note'],
   'src/data/tracks.ts': ['keys', 'tagline'],
   'src/data/projects.ts': ['brief'],
+  'src/data/danmaku.ts': ['text'],
+  'src/components/danmaku/composer.tsx': ['DISCLAIMER'],
 }
 
 const SCAN_EXT = new Set(['.ts', '.tsx', '.md', '.html'])

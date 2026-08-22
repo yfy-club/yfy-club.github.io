@@ -6,6 +6,7 @@
  * 背景自下而上：--bg-sky 纯色 → 坐标网格 → Canvas 粒子 → 内容。
  */
 import { useEffect, useState } from 'react'
+import { DanmakuTracks } from '@/components/danmaku/tracks'
 import { Rail, Reticle, Tag, TickScale } from '@/components/hud'
 import { Mascot, type MascotState } from '@/components/mascot'
 import { NAVI } from '@/data/characters'
@@ -34,6 +35,7 @@ export function Hero({ state = 'NEUTRAL' }: HeroProps) {
     <section className="hero" id="hero">
       <div className="hero-grid coord-grid" aria-hidden="true" />
       <ParticleField />
+      <DanmakuTracks />
 
       <TickScale count={TICKS} active={active} className="hero-scale" />
 

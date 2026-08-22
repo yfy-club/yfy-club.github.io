@@ -46,6 +46,10 @@ const RULES = [
   { fg: '--pink-700', bg: '--bg-sky', min: 4.5, usage: '粉色文案' },
   { fg: '--pink-700', bg: '--pink-100', min: 4.5, usage: 'Tag pink 底上的文字' },
   { fg: '--bg-paper', bg: '--sky-700', min: 4.5, usage: 'Tag solid 反白文字' },
+  // 弹幕浮层与回执：面是 --bg-paper（浮层是 88% 的它叠在 --bg-sky 上，只会更亮）
+  { fg: '--pink-700', bg: '--bg-paper', min: 4.5, usage: '弹幕浮层与回执里的粉色说明' },
+  { fg: '--sky-700', bg: '--bg-paper', min: 4.5, usage: '回执标题' },
+  { fg: '--ink-600', bg: '--bg-sunk', min: 4.5, usage: '凹陷底上的次级文字' },
   // 展台主调只画框线与光效，按 WCAG 1.4.11 非文本对比度要求 ≥ 3:1
   { fg: '--stage-zgyc', bg: '--bg-sky', min: 3, usage: '智光耀城展台框线' },
   { fg: '--stage-zhixueban', bg: '--bg-sky', min: 3, usage: '智学伴展台框线' },

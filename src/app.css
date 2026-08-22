@@ -8,9 +8,9 @@
 
 /*
  * 锚点跳转的预留量。
- * 导航条固定高 63px，不给 scroll-margin 的话 #tracks 的分区头正好被盖住。
+ * 导航条固定高 --nav-h，不给 scroll-margin 的话 #tracks 的分区头正好被盖住。
  * /docs 的三级标题另有一份，在 docs.css 里。
  */
 main > section[id] {
-  scroll-margin-top: 63px;
+  scroll-margin-top: var(--nav-h);
 }
