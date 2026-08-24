@@ -12,8 +12,7 @@ import { TRACK_FX, stageFx, type MascotFx } from './components/mascot/fx'
 import type { MascotState } from './components/mascot/states'
 import type { TrackSlug } from './data/characters'
 import { pageDescription, pageTitle } from './lib/page-title'
-import { useSmoothScroll, scrollToAnchor, scrollToTop } from './lib/smooth-scroll'
-import { usePrefersReducedMotion } from './components/mascot'
+import { scrollToAnchor, scrollToTop } from './lib/smooth-scroll'
 import { MascotLab } from './mascot-lab'
 import './app.css'
 
@@ -115,7 +114,6 @@ const SECTION_STATE: Record<string, MascotState> = {
  * Hero 的立绘只演首屏那一段，滚出去就交给挂件。
  */
 function Portal() {
-  useSmoothScroll(!usePrefersReducedMotion(), { lerp: 0.12 })
   const section = useCurrentSection()
   /** 悬停的方向卡。优先级高于展台——鼠标只可能在一个地方。 */
   const [track, setTrack] = useState<TrackSlug | null>(null)
