@@ -266,15 +266,25 @@ function useParallax(ref: React.RefObject<HTMLElement | null>, reduced: boolean)
 
     let raf = 0
     let queued = false
+    let docTop = 0
+    let elHeight = 0
+
+    const measure = () => {
+      const r = el.getBoundingClientRect()
+      docTop = r.top + window.scrollY
+      elHeight = r.height
+    }
 
     const apply = () => {
       queued = false
-      const r = el.getBoundingClientRect()
+      const top = docTop - window.scrollY
+      const bottom = top + elHeight
+      const vh = window.innerHeight
       // 区块完全在视口外就不算，省掉离屏元素的 style 写入
-      if (r.bottom < 0 || r.top > window.innerHeight) return
-      const center = r.top + r.height / 2
-      const p = (center - window.innerHeight / 2) / window.innerHeight
-      const px = (rate: number) => `${(p * r.height * rate).toFixed(1)}px`
+      if (bottom < 0 || top > vh) return
+      const center = top + elHeight / 2
+      const p = (center - vh / 2) / vh
+      const px = (rate: number) => `${(p * elHeight * rate).toFixed(1)}px`
       el.style.setProperty('--par-shot', px(RATE.shot))
       el.style.setProperty('--par-copy', px(RATE.copy))
       el.style.setProperty('--par-ticks', px(RATE.ticks))
@@ -286,14 +296,20 @@ function useParallax(ref: React.RefObject<HTMLElement | null>, reduced: boolean)
       raf = requestAnimationFrame(apply)
     }
 
+    const onResize = () => {
+      measure()
+      onScroll()
+    }
+
+    measure()
     apply()
     window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onScroll, { passive: true })
+    window.addEventListener('resize', onResize, { passive: true })
 
     return () => {
-      cancelAnimationFrame(raf)
+      if (raf) cancelAnimationFrame(raf)
       window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onScroll)
+      window.removeEventListener('resize', onResize)
     }
   }, [ref, reduced])
 }

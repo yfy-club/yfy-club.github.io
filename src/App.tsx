@@ -115,7 +115,7 @@ const SECTION_STATE: Record<string, MascotState> = {
  * Hero 的立绘只演首屏那一段，滚出去就交给挂件。
  */
 function Portal() {
-  useSmoothScroll(!usePrefersReducedMotion(), { lerp: 0.085, wheelMultiplier: 1.05 })
+  useSmoothScroll(!usePrefersReducedMotion())
   const section = useCurrentSection()
   /** 悬停的方向卡。优先级高于展台——鼠标只可能在一个地方。 */
   const [track, setTrack] = useState<TrackSlug | null>(null)
