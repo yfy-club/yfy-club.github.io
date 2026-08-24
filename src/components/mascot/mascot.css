@@ -60,6 +60,7 @@
    ------------------------------------------------------------------------- */
 
 .mascot .m-parallax,
+.mascot .m-squish,
 .mascot .m-pose,
 .mascot .m-breathe,
 .mascot .m-layer {
@@ -102,14 +103,10 @@
   );
 }
 
-/*
- * halo 用 translate 属性而不是 transform：
- * 下面的呼吸浮动与 POUT 抖动分别占用 translate 与 rotate，
- * 三样写进同一个 transform 会互相整条覆盖（transform 不叠加）。
- */
 .mascot .m-halo {
   translate: calc(var(--sway-halo-x) / var(--frame-w) * 100%)
     calc(var(--sway-halo-y) / var(--frame-h) * 100%);
+  rotate: calc(var(--sway-halo-x) * 0.12deg);
 }
 
 /* -------------------------------------------------------------------------
@@ -117,6 +114,23 @@
    以脚下为轴，纵向 0.6% 的位移 + 0.6% 的拉伸，4.6s 一轮。
    幅度再大就成了浮空，小于这个数在 104px 的挂件上看不出来。
    ------------------------------------------------------------------------- */
+
+/* -------------------------------------------------------------------------
+   触控 Q 弹压扁反馈（Squish / Elastic Pudding）
+   以底部（50% 100%）为轴向下压缩：
+   按住时整个角色（身体+Halo+道具）同步整体向下压扁（scale(1.06, 0.90)），
+   松手时通过超调弹性曲线 cubic-bezier(0.34, 1.68, 0.64, 1) 向上弹起回稳！
+   ------------------------------------------------------------------------- */
+
+.mascot .m-squish {
+  transform-origin: 50% 100%;
+  transition: transform 0.45s cubic-bezier(0.34, 1.68, 0.64, 1);
+}
+
+.mascot[data-pressed='true'] .m-squish {
+  transform: scale(1.06, 0.90);
+  transition: transform 0.08s cubic-bezier(0.1, 0, 0.2, 1);
+}
 
 .mascot .m-breathe {
   transform-origin: 50% 100%;
@@ -186,6 +200,51 @@
 /* 被连点三次。一次性弹性形变，5s 的 POUT 里只在开头演这 0.5s。 */
 .mascot[data-state='POUT'] .m-pose {
   animation: mascot-pout 0.5s var(--ease-out-expo);
+}
+
+/* 连点五次以上触发晕头转向（DIZZY）：1.8s 完整阻尼衰减，顺滑回落到 SMILE */
+.mascot[data-state='DIZZY'] .m-pose {
+  animation: mascot-dizzy 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
+
+@keyframes mascot-dizzy {
+  0% {
+    transform: rotate(0deg) translateY(0) scale(1);
+  }
+  7% {
+    transform: rotate(-3.5deg) translateY(-0.8%) translateX(-1.4%) scale(1.01);
+  }
+  16% {
+    transform: rotate(3.5deg) translateY(-0.8%) translateX(1.4%) scale(1.01);
+  }
+  26% {
+    transform: rotate(-3.2deg) translateY(-0.8%) translateX(-1.2%) scale(1.01);
+  }
+  36% {
+    transform: rotate(3.2deg) translateY(-0.8%) translateX(1.2%) scale(1.01);
+  }
+  46% {
+    transform: rotate(-2.4deg) translateY(-0.6%) translateX(-0.8%) scale(1.012);
+  }
+  56% {
+    transform: rotate(2.4deg) translateY(-0.6%) translateX(0.8%) scale(1.012);
+  }
+  67% {
+    transform: rotate(-1.5deg) translateY(-0.55%) translateX(-0.4%) scale(1.014);
+  }
+  78% {
+    transform: rotate(1.2deg) translateY(-0.55%) translateX(0.4%) scale(1.014);
+  }
+  88% {
+    transform: rotate(-0.5deg) translateY(-0.5%) translateX(-0.1%) scale(1.014);
+  }
+  95% {
+    transform: rotate(0.2deg) translateY(-0.5%) translateX(0) scale(1.014);
+  }
+  100% {
+    /* 像素级与 SMILE 状态完全重合，消除任何突变跳跃 */
+    transform: rotate(0deg) translateY(-0.5%) scale(1.014);
+  }
 }
 
 @keyframes mascot-pout {
@@ -277,6 +336,40 @@
   animation-duration: 40s;
 }
 
+/* 路线展开激活高能超频态（Halo Overclock - 仅加速旋转，严密保持在原盒模型内） */
+.mascot[data-active='true'] .halo-orbit {
+  animation-duration: 3.5s;
+}
+
+.mascot[data-active='true'] .halo-spin-cw {
+  animation-duration: 5.5s;
+}
+
+.mascot[data-active='true'] .halo-spin-ccw {
+  animation-duration: 4s;
+}
+
+.mascot[data-active='true'] .halo-node {
+  animation-duration: 0.85s;
+}
+
+/* 连点五次以上触发晕眩超速狂转（DIZZY - 暴风狂转 1.8s） */
+.mascot[data-state='DIZZY'] .halo-orbit {
+  animation-duration: 0.75s;
+}
+
+.mascot[data-state='DIZZY'] .halo-spin-cw {
+  animation-duration: 0.85s;
+}
+
+.mascot[data-state='DIZZY'] .halo-spin-ccw {
+  animation-duration: 0.7s;
+}
+
+.mascot[data-state='DIZZY'] .halo-node {
+  animation-duration: 0.2s;
+}
+
 @keyframes mascot-spin {
   to {
     rotate: 360deg;
@@ -319,21 +412,40 @@
   }
 }
 
-/* POUT 时 halo 抖（spec 3.3） */
+/* POUT 时 halo 轻微生气微抖并平滑阻尼衰减回正（持续 1.3s） */
 .mascot[data-state='POUT'] .m-halo {
-  rotate: -1.4deg;
   animation:
     mascot-halo-float 4.6s ease-in-out -0.9s infinite,
-    mascot-shake 0.24s linear infinite;
+    mascot-pout-halo 1.3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
 }
 
-@keyframes mascot-shake {
-  0%,
-  100% {
-    rotate: -1.4deg;
+@keyframes mascot-pout-halo {
+  0% {
+    transform: rotate(0deg) translateX(0);
   }
-  50% {
-    rotate: 1.4deg;
+  10% {
+    transform: rotate(-3.2deg) translateX(-1%) translateY(0.3%);
+  }
+  22% {
+    transform: rotate(3.2deg) translateX(1%) translateY(0.3%);
+  }
+  34% {
+    transform: rotate(-2.4deg) translateX(-0.8%);
+  }
+  48% {
+    transform: rotate(2.4deg) translateX(0.8%);
+  }
+  62% {
+    transform: rotate(-1.5deg) translateX(-0.4%);
+  }
+  76% {
+    transform: rotate(1.1deg) translateX(0.3%);
+  }
+  88% {
+    transform: rotate(-0.4deg) translateX(-0.1%);
+  }
+  100% {
+    transform: rotate(0deg) translateX(0) translateY(0);
   }
 }
 

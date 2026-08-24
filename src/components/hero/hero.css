@@ -216,18 +216,20 @@
   height: auto;
 }
 
-/* 名牌置于立绘左侧空隙，拉开间距，避免压住立绘 */
+/* 名牌置于立绘左侧，紧靠发丝外侧且不遮挡立绘 */
 .hero-mascot-plate {
   position: absolute;
-  left: clamp(-160px, -11vw, -60px);
-  bottom: calc(var(--space-8) + var(--space-6));
+  left: clamp(-85px, -6vw, -50px);
+  bottom: calc(var(--space-8) + var(--space-4));
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-1);
   padding: var(--space-3) var(--space-4);
   background: var(--bg-paper);
-  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--line-solid),
+    var(--shadow-lift);
   clip-path: polygon(
     0 0,
     100% 0,

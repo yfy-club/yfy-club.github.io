@@ -6,18 +6,18 @@
 
 .dock {
   position: fixed;
-  right: var(--space-4);
+  right: var(--space-5);
   bottom: var(--space-6);
   z-index: var(--z-mascot);
-  width: 120px;
+  width: 148px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: var(--space-1);
-  padding: var(--space-2);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
   pointer-events: none;
   background: var(--bg-paper);
-  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid), var(--shadow-lift);
   /* 右上切角。跟卡片同一套几何语言 */
   clip-path: polygon(
     0 0,
@@ -36,11 +36,25 @@
 .dock[data-visible='true'] {
   opacity: 1;
   translate: 0 0;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.dock:hover,
+.dock:focus-visible {
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--char-navi-accent),
+    var(--shadow-lift);
+  outline: none;
+}
+
+.dock:active {
+  translate: 0 2px;
 }
 
 /*
  * 1360 以下直接不显示。
- * 1280 视口左右只剩 64px 空槽，120px 的挂件会压到内容上。
+ * 1280 视口左右只剩 64px 空槽，挂件会压到内容上。
  * 只隐藏 DOM，状态机照常跑，宽屏一放大立刻看得见。
  */
 @media (width < 1360px) {
@@ -52,20 +66,21 @@
 .dock-code,
 .dock-romaji {
   font-family: var(--font-hud);
-  font-size: var(--text-hud);
   line-height: 1.2;
   text-align: center;
 }
 
 .dock-code {
-  font-weight: 600;
+  font-size: var(--text-caption);
+  font-weight: 700;
   letter-spacing: var(--tracking-hud);
   color: var(--sky-700);
 }
 
 .dock-romaji {
+  font-size: var(--text-hud);
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   color: var(--ink-500);
 }
 
@@ -73,6 +88,7 @@
 .dock-portrait {
   display: block;
   overflow: hidden;
+  border-radius: var(--radius-sm);
   background: var(--bg-sunk);
   box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
 }
@@ -81,11 +97,10 @@
   width: 100%;
   height: auto;
   /*
-   * 挂件只有 104px 宽。halo 描边挂了 vector-effect="non-scaling-stroke"，
-   * 粗细不随缩放走，3 在 Hero 上是细线，在这里就是糊成一团的粗杠，收细一档。
+   * 挂件尺寸约 128px 宽。halo 描边收细到 1.8，既清晰利落又不会太粗糊成一团。
    */
-  --halo-stroke: 1.6;
-  --prop-stroke: 1.4;
+  --halo-stroke: 1.8;
+  --prop-stroke: 1.6;
 }
 
 @media (prefers-reduced-motion: reduce) {

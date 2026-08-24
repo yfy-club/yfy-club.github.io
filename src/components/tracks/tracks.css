@@ -54,30 +54,38 @@
   row-gap: var(--space-6);
   /* 卡片要立在同一个透视里，否则每张卡自带一套灭点，倾斜方向会打架 */
   perspective: 1200px;
+  /* 单元格顶部独立对齐：单卡展开路线时不联动拉伸同行的其他卡片 */
+  align-items: start;
 }
 
 .track-card {
   --card-h: 460px;
+  align-self: start;
 }
 
 .track-card[data-track='ai'] {
   grid-column: 1 / span 6;
+  --accent: var(--char-oracle-accent);
 }
 
 .track-card[data-track='software'] {
   grid-column: 7 / span 6;
+  --accent: var(--char-weaver-accent);
 }
 
 .track-card[data-track='database'] {
   grid-column: 1 / span 6;
+  --accent: var(--char-vault-accent);
 }
 
 .track-card[data-track='cloud-iot'] {
   grid-column: 7 / span 6;
+  --accent: var(--char-relay-accent);
 }
 
 .track-card[data-track='industrial'] {
   grid-column: 4 / span 6;
+  --accent: var(--char-forge-accent);
 }
 
 
@@ -141,41 +149,8 @@
 .track-card:hover .track-tilt,
 .track-card:focus-within .track-tilt {
   box-shadow:
-    inset 0 0 0 var(--hairline) var(--pink-500),
+    inset 0 0 0 var(--hairline) var(--accent, var(--sky-500)),
     var(--shadow-lift);
-}
-
-/* 500ms 光栅扫过。只在 hover 时跑一次，不做 infinite——静止画面里不该有光 */
-.track-raster {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  opacity: 0;
-  background: linear-gradient(
-    100deg,
-    transparent 42%,
-    var(--pink-100) 50%,
-    transparent 58%
-  );
-  background-size: 300% 100%;
-  background-position: 100% 0;
-}
-
-.track-card:hover .track-raster,
-.track-card:focus-within .track-raster {
-  animation: track-raster 0.5s var(--ease-out-expo) 1;
-}
-
-@keyframes track-raster {
-  from {
-    opacity: 0.9;
-    background-position: 100% 0;
-  }
-  to {
-    opacity: 0;
-    background-position: 0 0;
-  }
 }
 
 /* -------------------------------------------------------------------------
@@ -481,15 +456,11 @@
   }
 }
 
-/* 关掉 3D 与光栅。规格第 6 节。 */
+/* 关掉 3D。规格第 6 节。 */
 @media (prefers-reduced-motion: reduce) {
   .track-card {
     opacity: 1;
     translate: none;
-  }
-
-  .track-raster {
-    display: none;
   }
 
   .track-grid {

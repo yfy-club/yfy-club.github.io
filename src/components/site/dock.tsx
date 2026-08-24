@@ -12,10 +12,12 @@
  * 样式硬约束：切角面板 + 1px 描边 + --bg-paper 实色。
  * 不许圆头像、不许阴影、不许毛玻璃，否则读成客服气泡。
  */
+import { useCallback } from 'react'
 import { Mascot } from '@/components/mascot'
 import type { MascotFx } from '@/components/mascot/fx'
 import type { MascotState } from '@/components/mascot/states'
 import { NAVI } from '@/data/characters'
+import { playClick, playPoke } from '@/lib/sound'
 import './dock.css'
 
 interface MascotDockProps {
@@ -28,17 +30,31 @@ interface MascotDockProps {
 }
 
 export function MascotDock({ state, fx, visible }: MascotDockProps) {
+  const scrollToTop = useCallback(() => {
+    playPoke()
+    playClick()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
+
   return (
-    <aside className="dock" data-visible={visible} aria-hidden="true">
+    <aside
+      className="dock"
+      data-visible={visible}
+      role="button"
+      tabIndex={visible ? 0 : -1}
+      title="点击向导快速返回顶部"
+      onClick={scrollToTop}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          scrollToTop()
+        }
+      }}
+    >
       <span className="dock-code">{NAVI.codename}</span>
       <span className="dock-portrait">
         <Mascot character={NAVI} state={state} fx={fx} crop="bust" />
       </span>
-      {/*
-        不把状态名当标签显示。
-        SURPRISE 持续 400ms 后由状态机自己回落到 SMILE（spec 3.3），
-        标签读的是传进来的值，会一直写着 SURPRISE 而脸已经在笑。实测过。
-      */}
       <span className="dock-romaji">{NAVI.romaji}</span>
     </aside>
   )

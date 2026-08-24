@@ -100,7 +100,7 @@ export function placement(id: PortraitId): MascotPlacement {
  */
 export const CROP_BOX = {
   full: { x: 0, y: 0, w: VIEW_W, h: VIEW_H },
-  bust: { x: 60, y: 48, w: 360, h: 430 },
+  bust: { x: 30, y: 36, w: 420, h: 470 },
 } as const
 
 export type MascotCrop = keyof typeof CROP_BOX

@@ -18,6 +18,7 @@ import { danmakuStore, initDanmaku, setDanmakuOn } from '@/components/danmaku/st
 import { useMounted } from '@/lib/use-mounted'
 import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { useStore } from '@/lib/store'
+import { isSoundEnabled, playClick, toggleSound } from '@/lib/sound'
 import { bgmStore, initBgm, setBgmOn } from './bgm'
 
 /** 回执停留时长，毫秒。够读完两行，又不至于赖着不走。 */
@@ -29,6 +30,7 @@ export function NavTools() {
   const danmaku = useStore(danmakuStore)
   const bgm = useStore(bgmStore)
   const onHome = useLocation().pathname === '/'
+  const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
 
   const tools = useRef<HTMLDivElement>(null)
   const [composing, setComposing] = useState(false)
@@ -94,9 +96,24 @@ export function NavTools() {
           onClick={() => setBgmOn(!bgm.on)}
         >
           <Diamond tone={bgm.on ? 'pink' : 'ink'} />
-          声音
+          BGM
         </button>
       )}
+
+      <button
+        className="nav-toggle"
+        type="button"
+        aria-pressed={soundOn}
+        title="开启 / 关闭科幻交互微音效"
+        onClick={() => {
+          const next = toggleSound()
+          setSoundOn(next)
+          if (next) playClick()
+        }}
+      >
+        <Diamond tone={soundOn ? 'pink' : 'ink'} />
+        音效
+      </button>
 
       {composing && <DanmakuComposer boundary={tools} onClose={closeComposer} />}
       {!composing && toast && <DanmakuToast text={toast} />}

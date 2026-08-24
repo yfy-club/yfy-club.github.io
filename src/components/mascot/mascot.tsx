@@ -42,6 +42,10 @@ interface MascotProps {
    * 传 null 就是没特效，此时反向播放回默认态，不留残留。
    */
   fx?: MascotFx | null
+  /** 是否处于激活高能态（如卡片路线展开态）。 */
+  active?: boolean
+  /** 是否开启点击/连击互动（默认 true）。在卡片未展开时可设为 false 避免抢占展开音。 */
+  interactive?: boolean
   /**
    * 这张是不是首屏 LCP 元素。只有 Hero 的 NAVI 传 true：
    * 它 eager + fetchpriority=high，其余一律 lazy。
@@ -76,6 +80,8 @@ export function Mascot({
   crop = 'full',
   still = false,
   fx = null,
+  active = false,
+  interactive = true,
   priority = false,
   className,
 }: MascotProps) {
@@ -83,7 +89,8 @@ export function Mascot({
   const reduced = usePrefersReducedMotion()
   const alive = !still && !reduced
 
-  const { state, poke } = useMascotState(base, alive)
+  const [pressed, setPressed] = useState(false)
+  const { state, poke } = useMascotState(base, alive && interactive)
   useMascotInertia(root, alive)
 
   const place = useMemo(() => placement(character.id), [character.id])
@@ -101,6 +108,8 @@ export function Mascot({
       data-state={state}
       data-crop={crop}
       data-alive={alive}
+      data-active={active}
+      data-pressed={pressed}
       /*
        * 整棵子树都是装饰：立绘、halo、道具没有一样承载信息，
        * 角色名与方向由外层卡片的真实文本负责。
@@ -109,7 +118,14 @@ export function Mascot({
       aria-hidden="true"
       // 联动特效两个通道。没传 fx 时属性不在，CSS 里那几条规则自然不命中。
       data-fx-halo={fx?.halo}
-      onPointerDown={poke}
+      onPointerDown={() => {
+        if (!interactive) return
+        setPressed(true)
+        poke()
+      }}
+      onPointerUp={() => setPressed(false)}
+      onPointerLeave={() => setPressed(false)}
+      onPointerCancel={() => setPressed(false)}
       style={
         {
           '--frame-w': frame.w,
@@ -122,41 +138,42 @@ export function Mascot({
       }
     >
       <div className="m-parallax">
-        <svg className="m-layer m-halo m-halo-back" viewBox={viewBoxOf(crop)}>
-          <g transform={haloTransform(place)}>
-            <HaloBack variant={character.halo} />
-          </g>
-        </svg>
+        <div className="m-squish">
+          <svg className="m-layer m-halo m-halo-back" viewBox={viewBoxOf(crop)}>
+            <g transform={haloTransform(place)}>
+              <HaloBack variant={character.halo} />
+            </g>
+          </svg>
 
-        {/* 状态姿态与呼吸拆两层：姿态是状态切换时的一次性位移，呼吸是常驻循环。
-            写在同一个元素上后者会被前者整条覆盖（transform 不叠加）。 */}
-        <div className="m-pose">
-          <div className="m-breathe">
-            <img
-              className="m-portrait"
-              src={portraitSrc(character.id)}
-              srcSet={portraitSrcSet(character.id)}
-              sizes={SIZES[crop]}
-              width={asset.width}
-              height={asset.height}
-              alt=""
-              draggable={false}
-              decoding="async"
-              loading={priority ? 'eager' : 'lazy'}
-              fetchPriority={priority ? 'high' : 'auto'}
-              // 图没到之前先铺 20px 的 LQIP，避免小卡在滚动中露出空洞。
-              style={{ backgroundImage: `url(${asset.lqip})` }}
-            />
+          {/* 状态姿态与呼吸拆分 */}
+          <div className="m-pose">
+            <div className="m-breathe">
+              <img
+                className="m-portrait"
+                src={portraitSrc(character.id)}
+                srcSet={portraitSrcSet(character.id)}
+                sizes={SIZES[crop]}
+                width={asset.width}
+                height={asset.height}
+                alt=""
+                draggable={false}
+                decoding="async"
+                loading={priority ? 'eager' : 'lazy'}
+                fetchPriority={priority ? 'high' : 'auto'}
+                // 图没到之前先铺 20px 的 LQIP，避免小卡在滚动中露出空洞。
+                style={{ backgroundImage: `url(${asset.lqip})` }}
+              />
+            </div>
           </div>
-        </div>
 
-        <svg className="m-layer m-halo m-halo-front" viewBox={viewBoxOf(crop)}>
-          <g transform={haloTransform(place)}>
-            <HaloFront variant={character.halo} />
-          </g>
-          {/* 道具锚在颅宽之外，bust 的取景框容不下它，只在 full 出。 */}
-          {crop === 'full' && <Prop variant={character.prop} at={place.prop} />}
-        </svg>
+          <svg className="m-layer m-halo m-halo-front" viewBox={viewBoxOf(crop)}>
+            <g transform={haloTransform(place)}>
+              <HaloFront variant={character.halo} />
+            </g>
+            {/* 道具锚在颅宽之外，bust 的取景框容不下它，只在 full 出。 */}
+            {crop === 'full' && <Prop variant={character.prop} at={place.prop} />}
+          </svg>
+        </div>
       </div>
     </div>
   )

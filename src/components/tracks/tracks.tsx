@@ -21,6 +21,7 @@ import { TRACKS, type Track } from '@/data/tracks'
 import { usePrefersReducedMotion } from '@/components/mascot/mascot'
 import { SPRING, staggerDelay } from '@/lib/motion-tokens'
 import { useInView } from '@/lib/use-in-view'
+import { playClick, playExpand } from '@/lib/sound'
 import './tracks.css'
 
 /** 倾斜上限。规格 4.2 写死 ≤ 4°，不许调大。 */
@@ -120,14 +121,18 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
         style={{ rotateX, rotateY }}
         onPointerMove={onPointerMove}
       >
-        {/* 悬停时扫过的光栅。绑在交互态上，静止画面里没有光（规格 2.5 第 4 条） */}
-        <span className="track-raster" aria-hidden="true" />
-
         <button
           type="button"
           className="track-face"
           aria-expanded={open}
-          onClick={onToggle}
+          onClick={() => {
+            if (!open) {
+              playExpand()
+            } else {
+              playClick()
+            }
+            onToggle()
+          }}
           // 键盘聚焦也要给向导反应，否则 Tab 过去像坏了
           onFocus={() => onHover(track.slug)}
           onBlur={() => onHover(null)}
@@ -137,8 +142,22 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
             <span className="track-index">{track.index}</span>
           </span>
 
-          <span className="track-portrait">
-            <Mascot character={character} crop="full" state="NEUTRAL" />
+          <span
+            className="track-portrait"
+            onClick={(e) => {
+              // 卡片已展开时，戳立绘专供角色连击与彩蛋，不误收起卡片
+              if (open) {
+                e.stopPropagation()
+              }
+            }}
+          >
+            <Mascot
+              character={character}
+              crop="full"
+              state={open ? 'FOCUS' : 'NEUTRAL'}
+              active={open}
+              interactive={open}
+            />
           </span>
 
           <span className="track-id">

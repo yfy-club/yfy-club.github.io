@@ -23,6 +23,7 @@ export const MASCOT_STATES = [
   'SMILE',
   'IDLE_DAZE',
   'POUT',
+  'DIZZY',
 ] as const
 
 export type MascotState = (typeof MASCOT_STATES)[number]
@@ -36,4 +37,5 @@ export const STATE_INTENT: Record<MascotState, string> = {
   SMILE: '愉快。轻微放大，halo 亮一档。',
   IDLE_DAZE: '发呆。呼吸拉长、下沉，halo 转速降一档。',
   POUT: '鼓脸。被连点三次，弹性形变一次并抖 halo。',
+  DIZZY: '晕眩。狂戳多次后进入不倒翁摇摆，Halo 超高速暴风自转，1.8s 后回落至 SMILE。',
 }

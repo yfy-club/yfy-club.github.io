@@ -28,14 +28,6 @@ function ringPoint(deg: number, rx: number = HALO.rx, ry: number = HALO.ry) {
   return { x: HALO.cx + rx * Math.cos(rad), y: HALO.cy + ry * Math.sin(rad) }
 }
 
-/** 椭圆上特定角度区间的弧线路径。 */
-function arcSegment(startDeg: number, endDeg: number, rx: number = HALO.rx, ry: number = HALO.ry) {
-  const start = ringPoint(startDeg, rx, ry)
-  const end = ringPoint(endDeg, rx, ry)
-  const diff = (endDeg - startDeg + 360) % 360
-  const largeArc = diff > 180 ? 1 : 0
-  return `M${start.x.toFixed(1)} ${start.y.toFixed(1)}A${rx} ${ry} 0 ${largeArc} 1 ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
-}
 
 /** 上半弧（远端，会被头发压住）。 */
 function arcTop(rx: number, ry: number) {
@@ -136,14 +128,11 @@ export function HaloBack({ variant }: { variant: string }) {
   }
 
   if (variant === 'navi') {
-    // 旗舰向导光环：双重浮空星轨 + 外层侧向星翼导轨（远端部分）
+    // 旗舰向导光环：双重浮空星轨（远端部分）
     return (
       <g className="halo-ring">
         <path d={arcTop(HALO.rx, HALO.ry)} />
-        <path d={arcTop(HALO.rx - 18, HALO.ry - 4.6)} />
-        {/* 左右两侧外浮星轨翼板（上段） */}
-        <path d={arcSegment(335, 360, HALO.rx + 16, HALO.ry + 4.1)} />
-        <path d={arcSegment(180, 205, HALO.rx + 16, HALO.ry + 4.1)} />
+        <path d={arcTop(HALO.rx - 16, HALO.ry - 4.1)} />
       </g>
     )
   }
@@ -161,26 +150,45 @@ export function HaloBack({ variant }: { variant: string }) {
 
 export function HaloFront({ variant }: { variant: string }) {
   switch (variant) {
-    /* 细环 + 一枚缓慢转动的指针 */
+    /* 细环 + 外环旋转星轨与向导星标阵列 */
     case 'navi':
       return (
         <g className="halo-ring">
           <path d={arcBottom(HALO.rx, HALO.ry)} />
           <path d={arcBottom(HALO.rx - 16, HALO.ry - 4.1)} />
-          {/* 左右与下方象限标尺刻度 */}
+          {/* 左右与下方象限标尺短刻度 */}
           <path
-            d={`M${HALO.cx - HALO.rx - 4} ${HALO.cy}H${HALO.cx - HALO.rx + 4}M${HALO.cx + HALO.rx - 4} ${HALO.cy}H${HALO.cx + HALO.rx + 4}M${HALO.cx} ${HALO.cy + HALO.ry - 3}V${HALO.cx} ${HALO.cy + HALO.ry + 4}`}
+            d={`M${HALO.cx - HALO.rx - 4} ${HALO.cy}H${HALO.cx - HALO.rx + 4}M${HALO.cx + HALO.rx - 4} ${HALO.cy}H${HALO.cx + HALO.rx + 4}M${HALO.cx} ${HALO.cy + HALO.ry - 3}V${HALO.cy + HALO.ry + 4}`}
           />
           <g transform={RING_SPACE}>
             <g className="halo-orbit">
-              {/* 北向罗盘主针 */}
-              <path className="halo-solid" d="M0 -84L6 -68L0 -73L-6 -68Z" />
-              {/* 南向尾羽菱形 */}
-              <path className="halo-solid" d="M0 84L4 72L0 76L-4 72Z" />
-              {/* 细轴心线 */}
-              <path d="M0 -66V66" />
-              {/* 环上运行的卫星导航菱形 */}
-              <path className="halo-solid" d="M78 -4L82 0L78 4L74 0Z" />
+              {/* 外环 4 组巡航星翼导轨与航向刻度（中心完全镂空，不穿呆毛） */}
+              {[30, 120, 210, 300].map((deg) => {
+                const rad0 = (deg * Math.PI) / 180
+                const rad1 = ((deg + 30) * Math.PI) / 180
+                const x0 = (92 * Math.cos(rad0)).toFixed(1)
+                const y0 = (92 * Math.sin(rad0)).toFixed(1)
+                const x1 = (92 * Math.cos(rad1)).toFixed(1)
+                const y1 = (92 * Math.sin(rad1)).toFixed(1)
+                const midRad = ((deg + 15) * Math.PI) / 180
+                const mx0 = (92 * Math.cos(midRad)).toFixed(1)
+                const my0 = (92 * Math.sin(midRad)).toFixed(1)
+                const mx1 = (97 * Math.cos(midRad)).toFixed(1)
+                const my1 = (97 * Math.sin(midRad)).toFixed(1)
+                return (
+                  <g key={deg}>
+                    <path d={`M${x0} ${y0}A92 92 0 0 1 ${x1} ${y1}`} />
+                    <path d={`M${mx0} ${my0}L${mx1} ${my1}`} />
+                  </g>
+                )
+              })}
+              {/* 北向领航罗盘星标 */}
+              <path className="halo-solid" d="M0 -88L7 -74L0 -78L-7 -74Z" />
+              {/* 南向对向巡航菱形尾羽 */}
+              <path className="halo-solid" d="M0 88L5 77L0 80L-5 77Z" />
+              {/* 东向与西向伴飞导航卫星菱晶 */}
+              <path className="halo-solid" d="M78 -4L83 0L78 4L73 0Z" />
+              <path className="halo-solid" d="M-78 -4L-73 0L-78 4L-83 0Z" />
             </g>
           </g>
         </g>
@@ -473,29 +481,26 @@ function propBody(variant: string) {
         </>
       )
 
-    /* 工业游标卡尺 / 机械咬合件 */
+    /* 工业数智化微控六角核心 / 视觉标定仪 */
     case 'forge':
       return (
-        <>
-          {/* 游标卡尺主尺身与精密刻度 */}
-          <path className="prop-line" d="M-7 -28V28" />
+        <g transform="translate(-4 0)">
+          {/* 外围轻盈 HUD 取景框：大间隙悬浮卡角 */}
           <path
             className="prop-line"
-            d="M-7 -20H-2M-7 -15H-4M-7 -10H-2M-7 -5H-5M-7 0H-2M-7 5H-5M-7 10H-2M-7 15H-4M-7 20H-2"
+            d="M-21 -14V-21H-14M14 -21H21V-14M21 14V21H14M-14 21H-21V14"
           />
-          {/* 上下测量卡爪 */}
-          <path className="prop-line" d="M-7 -28H14L18 -22H0L-7 -16Z" />
-          <path className="prop-line" d="M-7 28H14L18 22H0L-7 16Z" />
-          {/* 中间咬合的工业六角构件与核心 */}
-          <g transform="translate(9 0)">
-            <path className="prop-line" d={polygon(6, 11, 0)} />
-            <circle className="prop-solid" cx={0} cy={0} r={3} />
-          </g>
-          {/* 对准十字标与 HUD 框角 */}
-          <path className="prop-line" d="M9 -15V-12M9 15V12M-2 0H1M17 0H20" />
-          <path className="prop-line" d="M22 -22H27V-17M22 22H27V17" />
-          <circle className="prop-solid" cx={25} cy={0} r={1.5} />
-        </>
+          {/* 中心通透利落的工业六角螺母机械构件 */}
+          <path className="prop-line" d={polygon(6, 12, 0)} />
+          {/* 左右两侧工业通信现场总线导轨 */}
+          <path className="prop-line" d="M-21 0H-14M14 0H21" />
+          {/* 上下两颗 SCADA 状态呼吸脉冲灯 */}
+          <circle className="prop-node" style={{ animationDelay: '0s' }} cx={0} cy={-13.5} r={2.5} />
+          <circle className="prop-node" style={{ animationDelay: '0.8s' }} cx={0} cy={13.5} r={2.5} />
+          {/* 内层伺服圆环与核心微控能量点 */}
+          <circle className="prop-line" cx={0} cy={0} r={6.5} />
+          <circle className="prop-solid" cx={0} cy={0} r={3} />
+        </g>
       )
 
     default:
