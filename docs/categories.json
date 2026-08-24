@@ -1,0 +1,5 @@
+[
+  { "id": "setup", "label": "上手" },
+  { "id": "convention", "label": "约定" },
+  { "id": "quality", "label": "质量" }
+]

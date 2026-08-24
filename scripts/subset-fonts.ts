@@ -71,7 +71,7 @@ const LATIN_BASE = (() => {
 const SCOPES = {
   ui: ['src', 'index.html'],
   lab: ['src/mascot-lab.tsx', 'src/components/mascot/states.ts'],
-  docs: ['docs/content-docs.md', 'src/data/docs.ts'],
+  docs: ['docs/articles', 'src/data/docs.ts'],
 } as const
 
 /**

@@ -359,6 +359,18 @@
   color: var(--ink-900);
 }
 
+.doc-link {
+  color: var(--sky-700);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 500;
+  transition: color var(--dur-micro) var(--ease-out-expo);
+}
+
+.doc-link:hover {
+  color: var(--sky-900);
+}
+
 /*
  * 正文全文清晰可读，已移除动态模糊（blur）与弱化效果。
  */
@@ -398,6 +410,31 @@
   line-height: 1.75;
   color: var(--ink-900);
   tab-size: 2;
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-solid) transparent;
+}
+
+.doc-pre::-webkit-scrollbar,
+.doc-table-wrap::-webkit-scrollbar {
+  height: 4px;
+  width: 4px;
+}
+
+.doc-pre::-webkit-scrollbar-track,
+.doc-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.doc-pre::-webkit-scrollbar-thumb,
+.doc-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--line-solid);
+  border-radius: 999px;
+  transition: background var(--dur-micro);
+}
+
+.doc-pre::-webkit-scrollbar-thumb:hover,
+.doc-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--sky-500);
 }
 
 /*
@@ -430,10 +467,278 @@
   overflow-x: auto;
 }
 
+.doc-iframe-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  margin-block: var(--space-4);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg-sunk);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
+}
+
+.doc-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
 .doc-table {
   width: 100%;
   border-collapse: collapse;
   font-size: var(--text-caption);
+}
+
+/* -------------------------------------------------------------------------
+   视频预览播放器（融合 cult-ui 交互）
+   ------------------------------------------------------------------------- */
+
+.doc-video-card {
+  margin-block: var(--space-4);
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  transition: border-color var(--dur-micro) var(--ease-out-expo),
+              box-shadow var(--dur-micro) var(--ease-out-expo);
+}
+
+.doc-video-card:hover {
+  border-color: var(--sky-300);
+  box-shadow: 0 8px 24px rgba(46, 155, 224, 0.08);
+}
+
+.doc-video-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-sunk);
+  border-bottom: var(--hairline) solid var(--line-solid);
+}
+
+.doc-video-tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.doc-video-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  border-radius: 2px;
+}
+
+.doc-video-badge.is-yt {
+  background: #ff000015;
+  color: #cc0000;
+  border: 1px solid #ff000030;
+}
+
+.doc-video-badge.is-bili {
+  background: #00aeec15;
+  color: #0088cc;
+  border: 1px solid #00aeec30;
+}
+
+.doc-video-title {
+  flex: 1;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  color: var(--ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-video-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.doc-video-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-badge);
+  background: transparent;
+  color: var(--ink-600);
+  border: none;
+  cursor: pointer;
+  transition: color var(--dur-micro), background var(--dur-micro);
+}
+
+.doc-video-btn:hover {
+  color: var(--sky-700);
+  background: var(--bg-paper);
+}
+
+.doc-video-viewport {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+}
+
+.doc-video-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-video-thumb {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.85;
+}
+
+.doc-video-fallback-thumb {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #182230 0%, #0d121c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+}
+
+.doc-video-fallback-text {
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: #fff;
+  text-align: center;
+  max-width: 80%;
+}
+
+.doc-video-scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at center, transparent 30%, rgba(0, 0, 0, 0.4) 100%);
+  pointer-events: none;
+}
+
+.doc-video-play-btn {
+  position: relative;
+  z-index: 2;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--sky-700);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.doc-video-play-btn svg {
+  translate: 2px 0;
+}
+
+.doc-video-play-tip {
+  position: absolute;
+  bottom: var(--space-4);
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  padding: 3px 10px;
+  border-radius: 999px;
+  pointer-events: none;
+}
+
+.doc-video-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+/* 剧场模态框 */
+.doc-video-modal-root {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+}
+
+.doc-video-modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 15, 25, 0.75);
+  backdrop-filter: blur(8px);
+}
+
+.doc-video-modal-container {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
+  pointer-events: none;
+}
+
+.doc-video-modal-card {
+  width: 100%;
+  max-width: 1000px;
+  background: var(--bg-paper);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-video-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-5);
+  background: var(--bg-sunk);
+  border-bottom: var(--hairline) solid var(--line-solid);
+  gap: var(--space-4);
+}
+
+.doc-video-modal-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.doc-video-modal-title {
+  font-size: var(--text-base);
+  font-weight: 700;
+  color: var(--ink-900);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-video-modal-body {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
 }
 
 .doc-table th {

@@ -1,0 +1,70 @@
+---
+category: setup
+slug: roadmap-foundation
+title: 语法启蒙
+summary: C 语言程序逻辑与指针内存控制，C++ 面向对象思想与核心数据结构。
+minutes: 8
+---
+
+### 推荐视频与学习资源
+
+阶段一强烈推荐配合以下经典教学视频与刷题题单进行系统性练习：
+
+| 模块 | 推荐视频教程 | BV 号 / 链接 | 核心学习重点 |
+|---|---|---|---|
+| 编程通识必看 | [哈佛 CS50x 计算机科学通识导论](https://www.bilibili.com/video/BV1Ls6BYkEGk) | `BV1Ls6BYkEGk` / [YouTube 原版](https://www.youtube.com/watch?v=h6lqxDwUmJQ) | 计算机底层机制、内存管理、算法思维与问题解决模型 |
+| C 语言程序设计 | [C 语言入门精讲教程](https://www.bilibili.com/video/BV1dr4y1n7vA) | `BV1dr4y1n7vA` | 变量作用域、函数封装、指针运算与动态内存分配 |
+| C++ 面向对象 | [C++ 现代面向对象与标准库](https://www.bilibili.com/video/BV1FpWZemEMS) | `BV1FpWZemEMS` | 类与对象、封装继承多态、虚函数表与 STL 容器 |
+| 算法竞赛训练 | [灵神算法基础精讲](https://www.bilibili.com/video/BV1bP411c7oJ) | `BV1bP411c7oJ` | 二分查找、双指针、滑窗与动态规划经典题型 |
+| 刷题题单 | [灵神经典算法题单](https://github.com/EndlessCheng/EndlessCheng) | `开源题单` | 蓝桥杯与天梯赛高频考点分类训练 |
+
+<iframe width="560" height="315" src="https://www.youtube.com/embed/h6lqxDwUmJQ?si=1jMhjmdEtkoxfEmU" title="Harvard CS50x Introduction to Computer Science" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+### 计算机科学通识与 CS50x 导论
+
+在深入具体语言语法之前，推荐先观看哈佛大学经典公开课 CS50x，建立对计算机科学全貌的整体认知。
+
+课程自底向上从二进制数据表示、硬件与 CPU 逻辑开始，引导开发者理解算法的时间复杂度、C 语言的指针内存分配，再延伸至数据结构与网络基础，培养严密的工程直觉。
+
+### C 语言逻辑与流程控制
+
+从 C 语言建立严密的程序设计思维，掌握变量声明、作用域、运算符优先级与分支循环控制流。
+
+通过函数拆分与模块化设计，将复杂业务问题拆解为可独立验证的功能子单元，形成清晰的函数调用边界。
+
+### 指针运算与内存控制意识
+
+深入理解变量地址、指针变量以及直接寻址与间接寻址机制：
+
+```ts
+// 概念对照：指针运算与内存地址偏移
+// int* p = array; *(p + i) 等价于 array[i]
+```
+
+理解栈内存与堆内存的区别：栈由系统自动分配和回收，函数调用时压栈、返回时出栈，执行效率极高但容量有限；堆由开发者通过动态分配函数手动申请与释放，生命周期由代码逻辑掌控，灵活性高但需严防内存泄漏、野指针与越界访问。
+
+### C++ 面向对象编程思想
+
+从面向过程过渡到面向对象，理解类与对象的关系，掌握构造函数、析构函数与拷贝构造的生命周期管理。
+
+掌握面向对象三大核心特性：
+
+* **封装**：隐藏内部数据细节，仅暴露规范的接口方法，保障对象内部状态一致性；
+* **继承**：通过基类派生实现逻辑复用与概念层级划分；
+* **多态**：通过虚函数与虚函数表实现动态绑定，使同一调用在不同派生类对象上表现出不同的具体行为。
+
+### 基础数据结构与算法训练
+
+系统掌握线性结构与非线性结构：
+
+| 数据结构 | 核心操作与复杂度 | 典型应用场景 |
+|---|---|---|
+| 顺序表与链表 | 随机访问 O(1) 或 O(n) 插入删除 | 动态数据序列管理、LRU 缓存机制 |
+| 栈与队列 | O(1) 入栈出栈、先进先出排队 | 括号匹配、表达式求值、广度优先搜索 |
+| 二叉树与哈希表 | O(log n) 遍历查找、O(1) 哈希映射 | 目录层级检索、词频统计、高速索引查询 |
+
+### 算法竞赛备赛与复杂度约束
+
+结合标准模板库容器（如 `std::vector`、`std::map`、`std::queue`）开展排序、二分查找、双指针、滑窗与动态规划专项训练。
+
+在算法竞赛（如蓝桥杯、天梯赛）中，常规评测环境单秒允许执行操作次数约为 10 的 8 次方。在面对十万级数据规模时，算法需控制在 O(n log n) 或更低的时间复杂度，避免使用高阶嵌套循环。

@@ -5,30 +5,32 @@
  * 表格、代码块、摘要不参与：它们含 --ink-600 与等宽小字，
  * 在 opacity .7 下只有 3.32:1，过不了 AA。见 spec 4.4 的 M5 修正记录一。
  */
-import { Fragment } from 'react'
+import { Fragment, useState } from 'react'
 import type { DocBlock, DocInline } from '@/data/docs'
+import { VideoPlayer, VideoModal, type VideoTarget } from './video-player'
 
 export function DocBlocks({ blocks }: { blocks: readonly DocBlock[] }) {
+  const [activeVideo, setActiveVideo] = useState<VideoTarget | null>(null)
+
   return (
     <>
       {blocks.map((block, i) => (
-        <Block key={i} block={block} />
+        <Block key={i} block={block} onOpenVideo={setActiveVideo} />
       ))}
+      <VideoModal video={activeVideo} onClose={() => setActiveVideo(null)} />
     </>
   )
 }
 
-function Block({ block }: { block: DocBlock }) {
+function Block({
+  block,
+  onOpenVideo,
+}: {
+  block: DocBlock
+  onOpenVideo: (target: VideoTarget) => void
+}) {
   switch (block.kind) {
     case 'h3':
-      /*
-       * 块类型叫 h3（成稿里是三级标题），渲染成 h2。
-       *
-       * 页面里唯一的 h1 是篇名，这些是它的直接下级，中间没有 h2——
-       * 从 h1 跳到 h3 是跳级，读屏用户按标题导航时会以为漏了一层。
-       * class 与 id 保持 doc-h3 / sec-N 不变：目录树的第三层、锚点、
-       * 聚焦滚动、scroll-margin 全都按这两个名字挂着。
-       */
       return (
         <h2 className="doc-h3" id={block.id} data-focus-unit="">
           {block.text}
@@ -39,9 +41,8 @@ function Block({ block }: { block: DocBlock }) {
       return (
         <p className="doc-para" data-focus-unit="">
           {block.lines.map((line, i) => (
-            // 一段里的每个自然行单独占一行。成稿里三条禁令写成三行，连成一句会变成绕口令。
             <span className="doc-line" key={i}>
-              <Runs runs={line} />
+              <Runs runs={line} onOpenVideo={onOpenVideo} />
             </span>
           ))}
         </p>
@@ -51,10 +52,6 @@ function Block({ block }: { block: DocBlock }) {
       return (
         <div className="doc-code">
           {block.lang && <span className="doc-code-lang">{block.lang.toUpperCase()}</span>}
-          {/*
-           * html 是 scripts/build-docs.ts 构建期产出的，只含 tk-k / tk-s / tk-c 三个 class，
-           * 尖括号与 & 已在那边转义。运行时不做任何高亮。
-           */}
           <pre className="doc-pre">
             <code dangerouslySetInnerHTML={{ __html: block.html }} />
           </pre>
@@ -69,7 +66,7 @@ function Block({ block }: { block: DocBlock }) {
               <tr>
                 {block.head.map((cell, i) => (
                   <th key={i} scope="col">
-                    <Runs runs={cell} />
+                    <Runs runs={cell} onOpenVideo={onOpenVideo} />
                   </th>
                 ))}
               </tr>
@@ -79,7 +76,7 @@ function Block({ block }: { block: DocBlock }) {
                 <tr key={i}>
                   {row.map((cell, j) => (
                     <td key={j}>
-                      <Runs runs={cell} />
+                      <Runs runs={cell} onOpenVideo={onOpenVideo} />
                     </td>
                   ))}
                 </tr>
@@ -88,15 +85,97 @@ function Block({ block }: { block: DocBlock }) {
           </table>
         </div>
       )
+
+    case 'iframe':
+      return (
+        <div className="doc-iframe-wrap">
+          <iframe
+            className="doc-iframe"
+            src={block.src}
+            title={block.title || 'Video Player'}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            loading="lazy"
+          />
+        </div>
+      )
+
+    case 'video':
+      return (
+        <VideoPlayer
+          provider={block.provider}
+          id={block.id}
+          title={block.title}
+          bvid={block.bvid}
+        />
+      )
   }
 }
 
-function Runs({ runs }: { runs: readonly DocInline[] }) {
+/**
+ * 识别 B 站与 YouTube 视频链接
+ */
+function parseVideoLink(href: string): { provider: 'youtube' | 'bilibili'; id: string } | null {
+  if (!href) return null
+
+  // Bilibili link: https://www.bilibili.com/video/BV...
+  const biliMatch = href.match(/bilibili\.com\/(?:video|player\.html\?bvid=)\/(BV[0-9a-zA-Z]+)/i) ||
+                    href.match(/bvid=(BV[0-9a-zA-Z]+)/i) ||
+                    href.match(/(BV[0-9a-zA-Z]{10})/i)
+  if (biliMatch && biliMatch[1]) {
+    return { provider: 'bilibili', id: biliMatch[1] }
+  }
+
+  // YouTube link: https://www.youtube.com/watch?v=... or https://youtu.be/...
+  const ytMatch = href.match(/(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/i)
+  if (ytMatch && ytMatch[1]) {
+    return { provider: 'youtube', id: ytMatch[1] }
+  }
+
+  return null
+}
+
+function Runs({
+  runs,
+  onOpenVideo,
+}: {
+  runs: readonly DocInline[]
+  onOpenVideo: (target: VideoTarget) => void
+}) {
   return (
     <>
       {runs.map((run, i) => {
         if (run.t === 'code') return <code key={i}>{run.v}</code>
         if (run.t === 'strong') return <strong key={i}>{run.v}</strong>
+        if (run.t === 'link') {
+          const videoInfo = parseVideoLink(run.href || '')
+          return (
+            <a
+              key={i}
+              href={run.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="doc-link"
+              onClick={
+                videoInfo
+                  ? (e) => {
+                      if (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+                        e.preventDefault()
+                        onOpenVideo({
+                          provider: videoInfo.provider,
+                          id: videoInfo.id,
+                          title: run.v,
+                        })
+                      }
+                    }
+                  : undefined
+              }
+              title={videoInfo ? `点击预览：${run.v}` : undefined}
+            >
+              {run.v}
+            </a>
+          )
+        }
         return <Fragment key={i}>{run.v}</Fragment>
       })}
     </>

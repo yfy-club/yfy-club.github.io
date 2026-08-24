@@ -3,7 +3,7 @@
  *
  *   npm run docs:build
  *
- * 把成稿 docs/content-docs.md 解析成结构化数据，代码块在构建期用 Shiki 高亮，
+ * 把 docs/articles/*.md 解析成结构化数据，代码块在构建期用 Shiki 高亮，
  * 产物写进 src/data/docs.ts 提交进仓库。运行时零成本，shiki 只在 devDependencies，不进包。
  * 与 scripts/build-shots.ts、scripts/subset-fonts.ts 同一套路：产物是仓内文件，不是构建期副作用。
  *
@@ -17,11 +17,13 @@
  *
  * 注释原定 --ink-400，实测对 --bg-sunk 只有 3.13:1，低于 AA，已改。见 spec 4.4 的 M5 修正记录二。
  */
-import { readFile, writeFile } from 'node:fs/promises'
+import { readdir, readFile, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHighlighter, type ThemeRegistrationRaw } from 'shiki'
 
-const SRC = fileURLToPath(new URL('../docs/content-docs.md', import.meta.url))
+const ARTICLES_DIR = fileURLToPath(new URL('../docs/articles', import.meta.url))
+const CATS_FILE = fileURLToPath(new URL('../docs/categories.json', import.meta.url))
 const OUT = fileURLToPath(new URL('../src/data/docs.ts', import.meta.url))
 
 /** 高亮语言。成稿里只有这三种，多的不打进来。 */
@@ -92,8 +94,9 @@ const THEME: ThemeRegistrationRaw = {
 /* ====================================================================== */
 
 interface Inline {
-  t: 'text' | 'code' | 'strong'
+  t: 'text' | 'code' | 'strong' | 'link'
   v: string
+  href?: string
 }
 
 type Block =
@@ -101,6 +104,8 @@ type Block =
   | { kind: 'para'; lines: Inline[][] }
   | { kind: 'code'; lang: string; html: string }
   | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
+  | { kind: 'iframe'; src: string; title: string }
+  | { kind: 'video'; provider: 'youtube' | 'bilibili'; id: string; title: string; bvid?: string }
 
 interface Article {
   slug: string
@@ -113,9 +118,19 @@ interface Article {
   blocks: Block[]
 }
 
+function parseStrongAndText(segment: string, out: Inline[]) {
+  for (const seg of segment.split(/(\*\*[^*]+\*\*)/g)) {
+    if (!seg) continue
+    if (seg.startsWith('**') && seg.endsWith('**')) {
+      out.push({ t: 'strong', v: seg.slice(2, -2) })
+    } else {
+      out.push({ t: 'text', v: seg })
+    }
+  }
+}
+
 /**
- * 行内标记。先切 `code`，再在剩下的文本里切 **strong**——
- * 反过来会把 `138****1234` 里的星号当成加粗。
+ * 行内标记。先切 `code`，再切 [link](url)，再在剩下的文本里切 **strong**。
  */
 function inline(text: string): Inline[] {
   const out: Inline[] = []
@@ -125,10 +140,18 @@ function inline(text: string): Inline[] {
       out.push({ t: 'code', v: piece.slice(1, -1) })
       continue
     }
-    for (const seg of piece.split(/(\*\*[^*]+\*\*)/g)) {
-      if (!seg) continue
-      if (seg.startsWith('**') && seg.endsWith('**')) out.push({ t: 'strong', v: seg.slice(2, -2) })
-      else out.push({ t: 'text', v: seg })
+    const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    while ((match = linkRegex.exec(piece)) !== null) {
+      if (match.index > lastIndex) {
+        parseStrongAndText(piece.slice(lastIndex, match.index), out)
+      }
+      out.push({ t: 'link', v: match[1]!, href: match[2]! })
+      lastIndex = linkRegex.lastIndex
+    }
+    if (lastIndex < piece.length) {
+      parseStrongAndText(piece.slice(lastIndex), out)
     }
   }
   return out
@@ -147,144 +170,167 @@ const cells = (line: string) =>
     .map((c) => inline(c.trim()))
 
 async function main() {
-  const text = await readFile(SRC, 'utf8')
-  const lines = text.split(/\r?\n/)
-
   const highlighter = await createHighlighter({ themes: [THEME], langs: [...LANGS] })
 
-  /** 分类表：id 与中文标签。 */
-  const categories: { id: string; label: string }[] = []
-  const labelToId = new Map<string, string>()
+  const catsJson = await readFile(CATS_FILE, 'utf8')
+  const categories: { id: string; label: string }[] = JSON.parse(catsJson)
+
+  const entries = await readdir(ARTICLES_DIR)
+  const mdFiles = entries.filter((e) => e.endsWith('.md')).sort()
 
   const articles: Article[] = []
-  let current: Article | null = null
-  let category = ''
-  /** 连续非空行攒成一段，空行断开。成稿里「不 force push…」那种三行禁令是一段，不是三段。 */
-  let paragraph: string[] = []
 
-  const flushParagraph = () => {
-    if (!current || paragraph.length === 0) return
-    current.blocks.push({ kind: 'para', lines: paragraph.map(inline) })
-    paragraph = []
-  }
+  for (let idx = 0; idx < mdFiles.length; idx += 1) {
+    const fileName = mdFiles[idx]!
+    const filePath = join(ARTICLES_DIR, fileName)
+    const text = await readFile(filePath, 'utf8')
+    const lines = text.split(/\r?\n/)
 
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i]!
-    const trimmed = line.trim()
+    let category = ''
+    let slug = ''
+    let title = ''
+    let summary = ''
+    let minutes = 3
 
-    // 分类表。只有文件头那一张，落在任何文章开始之前。
-    if (!current && /^\|/.test(trimmed) && !trimmed.startsWith('| id') && !/^\|\s*-/.test(trimmed)) {
-      const [id, label] = trimmed.split('|').map((c) => c.trim()).filter(Boolean)
-      if (id && label) {
-        const clean = id.replace(/`/g, '')
-        categories.push({ id: clean, label })
-        labelToId.set(label, clean)
+    let lineIndex = 0
+
+    // 解析 Frontmatter (--- ... ---)
+    if (lines[0]?.trim() === '---') {
+      lineIndex = 1
+      while (lineIndex < lines.length && lines[lineIndex]?.trim() !== '---') {
+        const line = lines[lineIndex]!.trim()
+        const match = line.match(/^(\w+):\s*(.+)$/)
+        if (match) {
+          const [, key, rawVal] = match
+          const val = rawVal!.trim().replace(/^['"]|['"]$/g, '')
+          if (key === 'category') category = val
+          else if (key === 'slug') slug = val
+          else if (key === 'title') title = val
+          else if (key === 'summary') summary = val
+          else if (key === 'minutes') minutes = Number(val) || 3
+        }
+        lineIndex += 1
       }
-      continue
+      lineIndex += 1 // 跳过闭合的 ---
     }
 
-    // 一级标题就是分类分隔，本身不进内容
-    if (/^# /.test(trimmed)) {
-      flushParagraph()
-      const label = trimmed.slice(2).trim()
-      if (labelToId.has(label)) category = labelToId.get(label)!
-      current = null
-      continue
+    const current: Article = {
+      slug,
+      index: String(idx + 1).padStart(2, '0'),
+      category,
+      title,
+      summary,
+      minutes,
+      headings: [],
+      blocks: [],
     }
 
-    // 篇目头：## 3. 分支与提交 · `git-flow`
-    const head = trimmed.match(/^## (\d+)\.\s*(.+?)\s*·\s*`([\w-]+)`\s*$/)
-    if (head) {
-      flushParagraph()
-      current = {
-        slug: head[3]!,
-        index: head[1]!.padStart(2, '0'),
-        category,
-        title: head[2]!,
-        summary: '',
-        minutes: 0,
-        headings: [],
-        blocks: [],
+    let paragraph: string[] = []
+    const flushParagraph = () => {
+      if (paragraph.length === 0) return
+      current.blocks.push({ kind: 'para', lines: paragraph.map(inline) })
+      paragraph = []
+    }
+
+    for (let i = lineIndex; i < lines.length; i += 1) {
+      const line = lines[i]!
+      const trimmed = line.trim()
+
+      if (trimmed === '') {
+        flushParagraph()
+        continue
       }
-      articles.push(current)
-      continue
-    }
 
-    if (!current) continue
+      if (trimmed === '---') {
+        flushParagraph()
+        continue
+      }
 
-    if (trimmed === '' ) {
-      flushParagraph()
-      continue
-    }
+      if (/^### /.test(trimmed)) {
+        flushParagraph()
+        const id = `sec-${current.headings.length + 1}`
+        const heading = trimmed.slice(4).trim()
+        current.headings.push({ id, text: heading })
+        current.blocks.push({ kind: 'h3', id, text: heading })
+        continue
+      }
 
-    if (trimmed === '---') {
-      flushParagraph()
-      current = null
-      continue
-    }
+      // 视频播放器嵌入组件
+      const videoCustomMatch = trimmed.match(/^<video-preview\s+provider="(youtube|bilibili)"\s+id="([^"]+)"(?:\s+title="([^"]*)")?(?:\s+bvid="([^"]*)")?\s*><\/video-preview>$/i)
+      if (videoCustomMatch) {
+        flushParagraph()
+        const provider = videoCustomMatch[1] as 'youtube' | 'bilibili'
+        const id = videoCustomMatch[2]!
+        const title = videoCustomMatch[3] || '视频教程'
+        const bvid = videoCustomMatch[4]
+        current.blocks.push({ kind: 'video', provider, id, title, ...(bvid ? { bvid } : {}) })
+        continue
+      }
 
-    const summary = trimmed.match(/^\*\*摘要\*\*：(.+)$/)
-    if (summary) {
-      flushParagraph()
-      current.summary = summary[1]!.trim()
-      continue
-    }
+      // YouTube iframe 自动升级为可交互视频预览播放器
+      const ytIframeMatch = trimmed.match(/src="https?:\/\/(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]+)[^"]*"/i)
+      if (ytIframeMatch) {
+        flushParagraph()
+        const id = ytIframeMatch[1]!
+        const titleMatch = trimmed.match(/title="([^"]*)"/i)
+        const title = titleMatch ? titleMatch[1]! : 'Harvard CS50x 导论'
+        current.blocks.push({ kind: 'video', provider: 'youtube', id, title, bvid: 'BV1Ls6BYkEGk' })
+        continue
+      }
 
-    const minutes = trimmed.match(/^\*\*阅读\*\*：(\d+)\s*分钟$/)
-    if (minutes) {
-      flushParagraph()
-      current.minutes = Number(minutes[1])
-      continue
-    }
+      // 通用 iframe 视频嵌入
+      const iframeMatch = trimmed.match(/^<iframe\s+.*?src="([^"]+)".*?>\s*<\/iframe>$/i)
+      if (iframeMatch) {
+        flushParagraph()
+        const src = iframeMatch[1]!
+        const titleMatch = trimmed.match(/title="([^"]*)"/i)
+        const title = titleMatch ? titleMatch[1]! : ''
+        current.blocks.push({ kind: 'iframe', src, title })
+        continue
+      }
 
-    if (/^### /.test(trimmed)) {
-      flushParagraph()
-      const id = `sec-${current.headings.length + 1}`
-      const heading = trimmed.slice(4).trim()
-      current.headings.push({ id, text: heading })
-      current.blocks.push({ kind: 'h3', id, text: heading })
-      continue
-    }
-
-    // 代码块。栅栏语言缺省的是纯文本清单（分支命名、目录树、分层），不高亮也不给角标。
-    const fence = trimmed.match(/^```(\w*)\s*$/)
-    if (fence) {
-      flushParagraph()
-      const lang = fence[1] ?? ''
-      const body: string[] = []
-      i += 1
-      while (i < lines.length && !/^```\s*$/.test(lines[i]!.trim())) {
-        body.push(lines[i]!)
+      // 代码块
+      const fence = trimmed.match(/^```(\w*)\s*$/)
+      if (fence) {
+        flushParagraph()
+        const lang = fence[1] ?? ''
+        const body: string[] = []
         i += 1
+        while (i < lines.length && !/^```\s*$/.test(lines[i]!.trim())) {
+          body.push(lines[i]!)
+          i += 1
+        }
+        const code = body.join('\n')
+        const known = LANGS.find((l) => l === lang)
+        current.blocks.push({
+          kind: 'code',
+          lang: known ?? '',
+          html: known ? highlight(highlighter, code, known) : escapeHtml(code),
+        })
+        continue
       }
-      const code = body.join('\n')
-      const known = LANGS.find((l) => l === lang)
-      current.blocks.push({
-        kind: 'code',
-        lang: known ?? '',
-        html: known ? highlight(highlighter, code, known) : escapeHtml(code),
-      })
-      continue
-    }
 
-    if (/^\|/.test(trimmed)) {
-      flushParagraph()
-      const head = cells(trimmed)
-      const rows: Inline[][][] = []
-      i += 1
-      if (/^\|\s*-/.test(lines[i]?.trim() ?? '')) i += 1 // 分隔行
-      while (i < lines.length && /^\|/.test(lines[i]!.trim())) {
-        rows.push(cells(lines[i]!))
+      // 表格
+      if (/^\|/.test(trimmed)) {
+        flushParagraph()
+        const head = cells(trimmed)
+        const rows: Inline[][][] = []
         i += 1
+        if (/^\|\s*-/.test(lines[i]?.trim() ?? '')) i += 1 // 分隔行
+        while (i < lines.length && /^\|/.test(lines[i]!.trim())) {
+          rows.push(cells(lines[i]!))
+          i += 1
+        }
+        i -= 1
+        current.blocks.push({ kind: 'table', head, rows })
+        continue
       }
-      i -= 1
-      current.blocks.push({ kind: 'table', head, rows })
-      continue
-    }
 
-    paragraph.push(trimmed)
+      paragraph.push(trimmed)
+    }
+    flushParagraph()
+    articles.push(current)
   }
-  flushParagraph()
 
   verify(categories, articles)
   await writeFile(OUT, render(categories, articles), 'utf8')
@@ -300,7 +346,7 @@ async function main() {
   console.log(`篇目 ${articles.length}`)
   for (const a of articles) {
     console.log(
-      `  ${a.index} ${a.slug.padEnd(13)} ${a.category.padEnd(11)} ${String(a.minutes)} 分钟  ` +
+      `  ${a.index} ${a.slug.padEnd(25)} ${a.category.padEnd(11)} ${String(a.minutes)} 分钟  ` +
         `${a.headings.length} 节  ${a.blocks.length} 块  ${a.title}`,
     )
   }
@@ -333,8 +379,8 @@ function highlight(
 /** 解析结果的自查。成稿改了结构而解析没跟上时，这里直接失败，不要产出半份数据。 */
 function verify(categories: { id: string }[], articles: Article[]) {
   const problems: string[] = []
-  if (categories.length !== 3) problems.push(`分类应为 3 个，解析出 ${categories.length}`)
-  if (articles.length !== 8) problems.push(`篇目应为 8 篇，解析出 ${articles.length}`)
+  if (categories.length === 0) problems.push(`分类不可为空`)
+  if (articles.length === 0) problems.push(`篇目不可为空`)
   const ids = new Set(categories.map((c) => c.id))
   for (const a of articles) {
     if (!a.summary) problems.push(`${a.slug} 缺摘要`)
@@ -353,7 +399,14 @@ function verify(categories: { id: string }[], articles: Article[]) {
 const j = (v: unknown) => JSON.stringify(v)
 
 function renderInline(runs: Inline[]) {
-  return `[${runs.map((r) => `{ t: '${r.t}', v: ${j(r.v)} }`).join(', ')}]`
+  return `[${runs
+    .map((r) => {
+      if (r.t === 'link') {
+        return `{ t: 'link', v: ${j(r.v)}, href: ${j(r.href)} }`
+      }
+      return `{ t: '${r.t}', v: ${j(r.v)} }`
+    })
+    .join(', ')}]`
 }
 
 function renderBlock(b: Block): string {
@@ -369,6 +422,10 @@ function renderBlock(b: Block): string {
         `    { kind: 'table',\n      head: [${b.head.map(renderInline).join(', ')}],\n` +
         `      rows: [\n${b.rows.map((r) => `        [${r.map(renderInline).join(', ')}],`).join('\n')}\n      ] },`
       )
+    case 'iframe':
+      return `    { kind: 'iframe', src: ${j(b.src)}, title: ${j(b.title)} },`
+    case 'video':
+      return `    { kind: 'video', provider: '${b.provider}', id: ${j(b.id)}, title: ${j(b.title)}${b.bvid ? `, bvid: ${j(b.bvid)}` : ''} },`
   }
 }
 
@@ -396,12 +453,13 @@ ${a.blocks.map(renderBlock).join('\n')}
     )
     .join('\n')
 
-  return `/* 由 scripts/build-docs.ts 生成，不要手改。改内容改 docs/content-docs.md，再跑 npm run docs:build。 */
+  return `/* 由 scripts/build-docs.ts 生成，不要手改。改内容改 docs/articles/*.md，再跑 npm run docs:build。 */
 
-/** 行内片段。code 走等宽，strong 走 700。 */
+/** 行内片段。code 走等宽，strong 走 700，link 走超链接。 */
 export interface DocInline {
-  t: 'text' | 'code' | 'strong'
+  t: 'text' | 'code' | 'strong' | 'link'
   v: string
+  href?: string
 }
 
 /**
@@ -421,6 +479,14 @@ export type DocBlock =
       kind: 'table'
       head: readonly (readonly DocInline[])[]
       rows: readonly (readonly (readonly DocInline[])[])[]
+    }
+  | { kind: 'iframe'; src: string; title: string }
+  | {
+      kind: 'video'
+      provider: 'youtube' | 'bilibili'
+      id: string
+      title: string
+      bvid?: string
     }
 
 export interface DocCategory {
