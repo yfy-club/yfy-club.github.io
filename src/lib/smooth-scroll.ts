@@ -24,16 +24,18 @@ let active: Lenis | null = null
 
 export interface SmoothScrollOptions {
   lerp?: number
+  wheelMultiplier?: number
 }
 
 export function useSmoothScroll(enabled: boolean, options: SmoothScrollOptions = {}) {
-  const { lerp = 0.09 } = options
+  const { lerp = 0.085, wheelMultiplier = 1 } = options
 
   useEffect(() => {
     if (!enabled) return
 
     const lenis = new Lenis({
       lerp,
+      wheelMultiplier,
       autoRaf: true,
       // 站内锚点交给 lenis 接管，否则原生跳转会和惯性打架
       anchors: { offset: -NAV_OFFSET },
@@ -44,7 +46,7 @@ export function useSmoothScroll(enabled: boolean, options: SmoothScrollOptions =
       active = null
       lenis.destroy()
     }
-  }, [enabled, lerp])
+  }, [enabled, lerp, wheelMultiplier])
 }
 
 export function scrollToTop() {
