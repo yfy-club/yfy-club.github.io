@@ -1,5 +1,5 @@
 /* =========================================================================
-   项目视差展台 · 三个
+   项目战术展台 · 三个全宽终端卡片
    规格 4.3。三色世界只作用于框线与光效，面积占比 < 8%。
    ========================================================================= */
 
@@ -7,130 +7,143 @@
   padding-bottom: var(--space-8);
 }
 
+.projects-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  width: 100%;
+}
+
 /* -------------------------------------------------------------------------
-   一个展台。80vh，左右交替。
+   单个项目展台卡片
    ------------------------------------------------------------------------- */
 
 .stage {
   position: relative;
-  min-height: 80vh;
-  display: flex;
-  /* 竖向排：主体居中，展开的档案接在它下面往下顶。 */
-  /* 不用绝对定位压在主体上：那等于变相的模态遮罩，4.3 禁了。 */
-  flex-direction: column;
-  justify-content: center;
-  padding-block: var(--space-7);
-  /* 视差层的位移由 JS 写进来，这里给默认值，无 JS 时就是不动 */
-  --par-shot: 0px;
-  --par-copy: 0px;
-  --par-ticks: 0px;
+  width: 100%;
 }
 
-/* 背景刻度线。最快的一层，+14%。用重复线性渐变，不摆 DOM */
-.stage-ticks {
-  position: absolute;
-  inset: -20% 0;
-  pointer-events: none;
-  translate: 0 var(--par-ticks);
-  /*
-   * 这一层每帧都在动，而且里面一个字也没有，推上合成层是纯赚：
-   * 不推的话每帧要重画整个 80vh 展台高度的重复渐变。
-   * 文案块与截图那两层有小字，不能这么处理——推层会关掉 LCD 亚像素拗颜色，
-   * 它们的稳定靠位移取整到物理像素保证（见 projects.tsx 的 useParallax）。
-   */
-  will-change: transform;
-  background-image: repeating-linear-gradient(
-    to bottom,
-    var(--line-grid) 0 var(--hairline),
-    transparent var(--hairline) 56px
-  );
-  /* 只在文案那半边铺，另半边留给截图，否则线穿过截图像脏 */
-  background-size: 46% 100%;
-  background-repeat: no-repeat;
-  background-position: right center;
-}
+/* -------------------------------------------------------------------------
+   CutoutCard 全宽战术大卡片外壳（碧蓝档案 45° 几何切角）
+   ------------------------------------------------------------------------- */
 
-.stage[data-flip='true'] .stage-ticks {
-  background-position: left center;
-}
-
-.stage-inner {
+.stage-card {
   position: relative;
+  background: var(--bg-paper);
+  border-radius: var(--radius-card);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--line-solid),
+    0 16px 40px -12px rgba(0, 0, 0, 0.05);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 24px) 0,
+    100% 24px,
+    100% 100%,
+    24px 100%,
+    0 calc(100% - 24px)
+  );
+  padding: var(--space-6) var(--space-7);
+  opacity: 0;
+  transform: translateY(16px);
+  transition: box-shadow var(--dur-micro) var(--ease-out-expo);
+  width: 100%;
+}
+
+.stage[data-entered='true'] .stage-card {
+  animation: stage-enter var(--dur-enter) var(--ease-out-expo) forwards;
+}
+
+@keyframes stage-enter {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (scripting: none) {
+  .stage-card {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.stage:hover .stage-card {
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--stage-tone),
+    0 22px 50px -12px rgba(0, 0, 0, 0.08);
+}
+
+/* 45° 战术角标 Pin */
+.stage-card-pin {
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: var(--stage-tone);
+  color: #fff;
+  padding: 5px 20px 6px 24px;
+  clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%, 0 20px);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  z-index: 2;
+}
+
+.stage-pin-index {
+  font-family: var(--font-hud);
+  font-size: var(--text-body);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.stage-pin-tag {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  opacity: 0.85;
+}
+
+/* -------------------------------------------------------------------------
+   主展示行（大画幅截图 + 详情文案）
+   ------------------------------------------------------------------------- */
+
+.stage-card-main {
   display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
   align-items: center;
   gap: var(--space-7);
+  width: 100%;
 }
 
-.stage[data-flip='true'] .stage-shot {
+.stage[data-flip='true'] .stage-card-media {
   order: 2;
 }
 
 /* -------------------------------------------------------------------------
-   截图与取景框。Bracket 给四角 L 线，准星单独摆。
+   截图媒体区域（大画幅展示）
    ------------------------------------------------------------------------- */
 
-.stage-shot {
+.stage-card-media {
   position: relative;
-  translate: 0 var(--par-shot);
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--line-solid),
+    0 8px 24px -8px rgba(0, 0, 0, 0.08);
 }
-
-.stage-shot .hud-bracket {
-  display: block;
-}
-
-/* 四角准星。压在角线的交点上 */
-.stage-reticle {
-  position: absolute;
-  pointer-events: none;
-  color: var(--stage-tone);
-  opacity: 0;
-  transition: opacity var(--dur-micro) var(--ease-out-expo);
-}
-
-.stage:hover .stage-reticle,
-.stage[data-open='true'] .stage-reticle {
-  opacity: 1;
-}
-
-.stage-reticle[data-corner='tl'] {
-  top: -23px;
-  left: -23px;
-}
-
-.stage-reticle[data-corner='tr'] {
-  top: -23px;
-  right: -23px;
-}
-
-.stage-reticle[data-corner='bl'] {
-  bottom: -23px;
-  left: -23px;
-}
-
-.stage-reticle[data-corner='br'] {
-  bottom: -23px;
-  right: -23px;
-}
-
-/* 准星色是展台主调，Reticle 原子默认走 --sky-500，要提特异性压过去 */
-.stage .stage-reticle .hud-reticle {
-  color: currentColor;
-}
-
-/* -------------------------------------------------------------------------
-   截图本体。aspect-ratio 锁版，LQIP 垫底。
-   ------------------------------------------------------------------------- */
 
 .shot {
   position: relative;
   display: block;
+  width: 100%;
   overflow: hidden;
   background-color: var(--bg-sunk);
   background-image: var(--shot-lqip);
   background-size: cover;
   background-position: center;
-  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
 }
 
 .shot > img {
@@ -145,94 +158,22 @@
   opacity: 1;
 }
 
-/*
- * 淡入是 React 的 onLoad 打上 data-loaded 才发生的，没有 JS 就永远停在 opacity: 0，
- * 只剩 20px 的 LQIP 底图糊在那儿。首页自 M5 起是预渲染的静态页，
- * img 的 src 与 srcset 都在静态 HTML 里，图本身能下下来，这里只把淡入的起始态取消掉。
- */
 @media (scripting: none) {
   .shot > img {
     opacity: 1;
   }
 }
 
-/* 拓扑微光流。悬停时沿抽象界面骨架游走，透明度 0.35（规格 4.3） */
-.stage-topo {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity var(--dur-micro) var(--ease-out-expo);
-}
-
-.stage-topo path {
-  stroke: var(--stage-tone);
-  stroke-width: 1.5;
-  stroke-dasharray: 26 74;
-  vector-effect: non-scaling-stroke;
-}
-
-.stage:hover .stage-topo {
-  opacity: 0.35;
-}
-
-.stage:hover .stage-topo path {
-  animation: stage-topo 3.2s linear infinite;
-}
-
-@keyframes stage-topo {
-  to {
-    stroke-dashoffset: -100;
-  }
-}
-
 /* -------------------------------------------------------------------------
-   文案块。反向的一层视差 -4%。
+   卡片右侧：项目详情与核心指标
    ------------------------------------------------------------------------- */
 
-.stage-copy {
+.stage-card-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
-  /*
-   * translate 只归视差，入场位移走 transform。
-   *
-   * 两者必须分开。前一版把 16px 入场位移写在 stage-enter 的关键帧里
-   * （translate: 0 calc(var(--par-copy) + 16px)），而那条动画是 forwards——
-   * 动画结束后仍永久持有 translate 这个属性。于是视差变量不再直接作用于元素，
-   * 而要经「关键帧重新解析 var → 动画输出值」这条路，该过程发生在样式生命周期的
-   * 另一个阶段，比普通样式重算晚一拍。结果是文案块每帧比截图层滞后一帧，
-   * 快速滚动时两层看得出不同步。transform 与 translate 是两个独立属性且会叠加，
-   * 各管一摊后视差回到纯 CSS 属性赋值，跟 .stage-shot / .stage-ticks 同一拍。
-   */
-  translate: 0 var(--par-copy);
-  transform: translateY(16px);
-  opacity: 0;
-}
-
-.stage[data-entered='true'] .stage-copy {
-  animation: stage-enter var(--dur-enter) var(--ease-out-expo) forwards;
-}
-
-@keyframes stage-enter {
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-/*
- * 同 tracks.css：没有 JS 就没人来打 data-entered，文案会一直停在 opacity: 0。
- * 首页自 M5 起是预渲染的静态页，规格第 6 节要求无 JS 时内容可读。
- */
-@media (scripting: none) {
-  .stage-copy {
-    opacity: 1;
-    transform: none;
-  }
+  width: 100%;
 }
 
 .stage-head {
@@ -242,17 +183,6 @@
   width: 100%;
 }
 
-.stage-index {
-  font-family: var(--font-hud);
-  font-size: var(--text-h3);
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  line-height: 1;
-  color: var(--stage-tone);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Rail 原子里写了 width: 100%，单类选择器压不过它，要提特异性 */
 .stage .stage-head-rail {
   flex: 1;
   width: auto;
@@ -275,11 +205,11 @@
 }
 
 .stage-brief {
-  max-width: 42ch;
+  max-width: 44ch;
   color: var(--ink-600);
 }
 
-/* 数据条。hud 字体 + Diamond 分隔，横向铺开 */
+/* 数据条 */
 .stage-metrics {
   list-style: none;
   padding: 0;
@@ -317,7 +247,7 @@
 }
 
 /* -------------------------------------------------------------------------
-   两枚操作。切角靠 clip-path，不靠圆角。
+   操作按钮组
    ------------------------------------------------------------------------- */
 
 .stage-actions {
@@ -364,43 +294,81 @@
 }
 
 /* -------------------------------------------------------------------------
-   展开档案。原地展开，不弹模态遮罩。
+   底部全宽向下展开的档案区域 (Dossier Expandable)
    ------------------------------------------------------------------------- */
 
-.stage-dossier {
+.stage-card-dossier {
   overflow: hidden;
-  margin-top: var(--space-5);
-  background: var(--bg-paper);
-  box-shadow: inset 0 var(--hairline) 0 var(--line-solid);
+  width: 100%;
 }
 
 .stage-dossier-inner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 0.8fr);
+  margin-top: var(--space-6);
+  padding-top: var(--space-5);
+  border-top: var(--hairline) solid var(--line-solid);
+  display: flex;
+  flex-direction: column;
   gap: var(--space-6);
-  padding-block: var(--space-5);
 }
 
+.stage-dossier-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.stage-dossier-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.stage-dossier-title {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--stage-tone);
+  white-space: nowrap;
+}
+
+.stage .stage-dossier-rail {
+  flex: 1;
+  width: auto;
+}
+
+/* 4 列横向建筑分层流水线 */
 .stage-tiers {
   list-style: none;
   padding: 0;
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: var(--space-3);
+  width: 100%;
 }
 
 .stage-tiers > li {
-  display: grid;
-  grid-template-columns: 68px minmax(0, 1fr);
-  align-items: baseline;
-  gap: var(--space-2) var(--space-4);
-  padding-left: var(--space-3);
+  background: var(--bg-sunk);
+  border-radius: var(--radius-sm);
+  padding: var(--space-3) var(--space-4);
   box-shadow: inset 3px 0 0 var(--stage-tone);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.stage-tier-head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .stage-tier-code {
   font-family: var(--font-hud);
   font-size: var(--text-hud);
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--ink-500);
   font-variant-numeric: tabular-nums;
@@ -413,10 +381,9 @@
 }
 
 .stage-tier-tags {
-  grid-column: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1) var(--space-3);
+  gap: var(--space-1) var(--space-2);
   font-family: var(--font-hud);
   font-size: var(--text-hud);
   font-weight: 500;
@@ -424,69 +391,85 @@
   color: var(--ink-600);
 }
 
+/* 全宽大图展示图库 */
 .stage-gallery {
   display: grid;
-  gap: var(--space-3);
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  align-content: start;
+  gap: var(--space-4);
+  width: 100%;
+  align-items: start;
+}
+
+.stage-gallery[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stage-gallery[data-count='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.stage-gallery[data-count='1'] {
+  grid-template-columns: minmax(0, 720px);
+  justify-content: center;
+}
+
+.stage-gallery-item {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--line-solid),
+    0 6px 20px -6px rgba(0, 0, 0, 0.06);
+  transition:
+    transform var(--dur-micro) var(--ease-out-expo),
+    box-shadow var(--dur-micro) var(--ease-out-expo);
+}
+
+.stage-gallery-item:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    inset 0 0 0 var(--hairline) var(--stage-tone),
+    0 10px 28px -6px rgba(0, 0, 0, 0.1);
+}
+
+.stage-gallery-item .shot {
+  width: 100%;
+  border-radius: var(--radius-sm);
 }
 
 /* -------------------------------------------------------------------------
-   窄屏。截图与文案改上下叠，视差与光流关掉。
+   窄屏。截图与文案改上下叠，档案保持向下展开。
    ------------------------------------------------------------------------- */
 
 @media (width < 900px) {
-  .stage {
-    min-height: auto;
-    padding-block: var(--space-6);
+  .projects-list {
+    gap: var(--space-4);
   }
 
-  .stage-inner {
+  .stage-card {
+    padding: var(--space-5);
+  }
+
+  .stage-card-main {
     grid-template-columns: 1fr;
     gap: var(--space-5);
   }
 
-  /* 上下叠的时候截图一律在上，翻面失去意义 */
-  .stage[data-flip='true'] .stage-shot {
+  /* 上下叠的时候截图一律在上 */
+  .stage[data-flip='true'] .stage-card-media {
     order: 0;
   }
 
-  .stage-ticks {
-    display: none;
-  }
-
-  /*
-   * 窄屏收取景框。
-   * 角线 gap 14 + 准星外向偏 23px 在 390 的屏幕上溢出 3px，完整开不下。
-   * 准星收到框内，角线的 gap 也跟着收。
-   */
-  .stage-shot .hud-bracket {
-    --bracket-gap: 6px;
-    --bracket-len: 22px;
-  }
-
-  .stage-reticle[data-corner='tl'],
-  .stage-reticle[data-corner='tr'] {
-    top: 4px;
-  }
-
-  .stage-reticle[data-corner='bl'],
-  .stage-reticle[data-corner='br'] {
-    bottom: 4px;
-  }
-
-  .stage-reticle[data-corner='tl'],
-  .stage-reticle[data-corner='bl'] {
-    left: 4px;
-  }
-
-  .stage-reticle[data-corner='tr'],
-  .stage-reticle[data-corner='br'] {
-    right: 4px;
-  }
-
-  .stage-dossier-inner {
+  .stage-tiers {
     grid-template-columns: 1fr;
+    gap: var(--space-2);
+  }
+
+  .stage-gallery[data-count='3'],
+  .stage-gallery[data-count='2'],
+  .stage-gallery[data-count='1'] {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
   }
 
   .stage-brief {
@@ -495,27 +478,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stage {
-    --par-shot: 0px;
-    --par-copy: 0px;
-    --par-ticks: 0px;
-  }
-
-  /* 不做视差就不需要那层纹理 */
-  .stage-ticks {
-    will-change: auto;
-  }
-
-  .stage-copy {
+  .stage-card {
     opacity: 1;
     transform: none;
-  }
-
-  .stage:hover .stage-topo {
-    opacity: 0;
-  }
-
-  .stage:hover .stage-topo path {
-    animation: none;
   }
 }

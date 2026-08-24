@@ -54,11 +54,10 @@ export function Tracks({ onHover }: TracksProps) {
           <div className="sector-badges">
             <Reticle size={22} />
             <Tag tone="solid">SECTOR 01</Tag>
-            <Tag tone="ink">05 TRACKS</Tag>
           </div>
-          <h2 className="sector-title">五个技术方向</h2>
+          <h2 className="sector-title">技术研习方向</h2>
           <p className="sector-note">
-            每个方向配一位常驻研究员。悬停看向导反应，点开看三年路线。
+            涵盖现代软件工程的核心维度，为开发者规划从入门探索到独立交付的完整技术路径。
           </p>
         </header>
 

@@ -6,7 +6,7 @@
  */
 import { Link } from 'react-router'
 import { Diamond, Rail, Reticle, Tag } from '@/components/hud'
-import { DOC_CATEGORIES, DOCS, docsByCategory } from '@/data/docs'
+import { DOC_CATEGORIES, docsByCategory } from '@/data/docs'
 import './docs.css'
 
 export function ArchiveEntry() {
@@ -18,11 +18,10 @@ export function ArchiveEntry() {
           <div className="sector-badges">
             <Reticle size={22} />
             <Tag tone="solid">SECTOR 03</Tag>
-            <Tag tone="ink">{String(DOCS.length).padStart(2, '0')} DOCS</Tag>
           </div>
           <h2 className="sector-title">开发者档案库</h2>
           <p className="sector-note">
-            装什么版本、分支怎么起名、评审看什么。祈使句，给命令给禁令，不写导语。
+            涵盖阶段学习路线、开发工具链配置与团队工程约定，助力成员快速上手。
           </p>
         </header>
 

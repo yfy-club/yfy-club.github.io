@@ -11,7 +11,6 @@ import { Rail, Reticle, Tag, TickScale } from '@/components/hud'
 import { Mascot, type MascotState } from '@/components/mascot'
 import { NAVI } from '@/data/characters'
 import { onScrollFrame, requestScrollFrame, scrollY, viewportH } from '@/lib/scroll-frame'
-import { ParticleField } from './particles'
 import { Wordmark } from './wordmark'
 import './hero.css'
 
@@ -35,7 +34,6 @@ export function Hero({ state = 'NEUTRAL' }: HeroProps) {
   return (
     <section className="hero" id="hero">
       <div className="hero-grid coord-grid" aria-hidden="true" />
-      <ParticleField />
       <DanmakuTracks />
 
       <TickScale count={TICKS} active={active} className="hero-scale" />
@@ -48,11 +46,11 @@ export function Hero({ state = 'NEUTRAL' }: HeroProps) {
 
           <p className="hero-hud">OPEN SOURCE PORTAL</p>
 
-          <p className="hero-sub">五个技术方向 · 三个开源项目 · 一座观测站</p>
+          <p className="hero-sub">让年轻的想法，变成可运行的开源工程</p>
 
           <div className="hero-actions">
             <a className="hero-btn" data-kind="primary" href="#tracks">
-              进入方向档案
+              探索技术方向
             </a>
             <a
               className="hero-btn"

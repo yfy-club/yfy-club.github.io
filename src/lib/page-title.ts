@@ -24,10 +24,10 @@ export function pageTitle(pathname: string) {
 
 /** 首页那句。index.html 里的 meta 与这里必须一致，改一处要改两处。 */
 const HOME_DESCRIPTION =
-  '云飞扬社团的开源项目矩阵与开发者档案库。五个技术方向，三个开源项目，一座观测站。'
+  '云飞扬社团的开源项目矩阵与开发者档案库。让年轻的想法，变成可运行的开源工程。'
 
 const DOCS_DESCRIPTION =
-  '开发者档案库：环境基线、分支与提交约定、评审清单。3 个分类 8 篇，祈使句，给命令给禁令。'
+  '开发者档案库：涵盖阶段学习路线、开发工具链配置与团队工程约定，助力成员快速上手。'
 
 /**
  * 逐页 meta description。

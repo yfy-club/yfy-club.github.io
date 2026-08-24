@@ -28,11 +28,10 @@ export function DocsIndex() {
       <header className="doc-head">
         <div className="doc-head-badges">
           <Tag tone="solid">SECTOR 03</Tag>
-          <Tag tone="ink">{String(DOCS.length).padStart(2, '0')} DOCS</Tag>
         </div>
         <h1 className="doc-title">开发者档案库</h1>
         <p className="doc-summary">
-          装什么版本、分支怎么起名、评审看什么。祈使句，给命令给禁令，不写导语。
+          涵盖阶段学习路线、开发工具链配置与团队工程约定，助力成员快速上手。
         </p>
         <Rail />
       </header>

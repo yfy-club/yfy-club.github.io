@@ -13,13 +13,11 @@
  */
 import { useEffect, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
-import { Bracket, Diamond, Rail, Reticle, Tag } from '@/components/hud'
+import { Diamond, Rail, Reticle, Tag } from '@/components/hud'
 import { PROJECTS, type Project } from '@/data/projects'
 import { SHOTS, shotSrc, shotSrcSet, type ShotId } from '@/data/shots.generated'
 import { SPRING, staggerDelay } from '@/lib/motion-tokens'
-import { onScrollFrame, requestScrollFrame, scrollY, viewportH } from '@/lib/scroll-frame'
 import { useInView } from '@/lib/use-in-view'
-import { usePrefersReducedMotion } from '@/components/mascot/mascot'
 import './projects.css'
 
 interface ProjectsProps {
@@ -28,6 +26,8 @@ interface ProjectsProps {
 }
 
 export function Projects({ onHover }: ProjectsProps) {
+  const [openId, setOpenId] = useState<string | null>(null)
+
   return (
     <section className="projects" id="projects">
       <Rail />
@@ -36,18 +36,26 @@ export function Projects({ onHover }: ProjectsProps) {
           <div className="sector-badges">
             <Reticle size={22} />
             <Tag tone="solid">SECTOR 02</Tag>
-            <Tag tone="ink">03 PROJECTS</Tag>
           </div>
-          <h2 className="sector-title">三个开源项目</h2>
+          <h2 className="sector-title">社团开源工程</h2>
           <p className="sector-note">
-            每个展台取自己截图的主调做框线。悬停看拓扑光流，点开看分层与指标。
+            源自真实场景需求，具备完整的架构设计、技术分层与可在线运行环境。
           </p>
         </header>
       </div>
 
-      {PROJECTS.map((project, i) => (
-        <Stage key={project.id} project={project} flip={i % 2 === 1} onHover={onHover} />
-      ))}
+      <div className="projects-list shell">
+        {PROJECTS.map((project, i) => (
+          <Stage
+            key={project.id}
+            project={project}
+            flip={i % 2 === 1}
+            open={openId === project.id}
+            onToggle={() => setOpenId((cur) => (cur === project.id ? null : project.id))}
+            onHover={onHover}
+          />
+        ))}
+      </div>
     </section>
   )
 }
@@ -58,30 +66,25 @@ interface StageProps {
   project: Project
   /** 奇数号展台左右翻面。 */
   flip: boolean
+  open: boolean
+  onToggle: () => void
   onHover: (tone: string | null) => void
 }
 
-function Stage({ project, flip, onHover }: StageProps) {
-  const [open, setOpen] = useState(false)
+function Stage({ project, flip, open, onToggle, onHover }: StageProps) {
   const { ref, entered } = useInView<HTMLElement>()
-  const reduced = usePrefersReducedMotion()
-  useParallax(ref, reduced)
 
   /*
-   * Esc 收起。规格第 6 节要求全部卡片 Enter 展开 Esc 收起，
-   * M4 只给方向卡做了，展台漏了——a11y 探针实测抓到的。
-   *
-   * 挂 window 而不是 article：展开后焦点可能已经移到分层列表或图库里，
-   * 那些元素不在按钮的冒泡路径上。
+   * Esc 收起当前展开的卡片。
    */
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Escape') onToggle()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open])
+  }, [open, onToggle])
 
   return (
     <article
@@ -94,101 +97,124 @@ function Stage({ project, flip, onHover }: StageProps) {
       onPointerEnter={() => onHover(project.tone)}
       onPointerLeave={() => onHover(null)}
     >
-      {/* 背景刻度线。走最快的一层视差 +14% */}
-      <div className="stage-ticks" aria-hidden="true" />
+      <div className="stage-card" data-open={open}>
+        {/* 45° 战术角标 Pin */}
+        <div className="stage-card-pin">
+          <span className="stage-pin-index">{project.index}</span>
+          <span className="stage-pin-tag">PROJECT</span>
+        </div>
 
-      <div className="stage-inner shell">
-        <div className="stage-shot">
-          <Bracket tone="var(--stage-tone)" length={34} gap={14}>
+        {/* 主展示行（大画幅截图 + 详情文案） */}
+        <div className="stage-card-main">
+          {/* 卡片内截图媒体区 */}
+          <div className="stage-card-media">
             <Shot id={project.shot} alt={`${project.name} 界面截图`} />
-            <TopoFlow />
-          </Bracket>
-
-          {/* 取景框四角的准星。Bracket 只给角线，准星是另一件事 */}
-          {(['tl', 'tr', 'bl', 'br'] as const).map((corner) => (
-            <span key={corner} className="stage-reticle" data-corner={corner}>
-              <Reticle size={18} />
-            </span>
-          ))}
-        </div>
-
-        <div className="stage-copy">
-          <div className="stage-head">
-            <span className="stage-index">{project.index}</span>
-            <Rail className="stage-head-rail" ticks={false} />
-            <span className="stage-name-en">{project.nameEn}</span>
           </div>
 
-          <h3 className="stage-name">{project.name}</h3>
-          <p className="stage-brief">{project.brief}</p>
-
-          <ul className="stage-metrics">
-            {project.metrics.map((m, i) => (
-              <li key={m.label}>
-                {i > 0 && <Diamond tone="ink" />}
-                <span className="stage-metric-value">{m.value}</span>
-                <span className="stage-metric-label">{m.label}</span>
-              </li>
-            ))}
-          </ul>
-
-          <div className="stage-stack">
-            {project.stack.map((s) => (
-              <Tag key={s} tone="ink">
-                {s}
-              </Tag>
-            ))}
-          </div>
-
-          <div className="stage-actions">
-            <button
-              type="button"
-              className="stage-btn"
-              aria-expanded={open}
-              onClick={() => setOpen((v) => !v)}
-            >
-              {open ? '收起档案' : '展开档案'}
-            </button>
-            <a className="stage-link" href={project.live} target="_blank" rel="noreferrer">
-              打开线上 ↗
-            </a>
-          </div>
-        </div>
-      </div>
-
-      <AnimatePresence initial={false}>
-        {open && (
-          <motion.div
-            className="stage-dossier"
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            transition={SPRING.expand}
-          >
-            <div className="stage-dossier-inner shell">
-              <ol className="stage-tiers">
-                {project.tiers.map((tier, i) => (
-                  <li key={tier.code} style={{ '--enter-delay': `${staggerDelay(i)}s` } as React.CSSProperties}>
-                    <span className="stage-tier-code">{tier.code}</span>
-                    <span className="stage-tier-name">{tier.name}</span>
-                    <span className="stage-tier-tags">
-                      {tier.tags.map((t) => (
-                        <span key={t}>{t}</span>
-                      ))}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-
-              <div className="stage-gallery">
-                {project.gallery.map((id) => (
-                  <Shot key={id} id={id} alt={`${project.name} 界面截图`} />
-                ))}
-              </div>
+          {/* 卡片内信息区 */}
+          <div className="stage-card-content">
+            <div className="stage-head">
+              <Rail className="stage-head-rail" ticks={false} />
+              <span className="stage-name-en">{project.nameEn}</span>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+
+            <h3 className="stage-name">{project.name}</h3>
+            <p className="stage-brief">{project.brief}</p>
+
+            <ul className="stage-metrics">
+              {project.metrics.map((m, i) => (
+                <li key={m.label}>
+                  {i > 0 && <Diamond tone="ink" />}
+                  <span className="stage-metric-value">{m.value}</span>
+                  <span className="stage-metric-label">{m.label}</span>
+                </li>
+              ))}
+            </ul>
+
+            <div className="stage-stack">
+              {project.stack.map((s) => (
+                <Tag key={s} tone="ink">
+                  {s}
+                </Tag>
+              ))}
+            </div>
+
+            <div className="stage-actions">
+              <button
+                type="button"
+                className="stage-btn"
+                aria-expanded={open}
+                onClick={onToggle}
+              >
+                {open ? '收起档案 ▴' : '展开档案 ▾'}
+              </button>
+              <a className="stage-link" href={project.live} target="_blank" rel="noreferrer">
+                打开线上 ↗
+              </a>
+            </div>
+          </div>
+        </div>
+
+          {/* 底部全宽向下展开的档案区域 */}
+          <AnimatePresence initial={false}>
+            {open && (
+              <motion.div
+                className="stage-card-dossier"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={SPRING.expand}
+              >
+                <div className="stage-dossier-inner">
+                  {/* 分层架构区（4 列横向建筑分层流水线） */}
+                  <div className="stage-dossier-section">
+                    <div className="stage-dossier-header">
+                      <Reticle size={14} />
+                      <span className="stage-dossier-title">SYSTEM ARCHITECTURE TIERS</span>
+                      <Rail className="stage-dossier-rail" ticks={false} />
+                    </div>
+
+                    <ol className="stage-tiers">
+                      {project.tiers.map((tier, i) => (
+                        <li
+                          key={tier.code}
+                          style={{ '--enter-delay': `${staggerDelay(i)}s` } as React.CSSProperties}
+                        >
+                          <div className="stage-tier-head">
+                            <span className="stage-tier-code">{tier.code}</span>
+                            <span className="stage-tier-name">{tier.name}</span>
+                          </div>
+                          <div className="stage-tier-tags">
+                            {tier.tags.map((t) => (
+                              <span key={t}>{t}</span>
+                            ))}
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+
+                  {/* 详细图库区（全宽大画幅展示） */}
+                  <div className="stage-dossier-section">
+                    <div className="stage-dossier-header">
+                      <Reticle size={14} />
+                      <span className="stage-dossier-title">GALLERY PREVIEWS</span>
+                      <Rail className="stage-dossier-rail" ticks={false} />
+                    </div>
+
+                    <div className="stage-gallery" data-count={project.gallery.length}>
+                      {project.gallery.map((id) => (
+                        <div key={id} className="stage-gallery-item">
+                          <Shot id={id} alt={`${project.name} 界面截图`} />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
     </article>
   )
 }
@@ -227,99 +253,4 @@ function Shot({ id, alt }: { id: ShotId; alt: string }) {
       />
     </span>
   )
-}
-
-/**
- * 拓扑微光流。悬停时沿界面结构线游走，透明度 0.35。
- *
- * 路径是抽象的界面骨架（侧栏 → 主区 → 卡片行），不是描某一张截图的边，
- * 三个展台共用同一份——它表达的是"界面有结构"，不是某个具体布局。
- */
-function TopoFlow() {
-  return (
-    <svg className="stage-topo" viewBox="0 0 400 225" fill="none" aria-hidden="true" preserveAspectRatio="none">
-      <path d="M0 34H400" />
-      <path d="M84 34V225" />
-      <path d="M84 78H400" />
-      <path d="M232 78V225" />
-      <path d="M232 152H400" />
-      <path d="M84 186H232" />
-    </svg>
-  )
-}
-
-/* ====================================================================== */
-
-/** 三层视差的速率。规格 4.3：截图 +8%，文案 -4%，刻度线 +14%。 */
-const RATE = { shot: 0.08, copy: -0.04, ticks: 0.14 } as const
-
-/**
- * 视差。全展台共用一个滚动帧，位移写成 CSS 变量。
- *
- * 进度定义：区块中心与视口中心对齐时 0，往上往下各到 ±1。
- * 乘上区块高度再乘速率得到像素位移，所以 +8% 是"区块高度的 8%"，
- * 不是"滚了多少就位移多少的 8%"——后者在长页面里会飘到画面外。
- *
- * 注册在 write 相位：这里只往 style 上写，不读任何布局属性（坐标已经缓存在
- * docTop / elHeight 里）。跟 read 相位分开后，一帧只需要一次布局，
- * 见 lib/scroll-frame.ts。
- *
- * 位移取整到物理像素：展台文案块里有 13px 与 11px 的小字，带小数的 translate
- * 会把它们钉在非整亚像素相位上，每帧重新栅格化就是闪。
- * 一位小数的精度在视差上看不出差别，字的稳定看得出。
- */
-function useParallax(ref: React.RefObject<HTMLElement | null>, reduced: boolean) {
-  useEffect(() => {
-    const el = ref.current
-    if (!el || reduced) return
-
-    let docTop = 0
-    let elHeight = 0
-    /** 上一帧写进去的值。没变就不写，避开无用的样式失效。 */
-    let last = Number.NaN
-
-    const measure = () => {
-      const r = el.getBoundingClientRect()
-      docTop = r.top + window.scrollY
-      elHeight = r.height
-    }
-
-    const apply = () => {
-      const top = docTop - scrollY()
-      const bottom = top + elHeight
-      const vh = viewportH()
-      // 区块完全在视口外就不算，省掉离屏元素的 style 写入
-      if (bottom < 0 || top > vh) return
-      const center = top + elHeight / 2
-      const p = (center - vh / 2) / vh
-      if (p === last) return
-      last = p
-      const dpr = window.devicePixelRatio || 1
-      // 吸附到整数物理像素，理由见函数注释
-      const px = (rate: number) => `${Math.round(p * elHeight * rate * dpr) / dpr}px`
-      el.style.setProperty('--par-shot', px(RATE.shot))
-      el.style.setProperty('--par-copy', px(RATE.copy))
-      el.style.setProperty('--par-ticks', px(RATE.ticks))
-    }
-
-    const remeasure = () => {
-      measure()
-      requestScrollFrame()
-    }
-
-    measure()
-    apply()
-
-    // 展开分层与指标会改展台高度。不监听的话位移会按旧高度算，视差幅度突变。
-    const ro = new ResizeObserver(remeasure)
-    ro.observe(el)
-
-    const off = onScrollFrame('write', apply)
-    requestScrollFrame()
-
-    return () => {
-      off()
-      ro.disconnect()
-    }
-  }, [ref, reduced])
 }
