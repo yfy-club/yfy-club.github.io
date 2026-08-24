@@ -101,15 +101,11 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
     // 外层只管栅格位与 layout，内层只管倾斜。
     // 两件事不能写在同一个元素上：motion 的 layout 动画要接管 transform，
     // 跟自己写的 rotateX/rotateY 会互相覆盖。
-    <motion.div
+    <div
       className="track-card"
       data-track={track.slug}
       data-open={open}
-      layout
-      layoutId={`track-${track.slug}`}
-      transition={SPRING.expand}
-      // motion 的 style 不接 CSSProperties（exactOptionalPropertyTypes 下 x/y 等属性不兼容）
-      style={{ '--i': index, '--enter-delay': `${staggerDelay(index)}s` } as MotionStyle}
+      style={{ '--i': index, '--enter-delay': `${staggerDelay(index)}s` } as React.CSSProperties}
       onPointerEnter={() => {
         setHovered(true)
         onHover(track.slug)
@@ -221,7 +217,7 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
           )}
         </AnimatePresence>
       </motion.div>
-    </motion.div>
+    </div>
   )
 }
 

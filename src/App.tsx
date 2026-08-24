@@ -12,6 +12,7 @@ import { TRACK_FX, stageFx, type MascotFx } from './components/mascot/fx'
 import type { MascotState } from './components/mascot/states'
 import type { TrackSlug } from './data/characters'
 import { pageDescription, pageTitle } from './lib/page-title'
+import { onScrollFrame, requestScrollFrame, scrollY, viewportH } from './lib/scroll-frame'
 import { useSmoothScroll, scrollToAnchor, scrollToTop } from './lib/smooth-scroll'
 import { usePrefersReducedMotion } from './components/mascot'
 import { MascotLab } from './mascot-lab'
@@ -159,38 +160,65 @@ function Portal() {
  *
  * 判据是「哪个分区占了视口中线」，不是「谁先进视口 15%」：
  * 后者在两个分区交界处会来回抖，立绘表情跟着抽搐。
+ *
+ * 坐标缓存，不在滚动帧里读 rect。
+ *
+ * 前一版每帧对四个分区各调一次 getBoundingClientRect()。首页在同一帧里还有
+ * 视差与立绘惯性往 style 上写东西，读写交替 = 每帧一次强制同步布局
+ * （forced synchronous layout），lenis 的单帧步长因此忽长忽短。档案库上没有
+ * 任何一处在滚动帧里写 style，所以它那份 rect 读取是白拿的，首页不是。
+ *
+ * 分区高度会变（方向卡展开路线面板），所以挂 ResizeObserver 重新量，
+ * 而不是只在 window resize 时量。
  */
 function useCurrentSection() {
   const [id, setId] = useState('hero')
 
   useEffect(() => {
     const ids = ['hero', 'tracks', 'projects', 'docs']
-    let frame = 0
+    const els = ids
+      .map((sectionId) => document.getElementById(sectionId))
+      .filter((el): el is HTMLElement => el !== null)
+    if (els.length === 0) return
+
+    /** 文档绝对坐标区间。滚动帧里只拿它跟 scrollY 比大小，不碰布局。 */
+    let spans: { id: string; top: number; bottom: number }[] = []
+
+    const measure = () => {
+      const sy = window.scrollY
+      spans = els.map((el) => {
+        const r = el.getBoundingClientRect()
+        return { id: el.id, top: r.top + sy, bottom: r.bottom + sy }
+      })
+    }
 
     const pick = () => {
-      frame = 0
-      const mid = window.innerHeight / 2
+      const mid = scrollY() + viewportH() / 2
       let hit = 'hero'
-      for (const candidate of ids) {
-        const el = document.getElementById(candidate)
-        if (!el) continue
-        const r = el.getBoundingClientRect()
-        if (r.top <= mid && r.bottom > mid) hit = candidate
+      for (const span of spans) {
+        if (span.top <= mid && span.bottom > mid) hit = span.id
       }
       setId((prev) => (prev === hit ? prev : hit))
     }
 
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(pick)
+    const remeasure = () => {
+      measure()
+      requestScrollFrame()
     }
 
+    measure()
     pick()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule, { passive: true })
+
+    // 展开路线面板会改分区高度。ResizeObserver 只在真的变了时回调，不占滚动帧。
+    const ro = new ResizeObserver(remeasure)
+    for (const el of els) ro.observe(el)
+
+    const off = onScrollFrame('read', pick)
+    requestScrollFrame()
+
     return () => {
-      if (frame) cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
+      off()
+      ro.disconnect()
     }
   }, [])
 

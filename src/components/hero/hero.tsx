@@ -10,6 +10,7 @@ import { DanmakuTracks } from '@/components/danmaku/tracks'
 import { Rail, Reticle, Tag, TickScale } from '@/components/hud'
 import { Mascot, type MascotState } from '@/components/mascot'
 import { NAVI } from '@/data/characters'
+import { onScrollFrame, requestScrollFrame, scrollY, viewportH } from '@/lib/scroll-frame'
 import { ParticleField } from './particles'
 import { Wordmark } from './wordmark'
 import './hero.css'
@@ -84,28 +85,22 @@ export function Hero({ state = 'NEUTRAL' }: HeroProps) {
 /**
  * 首屏滚动进度，映射到刻度尺的第几格。
  * 只在首屏范围内算，滚出去就锁在最后一格，不做无意义的全页进度。
+ *
+ * 走共用滚动帧（lib/scroll-frame.ts）：每个监听各排一个 rAF 会让单帧耗时不均，
+ * 而 lenis 的阻尼步长是按实际帧间隔算的。
  */
 function useHeroProgress(count: number) {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
-    let frame = 0
-    const on = () => {
-      frame = 0
-      const span = window.innerHeight
-      const ratio = Math.min(1, Math.max(0, window.scrollY / span))
+    const off = onScrollFrame('read', () => {
+      const span = viewportH()
+      const ratio = Math.min(1, Math.max(0, scrollY() / span))
       const next = Math.min(count - 1, Math.round(ratio * (count - 1)))
       setIndex((prev) => (prev === next ? prev : next))
-    }
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(on)
-    }
-    on()
-    window.addEventListener('scroll', schedule, { passive: true })
-    return () => {
-      if (frame) cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', schedule)
-    }
+    })
+    requestScrollFrame()
+    return off
   }, [count])
 
   return index

@@ -17,6 +17,7 @@ import { Bracket, Diamond, Rail, Reticle, Tag } from '@/components/hud'
 import { PROJECTS, type Project } from '@/data/projects'
 import { SHOTS, shotSrc, shotSrcSet, type ShotId } from '@/data/shots.generated'
 import { SPRING, staggerDelay } from '@/lib/motion-tokens'
+import { onScrollFrame, requestScrollFrame, scrollY, viewportH } from '@/lib/scroll-frame'
 import { useInView } from '@/lib/use-in-view'
 import { usePrefersReducedMotion } from '@/components/mascot/mascot'
 import './projects.css'
@@ -253,21 +254,29 @@ function TopoFlow() {
 const RATE = { shot: 0.08, copy: -0.04, ticks: 0.14 } as const
 
 /**
- * 视差。全展台共用一个 RAF，位移写成 CSS 变量。
+ * 视差。全展台共用一个滚动帧，位移写成 CSS 变量。
  *
  * 进度定义：区块中心与视口中心对齐时 0，往上往下各到 ±1。
  * 乘上区块高度再乘速率得到像素位移，所以 +8% 是"区块高度的 8%"，
  * 不是"滚了多少就位移多少的 8%"——后者在长页面里会飘到画面外。
+ *
+ * 注册在 write 相位：这里只往 style 上写，不读任何布局属性（坐标已经缓存在
+ * docTop / elHeight 里）。跟 read 相位分开后，一帧只需要一次布局，
+ * 见 lib/scroll-frame.ts。
+ *
+ * 位移取整到物理像素：展台文案块里有 13px 与 11px 的小字，带小数的 translate
+ * 会把它们钉在非整亚像素相位上，每帧重新栅格化就是闪。
+ * 一位小数的精度在视差上看不出差别，字的稳定看得出。
  */
 function useParallax(ref: React.RefObject<HTMLElement | null>, reduced: boolean) {
   useEffect(() => {
     const el = ref.current
     if (!el || reduced) return
 
-    let raf = 0
-    let queued = false
     let docTop = 0
     let elHeight = 0
+    /** 上一帧写进去的值。没变就不写，避开无用的样式失效。 */
+    let last = Number.NaN
 
     const measure = () => {
       const r = el.getBoundingClientRect()
@@ -276,40 +285,41 @@ function useParallax(ref: React.RefObject<HTMLElement | null>, reduced: boolean)
     }
 
     const apply = () => {
-      queued = false
-      const top = docTop - window.scrollY
+      const top = docTop - scrollY()
       const bottom = top + elHeight
-      const vh = window.innerHeight
+      const vh = viewportH()
       // 区块完全在视口外就不算，省掉离屏元素的 style 写入
       if (bottom < 0 || top > vh) return
       const center = top + elHeight / 2
       const p = (center - vh / 2) / vh
-      const px = (rate: number) => `${(p * elHeight * rate).toFixed(1)}px`
+      if (p === last) return
+      last = p
+      const dpr = window.devicePixelRatio || 1
+      // 吸附到整数物理像素，理由见函数注释
+      const px = (rate: number) => `${Math.round(p * elHeight * rate * dpr) / dpr}px`
       el.style.setProperty('--par-shot', px(RATE.shot))
       el.style.setProperty('--par-copy', px(RATE.copy))
       el.style.setProperty('--par-ticks', px(RATE.ticks))
     }
 
-    const onScroll = () => {
-      if (queued) return
-      queued = true
-      raf = requestAnimationFrame(apply)
-    }
-
-    const onResize = () => {
+    const remeasure = () => {
       measure()
-      onScroll()
+      requestScrollFrame()
     }
 
     measure()
     apply()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    window.addEventListener('resize', onResize, { passive: true })
+
+    // 展开分层与指标会改展台高度。不监听的话位移会按旧高度算，视差幅度突变。
+    const ro = new ResizeObserver(remeasure)
+    ro.observe(el)
+
+    const off = onScrollFrame('write', apply)
+    requestScrollFrame()
 
     return () => {
-      if (raf) cancelAnimationFrame(raf)
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
+      off()
+      ro.disconnect()
     }
   }, [ref, reduced])
 }

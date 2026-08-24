@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Diamond } from '@/components/hud'
+import { onScrollFrame, requestScrollFrame, scrollY } from '@/lib/scroll-frame'
 import { NavTools } from './nav-tools'
 import './site.css'
 
@@ -60,14 +61,21 @@ export function Nav() {
   )
 }
 
-/** 滚过阈值才给导航条上背景，首屏保持完全通透。 */
+/**
+ * 滚过阈值才给导航条上背景，首屏保持完全通透。
+ *
+ * 走共用滚动帧而不是自己挂 scroll + rAF：首页滚动时同时在跑的订阅者有五个，
+ * 各排一个 rAF 会把单帧耗时抽成锯齿状，见 lib/scroll-frame.ts 的文件头。
+ */
 function useScrolled(threshold: number) {
   const [on, setOn] = useState(false)
   useEffect(() => {
-    const fn = () => setOn(window.scrollY > threshold)
-    fn()
-    window.addEventListener('scroll', fn, { passive: true })
-    return () => window.removeEventListener('scroll', fn)
+    const off = onScrollFrame('read', () => {
+      const next = scrollY() > threshold
+      setOn((prev) => (prev === next ? prev : next))
+    })
+    requestScrollFrame()
+    return off
   }, [threshold])
   return on
 }

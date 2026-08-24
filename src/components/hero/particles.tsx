@@ -133,8 +133,9 @@ export function ParticleField({ className }: ParticleFieldProps) {
     }
 
     const step = () => {
+      if (dead) return
       raf = requestAnimationFrame(step)
-      if (!visible || dead) return
+      if (!visible) return
 
       const t0 = performance.now()
       ctx.clearRect(0, 0, w, h)
@@ -227,6 +228,8 @@ export function ParticleField({ className }: ParticleFieldProps) {
           if (downgrades >= DOWNGRADE_LIMIT || particles.length < MIN_COUNT * 0.5) {
             dead = true
             ctx.clearRect(0, 0, w, h)
+            if (raf) cancelAnimationFrame(raf)
+            raf = 0
           }
         }
       } else if (overruns > 0) {
@@ -236,7 +239,21 @@ export function ParticleField({ className }: ParticleFieldProps) {
 
     const io = new IntersectionObserver(
       ([entry]) => {
-        visible = entry?.isIntersecting ?? false
+        const next = entry?.isIntersecting ?? false
+        if (next === visible) return
+        visible = next
+        /*
+         * 离屏就停 rAF，不只是在回调里提前 return。
+         *
+         * 粒子场只在首屏，而字体发抖发生在方向区——那时画布已经出画，
+         * 但空转的 rAF 回调仍然每帧插在 lenis 前面排队。一个空回调不到 0.01ms，
+         * 但没理由留着。
+         */
+        if (visible && raf === 0 && !dead) raf = requestAnimationFrame(step)
+        if (!visible && raf !== 0) {
+          cancelAnimationFrame(raf)
+          raf = 0
+        }
       },
       { threshold: 0 },
     )

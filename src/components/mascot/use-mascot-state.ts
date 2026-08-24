@@ -73,8 +73,11 @@ export function useMascotState(base: MascotState = 'NEUTRAL', enabled = true): M
     let toDaze: ReturnType<typeof setTimeout>
     let toWake: ReturnType<typeof setTimeout>
     let asleep = false
+    /** 上一次真的重排定时器的时刻。 */
+    let armedAt = 0
 
     const arm = () => {
+      armedAt = performance.now()
       clearTimeout(toDaze)
       toDaze = setTimeout(() => {
         asleep = true
@@ -87,7 +90,18 @@ export function useMascotState(base: MascotState = 'NEUTRAL', enabled = true): M
         asleep = false
         clearTimeout(toWake)
         toWake = setTimeout(() => setDazed(false), IDLE_RECOVER)
+        arm()
+        return
       }
+      /*
+       * 重排限速。
+       *
+       * 这个钩子每个立绘实例一份，首页上有六份（Hero + 五张卡 + 挂件）。
+       * scroll 与 wheel 在高刷屏上一秒派上百次，原本每次都要 clearTimeout + setTimeout
+       * 一轮，乘六份就是滚动期间凭空多出来的定时器流量。
+       * 20s 的发呆阈值对 1s 的误差不敏感。
+       */
+      if (performance.now() - armedAt < 1000) return
       arm()
     }
 

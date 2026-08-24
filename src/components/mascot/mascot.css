@@ -75,6 +75,23 @@
   pointer-events: none;
 }
 
+/*
+ * 图层隔离。
+ *
+ * halo 的自转、节点呼吸、波纹那几条无限关键帧作用在 SVG 内部的 <g> 与 path 上，
+ * 这类 transform 不可合成，每帧都要重绘。不单独开层的话，重绘区域会往上冒到
+ * 包着它的那个绘制层——在方向卡上就是整张卡面，于是能力项与 HUD 小字跟着
+ * 一帧一次重新栅格化。推上自己的层后，层内怎么重绘都不再碰到卡面的文字纹理。
+ *
+ * 只给真正在动的那几张（data-animating）的三层，不是滥发 will-change：
+ * 首页上六张立绘，同时看得见的只有一两张，每张多开一层就是一块白占的显存。
+ */
+.mascot[data-animating='true'] .m-parallax,
+.mascot[data-animating='true'] .m-breathe,
+.mascot[data-animating='true'] .m-halo {
+  will-change: transform;
+}
+
 .mascot .m-portrait {
   position: absolute;
   left: var(--img-x);
@@ -648,6 +665,20 @@
 }
 
 /*
+ * 离屏暂停。
+ *
+ * 用 animation-play-state 而不是 animation: none：后者会把相位归零，halo 转到一半时
+ * 滚出去再滚回来会看到它突然跳回起点。暂停后浏览器不再为这些元素排帧，
+ * 不可合成的 SVG 重绘也随之停下——滚动经过方向区时，只有视口里那一两张在花帧预算。
+ *
+ * 不拿 data-alive 共用同一条规则：data-alive='false' 是永久关掉（reduce / still），
+ * 归零相位是对的；这里是临时暂停，不能归零。
+ */
+.mascot[data-animating='false'] * {
+  animation-play-state: paused;
+}
+
+/*
  * reduce 下不只是关动画，姿态位移也要一起关。
  * 进区状态照常切（FOCUS / SMILE / THINK 由滚动位置决定），
  * 只关掉 .m-pose 的话立绘会跟着滚动倾斜缩放——那就是把动画换了个写法而已。
@@ -656,6 +687,13 @@
   .mascot * {
     animation: none !important;
     transition: none !important;
+  }
+
+  /* 不动了就不需要图层，六张立绘的显存全部退回 */
+  .mascot[data-animating='true'] .m-parallax,
+  .mascot[data-animating='true'] .m-breathe,
+  .mascot[data-animating='true'] .m-halo {
+    will-change: auto;
   }
 
   .mascot .m-pose,

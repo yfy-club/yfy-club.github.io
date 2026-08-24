@@ -17,6 +17,7 @@ import { Mascot } from '@/components/mascot'
 import type { MascotFx } from '@/components/mascot/fx'
 import type { MascotState } from '@/components/mascot/states'
 import { NAVI } from '@/data/characters'
+import { smoothScrollToTop } from '@/lib/smooth-scroll'
 import { playClick, playPoke } from '@/lib/sound'
 import './dock.css'
 
@@ -30,10 +31,11 @@ interface MascotDockProps {
 }
 
 export function MascotDock({ state, fx, visible }: MascotDockProps) {
-  const scrollToTop = useCallback(() => {
+  const backToTop = useCallback(() => {
     playPoke()
     playClick()
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // 走 smooth-scroll 模块：浏览器原生的 behavior: 'smooth' 会与 lenis 的惯性同时写滚动位置
+    smoothScrollToTop()
   }, [])
 
   return (
@@ -43,11 +45,11 @@ export function MascotDock({ state, fx, visible }: MascotDockProps) {
       role="button"
       tabIndex={visible ? 0 : -1}
       title="点击向导快速返回顶部"
-      onClick={scrollToTop}
+      onClick={backToTop}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
-          scrollToTop()
+          backToTop()
         }
       }}
     >

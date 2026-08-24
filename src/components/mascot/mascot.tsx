@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Character } from '@/data/characters'
 import { PORTRAITS, portraitSrc, portraitSrcSet } from '@/data/portraits.generated'
+import { useOnScreen } from '@/lib/use-on-screen'
 import { HaloBack, HaloFront, Prop } from './emblem'
 import type { MascotFx } from './fx'
 import { CROP_BOX, placement, viewBoxOf, type MascotCrop } from './layout'
@@ -87,7 +88,17 @@ export function Mascot({
 }: MascotProps) {
   const root = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
+  /*
+   * 离屏就停。
+   *
+   * halo 的自转与节点呼吸是 SVG 内部的 transform，不可合成，每帧真的要重绘。
+   * 首页上有六张立绘，滚到方向区时 Hero 那张已经出画、下面几张还没进画，
+   * 它们的重绘全是白烧的，而且恰好烧在滚动帧上。
+   */
+  const onScreen = useOnScreen(root)
   const alive = !still && !reduced
+  /** 动画真的在跑。跟 alive 分开：惯性系统自己有视口裁剪，不需要这一层。 */
+  const animating = alive && onScreen
 
   const [pressed, setPressed] = useState(false)
   const { state, poke } = useMascotState(base, alive && interactive)
@@ -108,6 +119,7 @@ export function Mascot({
       data-state={state}
       data-crop={crop}
       data-alive={alive}
+      data-animating={animating}
       data-active={active}
       data-pressed={pressed}
       /*

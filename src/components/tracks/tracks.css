@@ -93,8 +93,21 @@
 
 .track-card {
   position: relative;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
+  /*
+   * 不开合成层。
+   *
+   * 前一版在 .track-card / .track-tilt / .track-face 三层上各挂了一条
+   * translate3d(0,0,0) + backface-visibility: hidden，想拿「硬件加速」换稳定，实际上
+   * 换来的是相反的东西：
+   *   1. 被推上单独图层的文字层背后没有不透明底（纸色在父层上），Chrome 会关掉
+   *      LCD 亚像素拗颜色，11px 的 HUD 字与 13px 中文掉回灰度拗颜色，本身就变糊；
+   *   2. .track-tilt 还同时带 clip-path: polygon()。非矩形裁切叠上合成子层，每帧要走
+   *      mask 图层，滚动时 GPU 纹理缓存失效。
+   *
+   * 去掉后卡面跟 /docs 的正文一样：一次栅格化进滚动层的瓦片，滚动时只是位图平移。
+   * 字体的稳定由两件事保证，不靠开层：lenis 的位移吸附到整数物理像素
+   * （smooth-scroll.ts 的 snapToDevicePixel）+ 立绘的动画图层与卡面隔离（mascot.css）。
+   */
   /* 区块进入：位移 16px + 淡入，delay 由 staggerDelay() 算好写进 --enter-delay */
   opacity: 0;
   translate: 0 16px;
@@ -127,13 +140,18 @@
 .track-tilt {
   position: relative;
   height: 100%;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
   background: var(--bg-paper);
   border-radius: var(--radius-card);
   /* 描边走 inset shadow 而不是 border：clip-path 会把 border 一起切掉 */
   box-shadow: inset 0 0 0 var(--hairline) var(--line-solid);
   overflow: hidden;
+  /*
+   * 绘制隔离。overflow: hidden 与 clip-path 已经把子树的绘制围住了，
+   * contain 把这个保证显式告诉浏览器：卡内任何重绘（立绘 halo 自转、呼吸）
+   * 都不会冒到卡外，也不会拿到卡外的布局。五张卡彼此的重绘区域因此完全独立。
+   * 不用 contain: strict：那含 size，卡高就不再跟内容走了。
+   */
+  contain: layout paint style;
   /* 左下 45° 切角。关键卡片切一角，这是碧蓝档案几何感最省力的一招 */
   clip-path: polygon(
     0 0,
@@ -145,6 +163,15 @@
   transition:
     box-shadow var(--dur-micro) var(--ease-out-expo),
     background var(--dur-micro) var(--ease-out-expo);
+}
+
+/*
+ * 倒斜只在悬停时发生（useTilt 的 rotateX/rotateY 也只在 :hover 绑定），
+ * 图层提升就只在悬停时给。常驻 will-change 等于五张卡常驻五块纹理，
+ * 而滚动时没有任何一张在倒。
+ */
+.track-card:hover .track-tilt {
+  will-change: transform;
 }
 
 .track-card:hover .track-tilt,
@@ -178,10 +205,17 @@
   text-align: left;
   align-content: start;
   --portrait-col: 44%;
-  transform: translate3d(0, 0, 0);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+  /*
+   * 字体渲染不再动任何手脚。
+   *
+   * 前一版在这里又拄了 translate3d(0,0,0) + -webkit-font-smoothing: antialiased
+   * + text-rendering: optimizeLegibility 三样。三样都治不了 Windows 上的发抖：
+   *   translate3d 反而把 LCD 拗颜色关掉（见 .track-card 的注释）；
+   *   -webkit-font-smoothing 在 DirectWrite 下是空操作（它只在 macOS 生效），
+   *     而 body 上已经有一份，写两遍不会多一分效果；
+   *   optimizeLegibility 只是开连字与字符间距调整，与栅格化相位无关。
+   * 真正的修法在滚动位移侧（smooth-scroll.ts 的物理像素吸附）。
+   */
 }
 
 /* 顶部与角标横跨两列，其余文字一律待在左列 */

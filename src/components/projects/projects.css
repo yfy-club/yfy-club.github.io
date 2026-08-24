@@ -32,6 +32,13 @@
   inset: -20% 0;
   pointer-events: none;
   translate: 0 var(--par-ticks);
+  /*
+   * 这一层每帧都在动，而且里面一个字也没有，推上合成层是纯赚：
+   * 不推的话每帧要重画整个 80vh 展台高度的重复渐变。
+   * 文案块与截图那两层有小字，不能这么处理——推层会关掉 LCD 亚像素拗颜色，
+   * 它们的稳定靠位移取整到物理像素保证（见 projects.tsx 的 useParallax）。
+   */
+  will-change: transform;
   background-image: repeating-linear-gradient(
     to bottom,
     var(--line-grid) 0 var(--hairline),
@@ -190,7 +197,19 @@
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-3);
+  /*
+   * translate 只归视差，入场位移走 transform。
+   *
+   * 两者必须分开。前一版把 16px 入场位移写在 stage-enter 的关键帧里
+   * （translate: 0 calc(var(--par-copy) + 16px)），而那条动画是 forwards——
+   * 动画结束后仍永久持有 translate 这个属性。于是视差变量不再直接作用于元素，
+   * 而要经「关键帧重新解析 var → 动画输出值」这条路，该过程发生在样式生命周期的
+   * 另一个阶段，比普通样式重算晚一拍。结果是文案块每帧比截图层滞后一帧，
+   * 快速滚动时两层看得出不同步。transform 与 translate 是两个独立属性且会叠加，
+   * 各管一摊后视差回到纯 CSS 属性赋值，跟 .stage-shot / .stage-ticks 同一拍。
+   */
   translate: 0 var(--par-copy);
+  transform: translateY(16px);
   opacity: 0;
 }
 
@@ -199,12 +218,9 @@
 }
 
 @keyframes stage-enter {
-  from {
-    opacity: 0;
-    translate: 0 calc(var(--par-copy) + 16px);
-  }
   to {
     opacity: 1;
+    transform: none;
   }
 }
 
@@ -215,6 +231,7 @@
 @media (scripting: none) {
   .stage-copy {
     opacity: 1;
+    transform: none;
   }
 }
 
@@ -484,8 +501,14 @@
     --par-ticks: 0px;
   }
 
+  /* 不做视差就不需要那层纹理 */
+  .stage-ticks {
+    will-change: auto;
+  }
+
   .stage-copy {
     opacity: 1;
+    transform: none;
   }
 
   .stage:hover .stage-topo {
