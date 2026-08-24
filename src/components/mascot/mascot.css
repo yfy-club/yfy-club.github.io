@@ -212,13 +212,19 @@
 
 .mascot path,
 .mascot ellipse,
-.mascot circle {
+.mascot circle,
+.mascot polygon,
+.mascot line,
+.mascot rect {
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
 .mascot .halo-ring path,
-.mascot .halo-ring circle {
+.mascot .halo-ring circle,
+.mascot .halo-ring polygon,
+.mascot .halo-ring line,
+.mascot .halo-ring rect {
   fill: none;
   stroke: var(--accent);
   stroke-width: var(--halo-stroke);
@@ -337,6 +343,7 @@
   fill: none;
   stroke: var(--accent);
   stroke-width: var(--prop-stroke);
+  vector-effect: non-scaling-stroke;
 }
 
 .mascot .prop-solid {
@@ -349,6 +356,7 @@
   stroke: var(--accent);
   stroke-width: 2;
   animation: mascot-node 1.7s ease-in-out infinite;
+  vector-effect: non-scaling-stroke;
 }
 
 .mascot .prop-wave {
@@ -358,6 +366,7 @@
   animation: mascot-wave 1.35s ease-out infinite;
   transform-box: fill-box;
   transform-origin: 50% 100%;
+  vector-effect: non-scaling-stroke;
 }
 
 .mascot .prop-stack {
@@ -397,6 +406,9 @@
 
 .mascot .halo-ring path,
 .mascot .halo-ring circle,
+.mascot .halo-ring polygon,
+.mascot .halo-ring line,
+.mascot .halo-ring rect,
 .mascot .halo-solid {
   transition:
     stroke var(--dur-swap) var(--ease-out-expo),
@@ -405,7 +417,10 @@
 
 /* halo 一律提一档描边，不动用发光——发光就是弥散，2.5 禁了 */
 .mascot[data-fx-halo] .halo-ring path,
-.mascot[data-fx-halo] .halo-ring circle {
+.mascot[data-fx-halo] .halo-ring circle,
+.mascot[data-fx-halo] .halo-ring polygon,
+.mascot[data-fx-halo] .halo-ring line,
+.mascot[data-fx-halo] .halo-ring rect {
   stroke: var(--fx-tone, var(--accent));
   stroke-width: calc(var(--halo-stroke) + 1);
 }
@@ -465,7 +480,10 @@
 }
 
 /* FORGE 琥珀火花。环上所有线条闪一次 */
-.mascot[data-fx-halo='spark'] .halo-ring path {
+.mascot[data-fx-halo='spark'] .halo-ring path,
+.mascot[data-fx-halo='spark'] .halo-ring polygon,
+.mascot[data-fx-halo='spark'] .halo-ring line,
+.mascot[data-fx-halo='spark'] .halo-ring circle {
   animation: mascot-halo-spark 0.5s linear 1;
 }
 

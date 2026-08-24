@@ -45,15 +45,14 @@
 |---|---|---|---|---|---|
 | （向导） | 绫濑 云 | Ayase Kumo | **NAVI** | 细环 + 一枚缓慢转动的指针 | `--sky-500` |
 | `ai` | 星见 澪 | Hoshimi Mio | **ORACLE** | 神经节点环，节点随机点亮 | `#7C6BF0` 紫蓝 |
-| `software` | 白岸 织 | Shirakishi Ori | **WEAVER** | 双层齿环，反向咬合旋转 | `#1C7FC0` 天蓝 |
-| `database` | 深守 蓝 | Fukamori Ran | **VAULT** | 三层同心圆柱，逐层沉降 | `#1E7A8C` 深青 |
+| `software` | 白岸 织 | Shirakishi Ori | **WEAVER** | 双层齿环，反向咬合旋转 | `#DB497E` 樱粉 |
+| `database` | 深守 蓝 | Fukamori Ran | **VAULT** | 三层同心圆柱，逐层沉降 | `#A82D44` 绯红 |
 | `cloud-iot` | 空乃 涟 | Sorano Ren | **RELAY** | 三道扩散信号波纹 | `#2A9187` 青绿 |
-| `industrial` | 铁川 澄 | Tetsukawa Sumi | **FORGE** | 六角螺母环，带刻度齿 | `#BC6C18` 琥珀 |
+| `industrial` | 铁川 澄 | Tetsukawa Sumi | **FORGE** | 六角螺母环，带刻度齿 | `#CF6A10` 暖橙 |
 
 > 每张角色卡角标固定标注：`虚构角色 · 化名`。
 
-> M2 修正记录：`WEAVER` 由 `#2E9BE0` 调深为 `#1C7FC0`、`RELAY` 由 `#3FB6A8` 调深为 `#2A9187`、`FORGE` 由 `#E08A2E` 调深为 `#BC6C18`。
-> 原因是这三个主色要画 halo 与道具线条，属非文本图形，实测对 `--bg-sky` 分别只有 2.85 / 2.32 / 2.50，低于 WCAG 1.4.11 的 3:1；改后 4.05 / 3.57 / 3.70。
+> M2 修正记录：`WEAVER` 调整为樱粉色 `#DB497E`（呼应粉发主体并保持层次感与对比度 3.73:1）、`VAULT` 调整为绯红酒红色 `#A82D44`（呼应酒红发色主体，对比度 6.28:1）、`FORGE` 调整为活力暖金橙色 `#CF6A10`（契合橙金发色，对比度 3.43:1）；`NAVI`（`#2892D8`，3.17:1）、`ORACLE`（`#7C6BF0`，3.76:1）、`RELAY`（`#2A9187`，3.57:1）保持最佳层次感。真值在 `tokens.css` 的 `--char-*` 段，`check:contrast` 六条规则卡住它们，全部满足 WCAG 1.4.11 的 ≥ 3:1。
 > 另外 `#2E9BE0` 是 2.1 节 M1 已经废弃掉的旧 `--sky-500`，本表当时漏改。真值在 `tokens.css` 的 `--char-*` 段，`check:contrast` 六条规则卡住它们，不是口头约定。
 
 ---
@@ -117,7 +116,7 @@
 | `--bg-paper` on `--sky-700` | 5.75 | 4.5 | Tag solid 反白文字 |
 | `--pink-100` on `--sky-700` | 4.95 | 4.5 | 目录树当前项的序号 |
 | `--stage-*` on `--bg-sky` | 3.96–4.49 | 3 | 三个展台的框线（WCAG 1.4.11 非文本对比度） |
-| `--char-*-accent` on `--bg-sky` | 3.17–4.65 | 3 | 六位角色的 halo 与道具线条（同 1.4.11） |
+| `--char-*-accent` on `--bg-sky` | 3.17–6.28 | 3 | 六位角色的 halo 与道具线条（同 1.4.11） |
 
 **禁止承载文字**：`--ink-400`、`--pink-500`、`--pink-300`、`--sky-300`、`--sky-100`。这条规则写进了 `check-contrast.ts`，不是口头约定。
 

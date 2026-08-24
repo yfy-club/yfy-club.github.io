@@ -216,10 +216,10 @@
   height: auto;
 }
 
-/* 名牌压在立绘左下，与立绘左缘错开一格，形成层叠。 */
+/* 名牌置于立绘左侧空隙，拉开间距，避免压住立绘 */
 .hero-mascot-plate {
   position: absolute;
-  left: -1%;
+  left: clamp(-160px, -11vw, -60px);
   bottom: calc(var(--space-8) + var(--space-6));
   display: flex;
   flex-direction: column;
@@ -235,6 +235,7 @@
     calc(100% - var(--bevel)) 100%,
     0 100%
   );
+  z-index: 2;
 }
 
 .hero-mascot-name {

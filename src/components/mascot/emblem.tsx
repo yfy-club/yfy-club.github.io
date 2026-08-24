@@ -28,6 +28,15 @@ function ringPoint(deg: number, rx: number = HALO.rx, ry: number = HALO.ry) {
   return { x: HALO.cx + rx * Math.cos(rad), y: HALO.cy + ry * Math.sin(rad) }
 }
 
+/** 椭圆上特定角度区间的弧线路径。 */
+function arcSegment(startDeg: number, endDeg: number, rx: number = HALO.rx, ry: number = HALO.ry) {
+  const start = ringPoint(startDeg, rx, ry)
+  const end = ringPoint(endDeg, rx, ry)
+  const diff = (endDeg - startDeg + 360) % 360
+  const largeArc = diff > 180 ? 1 : 0
+  return `M${start.x.toFixed(1)} ${start.y.toFixed(1)}A${rx} ${ry} 0 ${largeArc} 1 ${end.x.toFixed(1)} ${end.y.toFixed(1)}`
+}
+
 /** 上半弧（远端，会被头发压住）。 */
 function arcTop(rx: number, ry: number) {
   const a = ringPoint(180, rx, ry)
@@ -52,11 +61,25 @@ function teeth(count: number, r0: number, r1: number) {
   }).join('')
 }
 
+/** 环上具有梯形/方块厚度的齿轮齿。画在圆空间里。 */
+function gearTeeth(count: number, r0: number, r1: number, halfWidthDeg: number = 6) {
+  return Array.from({ length: count }, (_, i) => {
+    const centerDeg = (i * 360) / count
+    const rad1 = ((centerDeg - halfWidthDeg) * Math.PI) / 180
+    const rad2 = ((centerDeg + halfWidthDeg) * Math.PI) / 180
+    const c1 = Math.cos(rad1)
+    const s1 = Math.sin(rad1)
+    const c2 = Math.cos(rad2)
+    const s2 = Math.sin(rad2)
+    return `M${(r0 * c1).toFixed(1)} ${(r0 * s1).toFixed(1)}L${(r1 * c1).toFixed(1)} ${(r1 * s1).toFixed(1)}A${r1} ${r1} 0 0 1 ${(r1 * c2).toFixed(1)} ${(r1 * s2).toFixed(1)}L${(r0 * c2).toFixed(1)} ${(r0 * s2).toFixed(1)}`
+  }).join('')
+}
+
 /** 环上均分的顶点连成的多边形。FORGE 的六角螺母用它。 */
-function polygon(count: number, r: number) {
+function polygon(count: number, r: number, offsetDeg: number = -90) {
   return (
     Array.from({ length: count }, (_, i) => {
-      const rad = ((i * 360) / count - 90) * (Math.PI / 180)
+      const rad = ((i * 360) / count + offsetDeg) * (Math.PI / 180)
       return `${(r * Math.cos(rad)).toFixed(1)} ${(r * Math.sin(rad)).toFixed(1)}`
     })
       .map((p, i) => (i === 0 ? `M${p}` : `L${p}`))
@@ -77,7 +100,7 @@ export function HaloBack({ variant }: { variant: string }) {
           <path
             key={i}
             className="halo-sink"
-            style={{ animationDelay: `${i * 0.32}s` }}
+            style={{ animationDelay: `${i * 0.35}s` }}
             d={arcTop(HALO.rx - i * 18, HALO.ry - i * 4.5)}
           />
         ))}
@@ -89,6 +112,7 @@ export function HaloBack({ variant }: { variant: string }) {
     // 三道扩散信号波纹
     return (
       <g className="halo-ring">
+        <path d={arcTop(HALO.rx, HALO.ry)} />
         {[0, 1, 2].map((i) => (
           <path
             key={i}
@@ -106,7 +130,20 @@ export function HaloBack({ variant }: { variant: string }) {
     return (
       <g className="halo-ring">
         <path d={arcTop(HALO.rx, HALO.ry)} />
-        <path d={arcTop(HALO.rx - 20, HALO.ry - 5)} />
+        <path d={arcTop(HALO.rx - 22, HALO.ry - 5.6)} />
+      </g>
+    )
+  }
+
+  if (variant === 'navi') {
+    // 旗舰向导光环：双重浮空星轨 + 外层侧向星翼导轨（远端部分）
+    return (
+      <g className="halo-ring">
+        <path d={arcTop(HALO.rx, HALO.ry)} />
+        <path d={arcTop(HALO.rx - 18, HALO.ry - 4.6)} />
+        {/* 左右两侧外浮星轨翼板（上段） */}
+        <path d={arcSegment(335, 360, HALO.rx + 16, HALO.ry + 4.1)} />
+        <path d={arcSegment(180, 205, HALO.rx + 16, HALO.ry + 4.1)} />
       </g>
     )
   }
@@ -129,9 +166,21 @@ export function HaloFront({ variant }: { variant: string }) {
       return (
         <g className="halo-ring">
           <path d={arcBottom(HALO.rx, HALO.ry)} />
+          <path d={arcBottom(HALO.rx - 16, HALO.ry - 4.1)} />
+          {/* 左右与下方象限标尺刻度 */}
+          <path
+            d={`M${HALO.cx - HALO.rx - 4} ${HALO.cy}H${HALO.cx - HALO.rx + 4}M${HALO.cx + HALO.rx - 4} ${HALO.cy}H${HALO.cx + HALO.rx + 4}M${HALO.cx} ${HALO.cy + HALO.ry - 3}V${HALO.cx} ${HALO.cy + HALO.ry + 4}`}
+          />
           <g transform={RING_SPACE}>
             <g className="halo-orbit">
-              <path className="halo-solid" d="M62 0L82 -13L82 13Z" />
+              {/* 北向罗盘主针 */}
+              <path className="halo-solid" d="M0 -84L6 -68L0 -73L-6 -68Z" />
+              {/* 南向尾羽菱形 */}
+              <path className="halo-solid" d="M0 84L4 72L0 76L-4 72Z" />
+              {/* 细轴心线 */}
+              <path d="M0 -66V66" />
+              {/* 环上运行的卫星导航菱形 */}
+              <path className="halo-solid" d="M78 -4L82 0L78 4L74 0Z" />
             </g>
           </g>
         </g>
@@ -142,6 +191,7 @@ export function HaloFront({ variant }: { variant: string }) {
       return (
         <g className="halo-ring">
           <path d={arcBottom(HALO.rx, HALO.ry)} />
+          <path d={arcBottom(HALO.rx - 16, HALO.ry - 4.1)} strokeDasharray="4 6" />
           {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => {
             const p = ringPoint(deg)
             return (
@@ -164,13 +214,16 @@ export function HaloFront({ variant }: { variant: string }) {
       return (
         <g className="halo-ring">
           <path d={arcBottom(HALO.rx, HALO.ry)} />
-          <path d={arcBottom(HALO.rx - 20, HALO.ry - 5)} />
+          <path d={arcBottom(HALO.rx - 22, HALO.ry - 5.6)} />
           <g transform={RING_SPACE}>
+            {/* 外层顺时针齿轮：8 齿清晰几何块 */}
             <g className="halo-spin-cw">
-              <path d={teeth(18, HALO.rx - 7, HALO.rx + 7)} />
+              <path d={gearTeeth(8, HALO.rx - 6, HALO.rx + 6, 7)} />
+              <path d={teeth(8, HALO.rx - 8, HALO.rx - 5)} />
             </g>
+            {/* 内层逆时针齿轮：6 齿咬合结构 */}
             <g className="halo-spin-ccw">
-              <path d={teeth(12, HALO.rx - 27, HALO.rx - 13)} />
+              <path d={gearTeeth(6, HALO.rx - 28, HALO.rx - 16, 9)} />
             </g>
           </g>
         </g>
@@ -180,14 +233,28 @@ export function HaloFront({ variant }: { variant: string }) {
     case 'vault':
       return (
         <g className="halo-ring">
+          <path d={arcBottom(HALO.rx, HALO.ry)} />
           {[0, 1, 2].map((i) => (
             <path
               key={i}
               className="halo-sink"
-              style={{ animationDelay: `${i * 0.32}s` }}
+              style={{ animationDelay: `${i * 0.35}s` }}
               d={arcBottom(HALO.rx - i * 18, HALO.ry - i * 4.5)}
             />
           ))}
+          {/* 纵向数据总线连接筋与分片刻度 */}
+          {[45, 90, 135].map((deg) => {
+            const p0 = ringPoint(deg, HALO.rx, HALO.ry)
+            const p2 = ringPoint(deg, HALO.rx - 36, HALO.ry - 9)
+            return (
+              <path
+                key={deg}
+                className="halo-sink"
+                style={{ animationDelay: `${(deg / 180) * 0.35}s` }}
+                d={`M${p0.x.toFixed(1)} ${p0.y.toFixed(1)}L${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`}
+              />
+            )
+          })}
         </g>
       )
 
@@ -203,6 +270,25 @@ export function HaloFront({ variant }: { variant: string }) {
               d={arcBottom(HALO.rx, HALO.ry)}
             />
           ))}
+          {/* 三向广播偶极子发射天线与节点 */}
+          <g transform={RING_SPACE}>
+            {[30, 150, 270].map((deg) => {
+              const rad = (deg * Math.PI) / 180
+              const c = Math.cos(rad)
+              const s = Math.sin(rad)
+              return (
+                <g key={deg}>
+                  <path d={`M${(64 * c).toFixed(1)} ${(64 * s).toFixed(1)}L${(84 * c).toFixed(1)} ${(84 * s).toFixed(1)}`} />
+                  <circle
+                    className="halo-node"
+                    cx={(84 * c).toFixed(1)}
+                    cy={(84 * s).toFixed(1)}
+                    r={3.5}
+                  />
+                </g>
+              )
+            })}
+          </g>
         </g>
       )
 
@@ -212,10 +298,17 @@ export function HaloFront({ variant }: { variant: string }) {
         <g className="halo-ring">
           <path d={arcBottom(HALO.rx, HALO.ry)} />
           <g transform={RING_SPACE}>
-            <path d={polygon(6, HALO.rx - 14)} />
+            {/* 六角螺母外廓 */}
+            <path d={polygon(6, HALO.rx - 8)} />
+            {/* 内层旋转刻度表盘 */}
+            <circle cx={0} cy={0} r={HALO.rx - 24} />
             <g className="halo-spin-cw">
-              <path d={teeth(24, HALO.rx - 5, HALO.rx + 5)} />
+              <path d={gearTeeth(6, HALO.rx - 26, HALO.rx - 16, 8)} />
             </g>
+            {/* 四向游标卡尺精度刻度线 */}
+            <path
+              d="M68 -4H76M68 0H80M68 4H76M-4 68V76M0 68V80M4 68V76M-68 -4H-76M-68 0H-80M-68 4H-76M-4 -68V-76M0 -68V-80M4 -68V-76"
+            />
           </g>
         </g>
       )
@@ -250,14 +343,26 @@ export function Prop({ variant, at }: { variant: string; at: { x: number; y: num
 
 function propBody(variant: string) {
   switch (variant) {
-    /* 悬浮罗盘：向导指路的那枚 */
+    /* 悬浮向导光标 / 瞄准准星导航浮标 */
     case 'navi':
       return (
         <>
-          <circle className="prop-line" cx={0} cy={0} r={24} />
-          <path className="prop-line" d="M0 -24V-16M0 24V16M-24 0H-16M24 0H16" />
+          {/* 准星四角 HUD 锁定边框 [ + ] */}
+          <path className="prop-line" d="M-22 -14V-22H-14M14 -22H22V-14M22 14V22H14M-14 22H-22V14" />
+          {/* 精密同心刻度环 */}
+          <circle className="prop-line" cx={0} cy={0} r={15} />
+          {/* 四向瞄准十字刻度 */}
+          <path className="prop-line" d="M0 -22V-17M0 22V17M-22 0H-17M22 0H17" />
+          {/* 45° 辅助定位点 */}
+          <circle className="prop-solid" cx={-10.6} cy={-10.6} r={1.5} />
+          <circle className="prop-solid" cx={10.6} cy={-10.6} r={1.5} />
+          <circle className="prop-solid" cx={10.6} cy={10.6} r={1.5} />
+          <circle className="prop-solid" cx={-10.6} cy={10.6} r={1.5} />
+          {/* 中心慢转罗盘指针 */}
           <g className="prop-needle">
-            <path className="prop-solid" d="M0 -17L6 4L0 0L-6 4Z" />
+            <path className="prop-solid" d="M0 -13L4.5 2.5L0 0L-4.5 2.5Z" />
+            <path className="prop-solid" d="M0 9L2.5 4.5L0 3L-2.5 4.5Z" />
+            <circle className="prop-solid" cx={0} cy={0} r={2.5} />
           </g>
         </>
       )
@@ -289,55 +394,107 @@ function propBody(variant: string) {
         </>
       )
 
-    /* 织梭与一根穿过去的线 */
+    /* 代码括号 / 语法晶体浮件 */
     case 'weaver':
       return (
         <>
-          <path className="prop-solid" d="M-26 0C-16 -12 16 -12 26 0C16 12 -16 12 -26 0Z" />
-          <path className="prop-line" d="M-34 0H34" />
-          <path className="prop-line" d="M-10 -6C-4 0 -4 0 -10 6M10 -6C4 0 4 0 10 6" />
+          {/* 左侧代码括号 < */}
+          <path className="prop-line" d="M-24 -15L-33 0L-24 15" />
+          <path className="prop-line" d="M-33 0H-37" />
+          <circle className="prop-solid" cx={-26} cy={-6} r={1.5} />
+          {/* 右侧代码括号 > */}
+          <path className="prop-line" d="M24 -15L33 0L24 15" />
+          <path className="prop-line" d="M33 0H37" />
+          <circle className="prop-solid" cx={26} cy={6} r={1.5} />
+          {/* 中心菱形语法晶体与编译晶格 */}
+          <path className="prop-line" d="M0 -22L16 0L0 22L-16 0Z" />
+          <path className="prop-line" d="M0 -13L9 0L0 13L-9 0Z" />
+          {/* 语法斜杠 / */}
+          <path className="prop-line" d="M4 -8L-4 8" />
+          {/* 晶体编译呼吸节点 */}
+          <circle className="prop-node" style={{ animationDelay: '0s' }} cx={0} cy={-22} r={3} />
+          <circle className="prop-node" style={{ animationDelay: '0.85s' }} cx={0} cy={22} r={3} />
+          {/* 核心能量核 */}
+          <circle className="prop-solid" cx={0} cy={0} r={2.5} />
         </>
       )
 
-    /* 三层数据柱 */
+    /* 数据分片 / 拓扑晶格柱 */
     case 'vault':
       return (
         <>
-          {[-16, 0, 16].map((dy, i) => (
-            <g key={dy} className="prop-stack" style={{ animationDelay: `${i * 0.3}s` }}>
-              <ellipse className="prop-line" cx={0} cy={dy} rx={22} ry={7} />
-              <path className="prop-line" d={`M-22 ${dy}V${dy + 9}A22 7 0 0 0 22 ${dy + 9}V${dy}`} />
-            </g>
-          ))}
+          {/* 顶部数据分片六角盖板 */}
+          <path className="prop-line" d="M0 -25L20 -15L20 -10L0 0L-20 -10L-20 -15Z" />
+          <path className="prop-line" d="M0 -25L20 -15L0 -5L-20 -15Z" />
+          {/* 底部数据基座 */}
+          <path className="prop-line" d="M0 3L20 13L20 18L0 28L-20 18L-20 13Z" />
+          <path className="prop-line" d="M0 3L20 13L0 23L-20 13Z" />
+          {/* 纵向分布式总线立柱 */}
+          <path className="prop-line" d="M-20 -10V13M0 0V23M20 -10V13" />
+          {/* 中层悬浮数据切片（带沉降呼吸） */}
+          <g className="prop-stack">
+            <path className="prop-line" d="M0 -11L15 -3L0 5L-15 -3Z" />
+            <circle className="prop-solid" cx={0} cy={-3} r={3} />
+          </g>
+          {/* 分布式共识拓扑节点 */}
+          <circle className="prop-node" style={{ animationDelay: '0s' }} cx={0} cy={-25} r={3} />
+          <circle className="prop-node" style={{ animationDelay: '0.4s' }} cx={-20} cy={-15} r={3} />
+          <circle className="prop-node" style={{ animationDelay: '0.8s' }} cx={20} cy={-15} r={3} />
+          <circle className="prop-node" style={{ animationDelay: '1.2s' }} cx={0} cy={28} r={3} />
         </>
       )
 
-    /* 信号塔 */
+    /* 无线通信节点 / 卫星环形天线 */
     case 'relay':
       return (
         <>
-          <path className="prop-line" d="M-12 24L-4 -10H4L12 24M-8 6H8" />
-          <circle className="prop-solid" cx={0} cy={-16} r={4.5} />
-          {[0, 1, 2].map((i) => (
+          {/* 倾斜双轨道卫星环（天球陀螺仪） */}
+          <ellipse cx={0} cy={0} rx={26} ry={9} transform="rotate(-25)" className="prop-line" />
+          <ellipse cx={0} cy={0} rx={26} ry={9} transform="rotate(35)" className="prop-line" />
+          {/* 轨道中继节点 */}
+          <circle className="prop-node" style={{ animationDelay: '0.3s' }} cx={22} cy={-10} r={3.2} />
+          <circle className="prop-node" style={{ animationDelay: '0.9s' }} cx={-20} cy={14} r={3.2} />
+          {/* 垂直偶极子天线主桅 */}
+          <path className="prop-line" d="M0 -8.5V-26M0 8.5V26" />
+          <circle className="prop-solid" cx={0} cy={-26} r={2.5} />
+          <circle className="prop-solid" cx={0} cy={26} r={2.5} />
+          {/* 中心通信信标核心 */}
+          <circle className="prop-solid" cx={0} cy={0} r={5.5} />
+          <circle className="prop-line" cx={0} cy={0} r={8.5} />
+          {/* 顶部向上扩散的射频无线电波 */}
+          {[0, 1].map((i) => (
             <path
               key={i}
               className="prop-wave"
-              style={{ animationDelay: `${i * 0.45}s` }}
-              d={`M${-9 - i * 6} ${-24 - i * 4}A${11 + i * 7} ${11 + i * 7} 0 0 1 ${9 + i * 6} ${-24 - i * 4}`}
+              style={{ animationDelay: `${i * 0.65}s` }}
+              d={`M${-8 - i * 5} ${-28 - i * 4}A${10 + i * 6} ${10 + i * 6} 0 0 1 ${8 + i * 5} ${-28 - i * 4}`}
             />
           ))}
         </>
       )
 
-    /* 六角扳手 */
+    /* 工业游标卡尺 / 机械咬合件 */
     case 'forge':
       return (
         <>
+          {/* 游标卡尺主尺身与精密刻度 */}
+          <path className="prop-line" d="M-7 -28V28" />
           <path
-            className="prop-solid"
-            d="M-6 -26L6 -26L6 6L18 14L12 26L-12 26L-18 14L-6 6Z"
+            className="prop-line"
+            d="M-7 -20H-2M-7 -15H-4M-7 -10H-2M-7 -5H-5M-7 0H-2M-7 5H-5M-7 10H-2M-7 15H-4M-7 20H-2"
           />
-          <path className="prop-line" d="M0 10L8 15L5 22L-5 22L-8 15Z" />
+          {/* 上下测量卡爪 */}
+          <path className="prop-line" d="M-7 -28H14L18 -22H0L-7 -16Z" />
+          <path className="prop-line" d="M-7 28H14L18 22H0L-7 16Z" />
+          {/* 中间咬合的工业六角构件与核心 */}
+          <g transform="translate(9 0)">
+            <path className="prop-line" d={polygon(6, 11, 0)} />
+            <circle className="prop-solid" cx={0} cy={0} r={3} />
+          </g>
+          {/* 对准十字标与 HUD 框角 */}
+          <path className="prop-line" d="M9 -15V-12M9 15V12M-2 0H1M17 0H20" />
+          <path className="prop-line" d="M22 -22H27V-17M22 22H27V17" />
+          <circle className="prop-solid" cx={25} cy={0} r={1.5} />
         </>
       )
 
