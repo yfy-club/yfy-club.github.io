@@ -360,25 +360,8 @@
 }
 
 /*
- * 虚焦聚焦。规格 4.4，全站唯一允许的 blur 动画。
- *
- * 默认态是实焦，虚焦要靠 JS 显式打上 data-focus="false"——
- * 反过来写的话预渲染出的静态页在没有 JS 时全文糊掉，
- * 那正是规格第 6 节要保住的「无 JS 内容可读」。
- *
- * opacity 取 .7 不是规格原文的 .35：.35 实测只有 2.08:1，远低于 AA 的 4.5。
- * 抬到 .7 得 5.54:1，虚实差别改由 blur 承担。见 spec 4.4 的 M5 修正记录一。
+ * 正文全文清晰可读，已移除动态模糊（blur）与弱化效果。
  */
-.doc-body [data-focus='false'] {
-  filter: blur(3px);
-  opacity: 0.7;
-}
-
-.doc-body [data-focus-unit] {
-  transition:
-    filter var(--dur-micro) var(--ease-out-expo),
-    opacity var(--dur-micro) var(--ease-out-expo);
-}
 
 /* -------------------------------------------------------------------------
    代码块

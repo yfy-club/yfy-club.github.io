@@ -89,14 +89,23 @@ function useHeroProgress(count: number) {
   const [index, setIndex] = useState(0)
 
   useEffect(() => {
+    let frame = 0
     const on = () => {
+      frame = 0
       const span = window.innerHeight
       const ratio = Math.min(1, Math.max(0, window.scrollY / span))
-      setIndex(Math.min(count - 1, Math.round(ratio * (count - 1))))
+      const next = Math.min(count - 1, Math.round(ratio * (count - 1)))
+      setIndex((prev) => (prev === next ? prev : next))
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(on)
     }
     on()
-    window.addEventListener('scroll', on, { passive: true })
-    return () => window.removeEventListener('scroll', on)
+    window.addEventListener('scroll', schedule, { passive: true })
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+    }
   }, [count])
 
   return index

@@ -114,7 +114,7 @@ export const TRACKS: readonly Track[] = [
         year: '大一',
         code: 'STG-01',
         title: '面向对象与 Web 工程入门',
-        tags: ['Java', 'SOLID', 'MySQL', 'JDBC'],
+        tags: ['Python', 'SOLID', 'MySQL', 'FastAPI'],
       },
       {
         year: '大二',

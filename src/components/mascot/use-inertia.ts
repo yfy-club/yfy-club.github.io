@@ -49,7 +49,10 @@ interface Axis {
 
 interface Node {
   el: HTMLElement
-  /** 立绘中心在视口里的位置，resize 与滚动时重算。 */
+  /** 立绘在文档中的绝对坐标中心。 */
+  docX: number
+  docY: number
+  /** 立绘中心在视口里的位置。 */
   cx: number
   cy: number
   parts: Record<(typeof ACTIVE_PARTS)[number], { x: Axis; y: Axis }>
@@ -85,6 +88,10 @@ function integrate(a: Axis, target: number, k: number, c: number, m: number, dt:
 
 function measure(node: Node) {
   const rect = node.el.getBoundingClientRect()
+  const sx = window.scrollX || 0
+  const sy = window.scrollY || 0
+  node.docX = rect.left + sx + rect.width / 2
+  node.docY = rect.top + sy + rect.height / 2
   node.cx = rect.left + rect.width / 2
   node.cy = rect.top + rect.height / 2
 }
@@ -157,9 +164,13 @@ function onPointer(e: PointerEvent) {
 
 function onScroll() {
   const y = window.scrollY
+  const x = window.scrollX
   scrollV += y - lastScrollY
   lastScrollY = y
-  for (const node of nodes) measure(node)
+  for (const node of nodes) {
+    node.cx = node.docX - x
+    node.cy = node.docY - y
+  }
   wake()
 }
 
@@ -211,7 +222,7 @@ export function useMascotInertia(
       ACTIVE_PARTS.map((k) => [k, { x: axis(), y: axis() }]),
     ) as Node['parts']
 
-    const node: Node = { el, cx: 0, cy: 0, parts, enabled: true }
+    const node: Node = { el, docX: 0, docY: 0, cx: 0, cy: 0, parts, enabled: true }
     nodeRef.current = node
     measure(node)
 

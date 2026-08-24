@@ -95,6 +95,8 @@
 
 .track-card {
   position: relative;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   /* 区块进入：位移 16px + 淡入，delay 由 staggerDelay() 算好写进 --enter-delay */
   opacity: 0;
   translate: 0 16px;
@@ -127,6 +129,8 @@
 .track-tilt {
   position: relative;
   height: 100%;
+  transform: translateZ(0);
+  backface-visibility: hidden;
   transform-style: preserve-3d;
   background: var(--bg-paper);
   border-radius: var(--radius-card);
@@ -227,8 +231,6 @@
   width: 44%;
   height: auto;
   z-index: 0;
-  content-visibility: auto;
-  contain-intrinsic-size: auto 240px 280px;
 }
 
 .track-id,
