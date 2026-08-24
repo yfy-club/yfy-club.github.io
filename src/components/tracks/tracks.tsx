@@ -93,6 +93,7 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
   const character = characterByTrack(track.slug)
   const card = useRef<HTMLDivElement>(null)
   const reduced = usePrefersReducedMotion()
+  const [hovered, setHovered] = useState(false)
 
   const { rotateX, rotateY, onPointerMove, onLeave } = useTilt(card, reduced)
 
@@ -109,8 +110,12 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
       transition={SPRING.expand}
       // motion 的 style 不接 CSSProperties（exactOptionalPropertyTypes 下 x/y 等属性不兼容）
       style={{ '--i': index, '--enter-delay': `${staggerDelay(index)}s` } as MotionStyle}
-      onPointerEnter={() => onHover(track.slug)}
+      onPointerEnter={() => {
+        setHovered(true)
+        onHover(track.slug)
+      }}
       onPointerLeave={() => {
+        setHovered(false)
         onLeave()
         onHover(null)
       }}
@@ -118,7 +123,7 @@ function TrackCard({ track, index, open, onToggle, onHover }: TrackCardProps) {
       <motion.div
         ref={card}
         className="track-tilt"
-        style={{ rotateX, rotateY }}
+        {...(hovered && !reduced ? { style: { rotateX, rotateY } as MotionStyle } : {})}
         onPointerMove={onPointerMove}
       >
         <button

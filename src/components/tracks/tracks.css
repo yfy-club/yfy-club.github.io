@@ -52,8 +52,6 @@
   column-gap: var(--grid-gutter);
   /* 行间要比 gutter 松一档，否则大卡与小卡挤成一堵墙 */
   row-gap: var(--space-6);
-  /* 卡片要立在同一个透视里，否则每张卡自带一套灭点，倾斜方向会打架 */
-  perspective: 1200px;
   /* 单元格顶部独立对齐：单卡展开路线时不联动拉伸同行的其他卡片 */
   align-items: start;
 }
@@ -95,7 +93,7 @@
 
 .track-card {
   position: relative;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
   /* 区块进入：位移 16px + 淡入，delay 由 staggerDelay() 算好写进 --enter-delay */
   opacity: 0;
@@ -129,9 +127,8 @@
 .track-tilt {
   position: relative;
   height: 100%;
-  transform: translateZ(0);
+  transform: translate3d(0, 0, 0);
   backface-visibility: hidden;
-  transform-style: preserve-3d;
   background: var(--bg-paper);
   border-radius: var(--radius-card);
   /* 描边走 inset shadow 而不是 border：clip-path 会把 border 一起切掉 */
@@ -181,6 +178,10 @@
   text-align: left;
   align-content: start;
   --portrait-col: 44%;
+  transform: translate3d(0, 0, 0);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* 顶部与角标横跨两列，其余文字一律待在左列 */
