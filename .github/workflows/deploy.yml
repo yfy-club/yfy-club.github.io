@@ -14,7 +14,7 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
   workflow_dispatch:
 
 # GITHUB_TOKEN 的最小权限。pages 与 id-token 是 deploy-pages 要的，缺一个就 403。
