@@ -71,8 +71,16 @@
 
 @media (width < 768px) {
   .danmaku {
-    --dm-pitch: 26px;
+    --dm-pitch: 24px;
+    --dm-tracks: 2;
     top: calc(var(--nav-h-sm) + var(--space-2));
+    height: calc(var(--dm-tracks) * var(--dm-pitch));
+  }
+
+  /* 移动端视口有限，只展示前 2 条轨道，避免覆盖大标题并彻底防拥挤 */
+  .danmaku-item[data-track='2'],
+  .danmaku-item[data-track='3'] {
+    display: none;
   }
 }
 

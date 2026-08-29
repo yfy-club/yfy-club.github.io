@@ -16,6 +16,9 @@ import { createStore } from '@/lib/store'
 /** 轨道数。规格 5.4。 */
 export const TRACKS = 4
 
+/** 初始展示预置弹幕上限条数。每轨 2 条，确保在任何窄屏下都不会追尾重叠 */
+export const INITIAL_PRESET_COUNT = 8
+
 /** 单条弹幕上限 40 字。规格 5.4。 */
 export const MAX_LEN = 40
 
@@ -28,8 +31,8 @@ export const MAX_MINE = 12
 /** 四条轨道各自的穿屏耗时，秒。规格 5.4 的 28–42s 区间四等分。 */
 const DURATIONS = [28, 32.7, 37.3, 42] as const
 
-/** 同轨两条弹幕的最小起跑间隔，秒。 */
-const MIN_GAP = 6
+/** 同轨两条弹幕的最小起跑间隔，秒（按 350px 文本在窄屏上的穿行时间计算，至少需 14s）。 */
+const MIN_GAP = 14
 
 const KEY_ON = 'yfy.danmaku.on'
 const KEY_MINE = 'yfy.danmaku.mine'
@@ -54,7 +57,7 @@ export interface DanmakuState {
   items: readonly DanmakuItem[]
 }
 
-export const danmakuStore = createStore<DanmakuState>({ on: false, items: [] })
+export const danmakuStore = createStore<DanmakuState>({ on: true, items: [] })
 
 /* ---------------------------------------------------------------------- */
 
@@ -90,23 +93,38 @@ const nextId = () => `dm-${(seq += 1)}`
  * 不用等半分钟才热起来——规格 5.4 要的是「首次进入展示 12 条预置弹幕」。
  */
 function layout(entries: readonly { text: string; own: boolean }[]): DanmakuItem[] {
-  const count = Math.max(1, entries.length)
   const now = Date.now()
+  const trackBuckets: { entry: { text: string; own: boolean }; globalIndex: number }[][] = Array.from(
+    { length: TRACKS },
+    () => [],
+  )
 
-  return entries.map((entry, i) => {
+  entries.forEach((entry, i) => {
     const track = i % TRACKS
-    const duration = DURATIONS[track]!
-    const delay = -((i / count) * duration)
-    return {
-      id: nextId(),
-      text: entry.text,
-      own: entry.own,
-      track,
-      duration,
-      delay,
-      startAt: now + delay * 1000,
-    }
+    trackBuckets[track]!.push({ entry, globalIndex: i })
   })
+
+  const result: DanmakuItem[] = []
+
+  trackBuckets.forEach((bucket, track) => {
+    const duration = DURATIONS[track]!
+    const countInTrack = Math.max(1, bucket.length)
+    bucket.forEach(({ entry }, k) => {
+      const trackOffset = track * 3.2
+      const delay = -(((k / countInTrack) * duration + trackOffset) % duration)
+      result.push({
+        id: nextId(),
+        text: entry.text,
+        own: entry.own,
+        track,
+        duration,
+        delay,
+        startAt: now + delay * 1000,
+      })
+    })
+  })
+
+  return result
 }
 
 /**
@@ -205,14 +223,16 @@ export function initDanmaku() {
   ready = true
 
   const mine = readMine()
+  const presets = DANMAKU_PRESETS.slice(0, INITIAL_PRESET_COUNT)
   const items = layout([
-    ...DANMAKU_PRESETS.map((p) => ({ text: p.text, own: false })),
+    ...presets.map((p) => ({ text: p.text, own: false })),
     ...mine.map((text) => ({ text, own: true })),
   ])
 
-  let on = false
+  // 默认开启：未明确设置为 '0' 时默认开启
+  let on = true
   try {
-    on = localStorage.getItem(KEY_ON) === '1'
+    on = localStorage.getItem(KEY_ON) !== '0'
   } catch {
     on = false
   }

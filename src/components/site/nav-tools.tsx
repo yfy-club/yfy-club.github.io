@@ -93,9 +93,18 @@ export function NavTools() {
           className="nav-toggle"
           type="button"
           aria-pressed={bgm.on}
+          title={bgm.on ? '暂停背景音乐' : '播放背景音乐（晴空环境音）'}
           onClick={() => setBgmOn(!bgm.on)}
         >
-          <Diamond tone={bgm.on ? 'pink' : 'ink'} />
+          {bgm.on ? (
+            <span className="nav-wave" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </span>
+          ) : (
+            <Diamond tone="ink" />
+          )}
           BGM
         </button>
       )}

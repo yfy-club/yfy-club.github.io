@@ -31,6 +31,7 @@ export function DanmakuTracks() {
           key={item.id}
           className="danmaku-item"
           data-own={item.own}
+          data-track={item.track}
           style={
             {
               '--dm-track': item.track,

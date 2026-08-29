@@ -294,7 +294,14 @@
     align-self: auto;
     margin: 0;
     order: 2;
-    /* 窄屏立绘不破框，底边那道闭合描边要自己切掉 */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .hero-mascot .mascot {
+    width: 100%;
+    /* 窄屏立绘不破框，底边那道闭合描边只在立绘自身切掉，绝对不切名牌 */
     clip-path: inset(0 0 5% 0);
   }
 

@@ -13,6 +13,7 @@
  * 挂在组件上的 <audio> 会被一起销毁，歌就断了。
  */
 import { createStore } from '@/lib/store'
+import { bgmSynth } from '@/lib/bgm-synth'
 
 const KEY_ON = 'yfy.audio.on'
 
@@ -28,12 +29,31 @@ export interface BgmState {
   on: boolean
 }
 
-export const bgmStore = createStore<BgmState>({ src: null, on: false })
+export const bgmStore = createStore<BgmState>({ src: null, on: true })
 
 /* ---------------------------------------------------------------------- */
 
 let audio: HTMLAudioElement | null = null
 let fadeFrame = 0
+let userGestureAttached = false
+
+function ensureGestureUnlock() {
+  if (userGestureAttached || typeof window === 'undefined') return
+  userGestureAttached = true
+
+  const unlock = () => {
+    window.removeEventListener('pointerdown', unlock)
+    window.removeEventListener('keydown', unlock)
+    window.removeEventListener('touchstart', unlock)
+    if (bgmStore.get().on) {
+      setBgmOn(true)
+    }
+  }
+
+  window.addEventListener('pointerdown', unlock, { once: true, passive: true })
+  window.addEventListener('keydown', unlock, { once: true, passive: true })
+  window.addEventListener('touchstart', unlock, { once: true, passive: true })
+}
 
 function ensureAudio(src: string) {
   if (audio) return audio
@@ -50,9 +70,15 @@ function ensureAudio(src: string) {
    * 监听器跟播放器同寿命，不解绑。
    */
   document.addEventListener('visibilitychange', () => {
+    const state = bgmStore.get()
+    if (state.src === 'synth') {
+      if (document.hidden) bgmSynth.pause()
+      else if (state.on) bgmSynth.resume(VOLUME)
+      return
+    }
     if (!audio) return
     if (document.hidden) audio.pause()
-    else if (bgmStore.get().on) void audio.play().catch(() => stopSilently())
+    else if (state.on) void audio.play().catch(() => ensureGestureUnlock())
   })
 
   audio = el
@@ -87,11 +113,9 @@ function persistOn(on: boolean) {
   }
 }
 
-/** 播放被拒时把界面拨回静音态。开关写着「开」而其实没声音，是在骗人。 */
-function stopSilently() {
-  const { src } = bgmStore.get()
-  bgmStore.set({ src, on: false })
-  persistOn(false)
+/** 播放被浏览器策略拦截时等待首次交互唤醒 */
+function onPlayBlocked() {
+  ensureGestureUnlock()
 }
 
 export function setBgmOn(on: boolean) {
@@ -101,7 +125,22 @@ export function setBgmOn(on: boolean) {
   if (!on) {
     persistOn(false)
     bgmStore.set({ src, on: false })
+    if (src === 'synth') {
+      bgmSynth.stop()
+      return
+    }
     fadeTo(0, () => audio?.pause())
+    return
+  }
+
+  if (src === 'synth') {
+    bgmSynth
+      .start(VOLUME)
+      .then(() => {
+        persistOn(true)
+        bgmStore.set({ src, on: true })
+      })
+      .catch(onPlayBlocked)
     return
   }
 
@@ -113,7 +152,7 @@ export function setBgmOn(on: boolean) {
       bgmStore.set({ src, on: true })
       fadeTo(VOLUME)
     })
-    .catch(stopSilently)
+    .catch(onPlayBlocked)
 }
 
 /* ---------------------------------------------------------------------- */
@@ -140,15 +179,17 @@ export function initBgm() {
   ready = true
 
   const path = pick()
-  if (!path) return
-  bgmStore.set({ src: `${import.meta.env.BASE_URL}${path}`, on: false })
+  // 如果有静态音频文件优先使用文件；若没有则启用实时代码合成引擎
+  const targetSrc = path ? `${import.meta.env.BASE_URL}${path}` : 'synth'
 
-  // 记住的选择在这里恢复。自动播放被浏览器拒了会由 setBgmOn 自己退回静音
-  let wanted = false
+  // 默认开启：未明确设置为 '0' 时默认开启
+  let wanted = true
   try {
-    wanted = localStorage.getItem(KEY_ON) === '1'
+    const saved = localStorage.getItem(KEY_ON)
+    wanted = saved !== '0'
   } catch {
-    wanted = false
+    wanted = true
   }
+  bgmStore.set({ src: targetSrc, on: wanted })
   if (wanted) setBgmOn(true)
 }
