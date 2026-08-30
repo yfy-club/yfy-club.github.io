@@ -92,18 +92,36 @@ export function NavTools() {
         <button
           className="nav-toggle"
           type="button"
-          aria-pressed={bgm.on}
-          title={bgm.on ? '暂停背景音乐' : '播放背景音乐（晴空环境音）'}
-          onClick={() => setBgmOn(!bgm.on)}
+          aria-pressed={bgm.on && !bgm.pending}
+          data-pending={bgm.pending || undefined}
+          title={
+            bgm.pending
+              ? '点一下开始播放（浏览器要求先有一次点击）'
+              : bgm.on
+                ? '暂停背景音乐'
+                : '播放背景音乐（晴空环境音）'
+          }
+          onClick={() => {
+            /*
+             * pending 时这一下点击本身就是那个「离散手势」，
+             * sound.ts 的全局钩会在同一个调用栈里完成解锁，
+             * 所以不要把它当成「关掉」——保持 on 不变，只等声音起来。
+             */
+            if (bgm.pending) {
+              setBgmOn(true)
+              return
+            }
+            setBgmOn(!bgm.on)
+          }}
         >
-          {bgm.on ? (
+          {bgm.on && !bgm.pending ? (
             <span className="nav-wave" aria-hidden="true">
               <span />
               <span />
               <span />
             </span>
           ) : (
-            <Diamond tone="ink" />
+            <Diamond tone={bgm.pending ? 'pink' : 'ink'} />
           )}
           BGM
         </button>

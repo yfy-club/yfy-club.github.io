@@ -147,6 +147,38 @@
   color: var(--pink-700);
 }
 
+/*
+ * BGM 待开启态：意愿已开，但浏览器还没放行，此刻一声都没有。
+ *
+ * 必须跟「正在放」看起来不一样（M9）。之前无论有没有声音都是同一个跳动波形，
+ * 移动端用户看着波形在跳却听不见，只能去戳立绘试运气。
+ * 缓慢呼吸的粉色菱形 + 「待开启」后缀，一眼能看出这里要点一下。
+ */
+.nav-toggle[data-pending] {
+  color: var(--pink-700);
+}
+
+.nav-toggle[data-pending] svg {
+  animation: nav-pending-breathe 1.6s ease-in-out infinite;
+}
+
+.nav-toggle[data-pending]::after {
+  content: '·待开启';
+  font-size: var(--text-hud);
+  letter-spacing: 0;
+  color: var(--ink-600);
+}
+
+@keyframes nav-pending-breathe {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .nav-wave {
   display: inline-flex;
   align-items: flex-end;
@@ -185,6 +217,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .nav-toggle[data-pending] svg {
+    animation: none;
+    opacity: 1;
+  }
+
   .nav-wave span {
     animation: none;
     transform: scaleY(0.6);

@@ -1,4 +1,5 @@
 import { getSharedAudioContext, isAudioRunning, onAudioUnlocked } from './sound'
+import { tonePreset, type TonePreset } from './bgm-tone'
 /**
  * Web Audio 极简 C418 (Sweden) 纯音乐合成引擎
  *
@@ -8,6 +9,10 @@ import { getSharedAudioContext, isAudioRunning, onAudioUnlocked } from './sound'
  *    - 暖声底垫 (Dmaj7 -> Gmaj7 -> Bm7 -> Gmaj7)，超慢速 16 秒一换，音量极轻
  *    - 干净的毛毡立式钢琴 Solo (F#4 -> A4 -> D5 -> C#5...)，自带大量宁静留白
  * 3. 零噪音层、零风声、零杂乱调制，背景极其干净通透。
+ *
+ * 所有音色数值外提到 bgm-tone.ts，分桌面 / 手机两套（M9）。
+ * 手机扇声器 500Hz 以下基本没有输出能力，原始数值在手机上等于静音，
+ * 详细实测与缘由见 bgm-tone.ts 的文件头。
  */
 
 interface Chord {
@@ -63,7 +68,8 @@ const MELODY_SECTIONS: Note[][] = [
 ]
 
 const CHORD_DURATION_SEC = 16.0
-const FADE_MS = 1500
+/** 淡出时长，毫秒。淡入走预设的 fadeInMs。 */
+const FADE_OUT_MS = 1500
 const DEFAULT_VOLUME = 0.35
 
 class BgmSynthEngine {
@@ -88,6 +94,9 @@ class BgmSynthEngine {
   private padOscs: OscillatorNode[] = []
   private bassOsc: OscillatorNode | null = null
 
+  /** 当前生效的音色预设。每次 launch() 时重新挑。 */
+  private tone: TonePreset = tonePreset()
+
   private ensureContext(): AudioContext | null {
     this.ctx = getSharedAudioContext()
     return this.ctx
@@ -96,22 +105,23 @@ class BgmSynthEngine {
   /** 构建立体声母带与温润空间混响延迟 */
   private setupMaster(ctx: AudioContext) {
     const now = ctx.currentTime
+    const tone = this.tone
 
     // 1. 主增益
     this.masterGain = ctx.createGain()
     this.masterGain.gain.setValueAtTime(0.00001, now)
 
-    // 2. 45Hz 高通滤除杂音
+    // 2. 高通滤除杂音。手机上抬得更高，砍掉放不出来的超低频
     const hp = ctx.createBiquadFilter()
     hp.type = 'highpass'
-    hp.frequency.setValueAtTime(45, now)
+    hp.frequency.setValueAtTime(tone.masterHighpassHz, now)
 
     this.masterGain.connect(hp)
     hp.connect(ctx.destination)
 
     // 3. 500ms 纯净立体声空间回响 (Space Delay)
     this.delaySend = ctx.createGain()
-    this.delaySend.gain.setValueAtTime(0.24, now)
+    this.delaySend.gain.setValueAtTime(tone.delaySendGain, now)
 
     const delayL = ctx.createDelay()
     delayL.delayTime.setValueAtTime(0.48, now)
@@ -119,11 +129,11 @@ class BgmSynthEngine {
     delayR.delayTime.setValueAtTime(0.72, now)
 
     const feedback = ctx.createGain()
-    feedback.gain.setValueAtTime(0.28, now)
+    feedback.gain.setValueAtTime(tone.delayFeedback, now)
 
     const delayFilter = ctx.createBiquadFilter()
     delayFilter.type = 'lowpass'
-    delayFilter.frequency.setValueAtTime(1000, now) // 温暖暗色回声
+    delayFilter.frequency.setValueAtTime(tone.delayLowpassHz, now) // 温暖暗色回声
 
     const panL = ctx.createStereoPanner ? ctx.createStereoPanner() : null
     if (panL) panL.pan.setValueAtTime(-0.35, now)
@@ -150,13 +160,14 @@ class BgmSynthEngine {
     }
   }
 
-  /** 演奏背景和弦（极简、极轻 0.015，只作温润打底） */
+  /** 演奏背景和弦（极简极轻，只作温润打底；具体增益与滤波看预设） */
   private playPadChord(chord: Chord) {
     const ctx = this.ctx
     if (!ctx || !this.isRunning) return
     // Context 被挂起时 currentTime 是冻结的，此时排包络等于把声音扔进黑洞
     if (ctx.state !== 'running') return
     const now = ctx.currentTime
+    const tone = this.tone
 
     // 停止上一组和弦振荡器
     if (this.padGain) {
@@ -178,11 +189,11 @@ class BgmSynthEngine {
     // 创建新和弦组
     const gain = ctx.createGain()
     gain.gain.setValueAtTime(0.00001, now)
-    gain.gain.linearRampToValueAtTime(0.016, now + 2.5) // 极轻柔打底
+    gain.gain.linearRampToValueAtTime(tone.padGain, now + tone.padRampSec)
 
     const lp = ctx.createBiquadFilter()
     lp.type = 'lowpass'
-    lp.frequency.setValueAtTime(320, now) // 320Hz 极暖低通，不抢钢琴
+    lp.frequency.setValueAtTime(tone.padLowpassHz, now)
 
     gain.connect(lp)
     if (this.masterGain) lp.connect(this.masterGain)
@@ -195,6 +206,23 @@ class BgmSynthEngine {
       osc.connect(gain)
       osc.start(now)
       newOscs.push(osc)
+
+      /*
+       * 八度叠层。正弦波在 185Hz 上于 500Hz 处能量严格为零，
+       * 手机扇声器往下又放不出来，所以必须真的把能量搬到 370–555Hz。
+       * 叠八度而不是直接移调：和声色彩不变。
+       */
+      if (tone.padOctaveMix > 0) {
+        const up = ctx.createOscillator()
+        const upGain = ctx.createGain()
+        up.type = 'sine'
+        up.frequency.setValueAtTime(freq * 2, now)
+        upGain.gain.setValueAtTime(tone.padOctaveMix, now)
+        up.connect(upGain)
+        upGain.connect(gain)
+        up.start(now)
+        newOscs.push(up)
+      }
     })
 
     // 次低音微弱垫底 (49Hz ~ 73Hz)
@@ -202,7 +230,7 @@ class BgmSynthEngine {
       this.bassOsc = ctx.createOscillator()
       this.bassOsc.type = 'sine'
       const bassGain = ctx.createGain()
-      bassGain.gain.setValueAtTime(0.012, now)
+      bassGain.gain.setValueAtTime(tone.bassGain, now)
       this.bassOsc.connect(bassGain)
       if (this.masterGain) bassGain.connect(this.masterGain)
       this.bassOsc.start(now)
@@ -219,17 +247,18 @@ class BgmSynthEngine {
     if (!ctx || !this.isRunning || this.isPaused) return
     if (ctx.state !== 'running') return
     const now = ctx.currentTime
+    const tone = this.tone
 
     // 1. 音符增益
     const noteGain = ctx.createGain()
     noteGain.gain.setValueAtTime(0.00001, now)
-    noteGain.gain.linearRampToValueAtTime(0.055, now + 0.008) // 8ms 柔和毛毡击弦
+    noteGain.gain.linearRampToValueAtTime(tone.pianoGain, now + 0.008) // 8ms 柔和毛毡击弦
     noteGain.gain.exponentialRampToValueAtTime(0.00001, now + Math.max(0.2, duration * 1.3))
 
-    // 2. 钢琴低通滤波 (1100Hz 温暖圆润，不刺耳)
+    // 2. 钢琴低通滤波（手机上抬亮，否则泛音全被砍掉）
     const pianoFilter = ctx.createBiquadFilter()
     pianoFilter.type = 'lowpass'
-    pianoFilter.frequency.setValueAtTime(1100, now)
+    pianoFilter.frequency.setValueAtTime(tone.pianoLowpassHz, now)
 
     // 基音 (1x)
     const osc1 = ctx.createOscillator()
@@ -241,12 +270,30 @@ class BgmSynthEngine {
     const osc2Gain = ctx.createGain()
     osc2.type = 'sine'
     osc2.frequency.setValueAtTime(freq * 2, now)
-    osc2Gain.gain.setValueAtTime(0.3, now)
+    osc2Gain.gain.setValueAtTime(tone.pianoH2, now)
     osc2Gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.6)
     osc2.connect(osc2Gain)
 
     osc1.connect(pianoFilter)
     osc2Gain.connect(pianoFilter)
+
+    /*
+     * 3 次谐波。只在手机预设下加：
+     * F#4 (370Hz) 的 3x 是 1110Hz，正好落在扇声器通带正中间，
+     * 让旋律头两颗低音也能被听见，不用改旋律本身。
+     */
+    let osc3: OscillatorNode | null = null
+    if (tone.pianoH3 > 0) {
+      osc3 = ctx.createOscillator()
+      const osc3Gain = ctx.createGain()
+      osc3.type = 'sine'
+      osc3.frequency.setValueAtTime(freq * 3, now)
+      osc3Gain.gain.setValueAtTime(tone.pianoH3, now)
+      osc3Gain.gain.exponentialRampToValueAtTime(0.00001, now + 0.35)
+      osc3.connect(osc3Gain)
+      osc3Gain.connect(pianoFilter)
+    }
+
     pianoFilter.connect(noteGain)
 
     // 接入主通道与空间延迟
@@ -255,8 +302,10 @@ class BgmSynthEngine {
 
     osc1.start(now)
     osc2.start(now)
+    osc3?.start(now)
     osc1.stop(now + duration * 1.4)
     osc2.stop(now + duration * 1.4)
+    osc3?.stop(now + duration * 1.4)
   }
 
   /** 演奏一整段 Sweden 旋律并留白 */
@@ -283,10 +332,10 @@ class BgmSynthEngine {
 
       this.playPadChord(chord)
 
-      // 和弦升起 1.0 秒后，缓缓落下第一颗钢琴键
+      // 和弦升起后，缓缓落下第一颗钢琴键（手机上缩短，开头死区越短越好）
       const timer = window.setTimeout(() => {
         this.playMelodySection(melody)
-      }, 1000)
+      }, this.tone.firstNoteDelayMs)
       this.activeTimers.push(timer)
 
       this.currentStep++
@@ -319,7 +368,7 @@ class BgmSynthEngine {
         const now = ctx.currentTime
         this.masterGain.gain.cancelScheduledValues(now)
         this.masterGain.gain.setValueAtTime(Math.max(0.00001, this.masterGain.gain.value), now)
-        this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + 0.5)
+        this.masterGain.gain.linearRampToValueAtTime(this.masterTarget(targetVolume), now + 0.5)
       }
       if (this.isPaused) this.resume(targetVolume)
       return Promise.resolve()
@@ -340,6 +389,11 @@ class BgmSynthEngine {
     return Promise.resolve()
   }
 
+  /** 应用预设的主音量倍率，并夹到 0.9 以下防削波。 */
+  private masterTarget(v: number): number {
+    return Math.min(0.9, v * this.tone.masterVolumeScale)
+  }
+
   /** 真正建图与开跑。只在 Context 已 running 时进入。 */
   private launch(targetVolume: number) {
     const ctx = this.ensureContext()
@@ -348,6 +402,8 @@ class BgmSynthEngine {
     this.isRunning = true
     this.isPaused = false
     this.currentStep = 0
+    // 现算而不是用构造时的值：桌面拖窗口宽度、平板旋转都会改变结论
+    this.tone = tonePreset()
 
     this.setupMaster(ctx)
 
@@ -355,7 +411,7 @@ class BgmSynthEngine {
       const now = ctx.currentTime
       this.masterGain.gain.cancelScheduledValues(now)
       this.masterGain.gain.setValueAtTime(0.00001, now)
-      this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + FADE_MS / 1000)
+      this.masterGain.gain.linearRampToValueAtTime(this.masterTarget(targetVolume), now + this.tone.fadeInMs / 1000)
     }
 
     this.schedule()
@@ -405,12 +461,12 @@ class BgmSynthEngine {
       const now = this.ctx.currentTime
       this.masterGain.gain.cancelScheduledValues(now)
       this.masterGain.gain.setValueAtTime(Math.max(0.00001, this.masterGain.gain.value), now)
-      this.masterGain.gain.exponentialRampToValueAtTime(0.00001, now + FADE_MS / 1000)
+      this.masterGain.gain.exponentialRampToValueAtTime(0.00001, now + FADE_OUT_MS / 1000)
     }
 
     setTimeout(() => {
       this.cleanup()
-    }, FADE_MS + 200)
+    }, FADE_OUT_MS + 200)
   }
 
   public pause(): void {
@@ -433,7 +489,7 @@ class BgmSynthEngine {
     if (this.ctx && this.masterGain) {
       const now = this.ctx.currentTime
       this.masterGain.gain.cancelScheduledValues(now)
-      this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + 0.5)
+      this.masterGain.gain.linearRampToValueAtTime(this.masterTarget(targetVolume), now + 0.5)
     }
   }
 

@@ -22,10 +22,12 @@ const unlockWaiters = new Set<() => void>()
 let unlockedOnce = false
 
 /**
- * 手势事件清单。
+ * 手势事件清单。全部是「离散手势」。
  *
- * scroll 也算：移动端第一次交互多半是滑动，touchstart 之后才是 touchmove/scroll，
- * 但 iOS 上被 lenis 接管的容器里 touchstart 有可能被吞，多留一道保险不花钱。
+ * 不含 scroll / wheel（M9）：浏览器只把离散手势计作 user activation，
+ * 滑动产生的 touchmove / scroll 不算。实测一次滑动会白白触发 13 次解锁尝试，
+ * 建 13 个静音 buffer 然后全部失败——留着只是浪费，不会多救回一次。
+ * 真正的弥补在 UI：解锁前 BGM 开关显示为待开启态，告诉用户该点哪里。
  */
 const UNLOCK_EVENTS = [
   'pointerdown',
@@ -35,8 +37,6 @@ const UNLOCK_EVENTS = [
   'mousedown',
   'click',
   'keydown',
-  'wheel',
-  'scroll',
 ] as const
 
 export function getSharedAudioContext(): AudioContext | null {

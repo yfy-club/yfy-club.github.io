@@ -13,7 +13,7 @@
  * 挂在组件上的 <audio> 会被一起销毁，歌就断了。
  */
 import { createStore } from '@/lib/store'
-import { getSharedAudioContext, onAudioUnlocked } from '@/lib/sound'
+import { getSharedAudioContext, isAudioRunning, onAudioUnlocked } from '@/lib/sound'
 import { bgmSynth } from '@/lib/bgm-synth'
 
 const KEY_ON = 'yfy.audio.on'
@@ -28,9 +28,16 @@ export interface BgmState {
   /** 探测到的可播放地址。null 表示没有文件，开关不出现。 */
   src: string | null
   on: boolean
+  /**
+   * 意愿已开启但浏览器还没放行，此刻一声也没有。
+   *
+   * 开关得把这个状态画出来（M9）：之前 aria-pressed 一上来就是 true、
+   * 图标在跳波形，而实际上静音——这是在骗人，用户于是去戳立绘试运气。
+   */
+  pending: boolean
 }
 
-export const bgmStore = createStore<BgmState>({ src: null, on: true })
+export const bgmStore = createStore<BgmState>({ src: null, on: true, pending: false })
 
 /* ---------------------------------------------------------------------- */
 
@@ -131,7 +138,7 @@ export function setBgmOn(on: boolean) {
 
   if (!on) {
     persistOn(false)
-    bgmStore.set({ src, on: false })
+    bgmStore.set({ src, on: false, pending: false })
     // 关掉就不该再等解锁，否则下一次点屏会自己唱起来
     if (offUnlock) {
       offUnlock()
@@ -148,14 +155,16 @@ export function setBgmOn(on: boolean) {
   /*
    * 开启路径。store 先置 on，开关立即反馈；
    * 能不能真的出声交给 sound.ts 的解锁机制，它会在 running 那一刻回来叫我们。
+   * pending 把「意愿已开、但还没声」画出来，否则开关在骗人。
    */
   persistOn(true)
-  bgmStore.set({ src, on: true })
+  const unlocked = isAudioRunning()
+  bgmStore.set({ src, on: true, pending: !unlocked })
+  if (!unlocked) markPendingUntilUnlocked()
 
   if (src === 'synth') {
     // 建 Context + 挂全局手势钩（幂等）。
-    // 引擎 start() 内部自己会等 running 后才建图，这里不要再叠一道等待，
-    // 否则解锁后会把刚开始的 1.5s 淡入跌回 0.5s 对齐。
+    // 引擎 start() 内部自己会等 running 后才建图，这里不要再叠一道等待。
     getSharedAudioContext()
     bgmSynth.start(VOLUME).catch(onPlayBlocked)
     return
@@ -168,6 +177,14 @@ export function setBgmOn(on: boolean) {
       fadeTo(VOLUME)
     })
     .catch(onPlayBlocked)
+}
+
+/** 解锁那一刻把 pending 摘掉，开关从「待开启」切成「正在放」。 */
+function markPendingUntilUnlocked() {
+  onAudioUnlocked(() => {
+    const s = bgmStore.get()
+    if (s.pending) bgmStore.set({ ...s, pending: false })
+  })
 }
 
 /* ---------------------------------------------------------------------- */
@@ -205,7 +222,7 @@ export function initBgm() {
   } catch {
     wanted = true
   }
-  bgmStore.set({ src: targetSrc, on: wanted })
+  bgmStore.set({ src: targetSrc, on: wanted, pending: false })
   // 建 Context 并挂上全局手势解锁钩子（幂等）
   getSharedAudioContext()
   bindVisibility()
