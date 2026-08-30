@@ -6,8 +6,9 @@
  */
 
 let ctx: AudioContext | null = null
+let autoUnlockBound = false
 
-function getAudioContext(): AudioContext | null {
+export function getSharedAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null
   if (!ctx) {
     const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
@@ -18,6 +19,36 @@ function getAudioContext(): AudioContext | null {
   if (ctx && ctx.state === 'suspended') {
     ctx.resume().catch(() => {})
   }
+  if (!autoUnlockBound && typeof window !== 'undefined') {
+    bindAutoUnlock()
+  }
+  return ctx
+}
+
+/** 全局监听任意首次手势（触摸/点击/按键/滑动），在捕获阶段瞬间唤醒 AudioContext */
+function bindAutoUnlock() {
+  if (autoUnlockBound || typeof window === 'undefined') return
+  autoUnlockBound = true
+
+  const events = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown']
+
+  const unlock = () => {
+    const ac = getSharedAudioContext()
+    if (ac && ac.state === 'suspended') {
+      ac.resume().catch(() => {})
+    }
+    window.dispatchEvent(new CustomEvent('yfy-audio-unlocked'))
+    events.forEach((ev) => {
+      window.removeEventListener(ev, unlock, true)
+    })
+  }
+
+  events.forEach((ev) => {
+    window.addEventListener(ev, unlock, { capture: true, passive: true })
+  })
+}
+
+export function getAudioContext(): AudioContext | null {
   return ctx
 }
 
@@ -46,7 +77,7 @@ export function toggleSound(): boolean {
  */
 export function playClick(): void {
   if (!soundEnabled) return
-  const ac = getAudioContext()
+  const ac = getSharedAudioContext()
   if (!ac) return
 
   const now = ac.currentTime
@@ -72,7 +103,7 @@ export function playClick(): void {
  */
 export function playExpand(): void {
   if (!soundEnabled) return
-  const ac = getAudioContext()
+  const ac = getSharedAudioContext()
   if (!ac) return
 
   const now = ac.currentTime
@@ -106,7 +137,7 @@ export function playExpand(): void {
  */
 export function playComboPoke(step = 1): void {
   if (!soundEnabled) return
-  const ac = getAudioContext()
+  const ac = getSharedAudioContext()
   if (!ac) return
 
   const now = ac.currentTime
@@ -144,7 +175,7 @@ export function playPoke(): void {
  */
 export function playBurst(): void {
   if (!soundEnabled) return
-  const ac = getAudioContext()
+  const ac = getSharedAudioContext()
   if (!ac) return
 
   const now = ac.currentTime

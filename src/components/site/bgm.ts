@@ -13,6 +13,7 @@
  * 挂在组件上的 <audio> 会被一起销毁，歌就断了。
  */
 import { createStore } from '@/lib/store'
+import { getSharedAudioContext } from '@/lib/sound'
 import { bgmSynth } from '@/lib/bgm-synth'
 
 const KEY_ON = 'yfy.audio.on'
@@ -42,17 +43,39 @@ function ensureGestureUnlock() {
   userGestureAttached = true
 
   const unlock = () => {
-    window.removeEventListener('pointerdown', unlock)
-    window.removeEventListener('keydown', unlock)
-    window.removeEventListener('touchstart', unlock)
+    const events = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown']
+    events.forEach((ev) => {
+      window.removeEventListener(ev, unlock, true)
+    })
+    const ctx = getSharedAudioContext()
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
+    }
     if (bgmStore.get().on) {
-      setBgmOn(true)
+      const state = bgmStore.get()
+      if (state.src === 'synth') {
+        bgmSynth.start(VOLUME)
+      } else if (audio) {
+        void audio.play().catch(() => {})
+        fadeTo(VOLUME)
+      }
     }
   }
 
-  window.addEventListener('pointerdown', unlock, { once: true, passive: true })
-  window.addEventListener('keydown', unlock, { once: true, passive: true })
-  window.addEventListener('touchstart', unlock, { once: true, passive: true })
+  const events = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown']
+  events.forEach((ev) => {
+    window.addEventListener(ev, unlock, { capture: true, passive: true })
+  })
+
+  window.addEventListener(
+    'yfy-audio-unlocked',
+    () => {
+      if (bgmStore.get().on) {
+        setBgmOn(true)
+      }
+    },
+    { once: true },
+  )
 }
 
 function ensureAudio(src: string) {
@@ -191,5 +214,6 @@ export function initBgm() {
     wanted = true
   }
   bgmStore.set({ src: targetSrc, on: wanted })
+  ensureGestureUnlock()
   if (wanted) setBgmOn(true)
 }

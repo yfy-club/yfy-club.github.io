@@ -1,3 +1,4 @@
+import { getSharedAudioContext } from './sound'
 /**
  * Web Audio 极简 C418 (Sweden) 纯音乐合成引擎
  *
@@ -82,18 +83,7 @@ class BgmSynthEngine {
   private bassOsc: OscillatorNode | null = null
 
   private ensureContext(): AudioContext | null {
-    if (typeof window === 'undefined') return null
-    if (!this.ctx) {
-      const AudioCtx =
-        window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext
-      if (AudioCtx) {
-        this.ctx = new AudioCtx()
-      }
-    }
-    if (this.ctx && this.ctx.state === 'suspended') {
-      this.ctx.resume().catch(() => {})
-    }
+    this.ctx = getSharedAudioContext()
     return this.ctx
   }
 
@@ -301,7 +291,17 @@ class BgmSynthEngine {
     const ctx = this.ensureContext()
     if (!ctx) return Promise.reject(new Error('No Web Audio Support'))
 
+    // 如果已经在跑但处于挂起状态（如等待首次手势），在恢复时对齐音量
     if (this.isRunning) {
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {})
+      }
+      if (this.masterGain) {
+        const now = ctx.currentTime
+        this.masterGain.gain.cancelScheduledValues(now)
+        this.masterGain.gain.setValueAtTime(Math.max(0.00001, this.masterGain.gain.value), now)
+        this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + 0.5)
+      }
       if (this.isPaused) {
         this.resume()
       }
@@ -312,13 +312,22 @@ class BgmSynthEngine {
     this.isPaused = false
     this.currentStep = 0
 
+    // 监听 AudioContext 状态变化，从 suspended 变为 running 时平滑淡入
+    ctx.onstatechange = () => {
+      if (ctx.state === 'running' && this.isRunning && !this.isPaused) {
+        this.resume(targetVolume)
+      }
+    }
+
     this.setupMaster(ctx)
 
-    // 平滑淡入
+    // 平滑淡入（若 Context 此时还未 resume，待手势触发后自动生效）
     if (this.masterGain) {
       const now = ctx.currentTime
       this.masterGain.gain.setValueAtTime(0.00001, now)
-      this.masterGain.gain.exponentialRampToValueAtTime(targetVolume, now + FADE_MS / 1000)
+    }
+    if (ctx.state === 'suspended') {
+      ctx.resume().catch(() => {})
     }
 
     this.schedule()
