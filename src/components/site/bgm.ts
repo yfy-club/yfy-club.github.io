@@ -13,7 +13,7 @@
  * 挂在组件上的 <audio> 会被一起销毁，歌就断了。
  */
 import { createStore } from '@/lib/store'
-import { getSharedAudioContext } from '@/lib/sound'
+import { getSharedAudioContext, onAudioUnlocked } from '@/lib/sound'
 import { bgmSynth } from '@/lib/bgm-synth'
 
 const KEY_ON = 'yfy.audio.on'
@@ -36,46 +36,23 @@ export const bgmStore = createStore<BgmState>({ src: null, on: true })
 
 let audio: HTMLAudioElement | null = null
 let fadeFrame = 0
-let userGestureAttached = false
+let offUnlock: (() => void) | null = null
+let visibilityBound = false
 
-function ensureGestureUnlock() {
-  if (userGestureAttached || typeof window === 'undefined') return
-  userGestureAttached = true
-
-  const unlock = () => {
-    const events = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown']
-    events.forEach((ev) => {
-      window.removeEventListener(ev, unlock, true)
-    })
-    const ctx = getSharedAudioContext()
-    if (ctx && ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
-    }
-    if (bgmStore.get().on) {
-      const state = bgmStore.get()
-      if (state.src === 'synth') {
-        bgmSynth.start(VOLUME)
-      } else if (audio) {
-        void audio.play().catch(() => {})
-        fadeTo(VOLUME)
-      }
-    }
-  }
-
-  const events = ['touchstart', 'touchend', 'pointerdown', 'mousedown', 'keydown']
-  events.forEach((ev) => {
-    window.addEventListener(ev, unlock, { capture: true, passive: true })
+/**
+ * 等音频真正可用时自动接着播。
+ *
+ * 手势监听只在 lib/sound.ts 里有一份（M9）。这里曾经另挂了一套并且首次手势就
+ * 把自己摘掉，两份监听抢同一次手势；而 resume() 在移动端首次手势时往往还没真的
+ * 把 state 推到 running——钩子却已经没了，BGM 于是永远在等一个不会再来的回调。
+ */
+function waitForUnlock() {
+  if (offUnlock) return
+  offUnlock = onAudioUnlocked(() => {
+    offUnlock = null
+    if (!bgmStore.get().on) return
+    setBgmOn(true)
   })
-
-  window.addEventListener(
-    'yfy-audio-unlocked',
-    () => {
-      if (bgmStore.get().on) {
-        setBgmOn(true)
-      }
-    },
-    { once: true },
-  )
 }
 
 function ensureAudio(src: string) {
@@ -88,10 +65,20 @@ function ensureAudio(src: string) {
   el.preload = 'none'
   el.volume = 0
 
-  /*
-   * 页面隐藏就暂停。切到别的标签页还在放歌是最招人烦的一种自作主张。
-   * 监听器跟播放器同寿命，不解绑。
-   */
+  audio = el
+  return el
+}
+
+/**
+ * 页面隐藏就暂停。切到别的标签页还在放歌是最招人烦的一种自作主张。
+ *
+ * 挂在模块初始化而不是 ensureAudio 里（M9）：ensureAudio 只在有静态音频文件时才跑，
+ * 而现在默认路径是 synth，以前这段逻辑在合成引擎上永远不生效。
+ */
+function bindVisibility() {
+  if (visibilityBound || typeof document === 'undefined') return
+  visibilityBound = true
+
   document.addEventListener('visibilitychange', () => {
     const state = bgmStore.get()
     if (state.src === 'synth') {
@@ -101,11 +88,8 @@ function ensureAudio(src: string) {
     }
     if (!audio) return
     if (document.hidden) audio.pause()
-    else if (state.on) void audio.play().catch(() => ensureGestureUnlock())
+    else if (state.on) void audio.play().catch(() => waitForUnlock())
   })
-
-  audio = el
-  return el
 }
 
 /** 线性淡入淡出。不用 CSS，音量不是样式。 */
@@ -138,7 +122,7 @@ function persistOn(on: boolean) {
 
 /** 播放被浏览器策略拦截时等待首次交互唤醒 */
 function onPlayBlocked() {
-  ensureGestureUnlock()
+  waitForUnlock()
 }
 
 export function setBgmOn(on: boolean) {
@@ -148,6 +132,11 @@ export function setBgmOn(on: boolean) {
   if (!on) {
     persistOn(false)
     bgmStore.set({ src, on: false })
+    // 关掉就不该再等解锁，否则下一次点屏会自己唱起来
+    if (offUnlock) {
+      offUnlock()
+      offUnlock = null
+    }
     if (src === 'synth') {
       bgmSynth.stop()
       return
@@ -156,14 +145,19 @@ export function setBgmOn(on: boolean) {
     return
   }
 
+  /*
+   * 开启路径。store 先置 on，开关立即反馈；
+   * 能不能真的出声交给 sound.ts 的解锁机制，它会在 running 那一刻回来叫我们。
+   */
+  persistOn(true)
+  bgmStore.set({ src, on: true })
+
   if (src === 'synth') {
-    bgmSynth
-      .start(VOLUME)
-      .then(() => {
-        persistOn(true)
-        bgmStore.set({ src, on: true })
-      })
-      .catch(onPlayBlocked)
+    // 建 Context + 挂全局手势钩（幂等）。
+    // 引擎 start() 内部自己会等 running 后才建图，这里不要再叠一道等待，
+    // 否则解锁后会把刚开始的 1.5s 淡入跌回 0.5s 对齐。
+    getSharedAudioContext()
+    bgmSynth.start(VOLUME).catch(onPlayBlocked)
     return
   }
 
@@ -171,8 +165,6 @@ export function setBgmOn(on: boolean) {
   void el
     .play()
     .then(() => {
-      persistOn(true)
-      bgmStore.set({ src, on: true })
       fadeTo(VOLUME)
     })
     .catch(onPlayBlocked)
@@ -214,6 +206,8 @@ export function initBgm() {
     wanted = true
   }
   bgmStore.set({ src: targetSrc, on: wanted })
-  ensureGestureUnlock()
+  // 建 Context 并挂上全局手势解锁钩子（幂等）
+  getSharedAudioContext()
+  bindVisibility()
   if (wanted) setBgmOn(true)
 }

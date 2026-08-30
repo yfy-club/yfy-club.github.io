@@ -1,4 +1,4 @@
-import { getSharedAudioContext } from './sound'
+import { getSharedAudioContext, isAudioRunning, onAudioUnlocked } from './sound'
 /**
  * Web Audio 极简 C418 (Sweden) 纯音乐合成引擎
  *
@@ -77,6 +77,12 @@ class BgmSynthEngine {
   private loopTimer: number | null = null
   private activeTimers: number[] = []
 
+  /** 等首次解锁的退订函数。用户在解锁前就关了 BGM 时要能取消。 */
+  private pendingUnlock: (() => void) | null = null
+  /** 待解锁后启动时用的目标音量。 */
+  private wantedVolume = DEFAULT_VOLUME
+  private stateWatcherBound = false
+
   // 背景暖垫（平滑淡入淡出）
   private padGain: GainNode | null = null
   private padOscs: OscillatorNode[] = []
@@ -148,6 +154,8 @@ class BgmSynthEngine {
   private playPadChord(chord: Chord) {
     const ctx = this.ctx
     if (!ctx || !this.isRunning) return
+    // Context 被挂起时 currentTime 是冻结的，此时排包络等于把声音扔进黑洞
+    if (ctx.state !== 'running') return
     const now = ctx.currentTime
 
     // 停止上一组和弦振荡器
@@ -209,6 +217,7 @@ class BgmSynthEngine {
   private playPianoNote(freq: number, duration: number) {
     const ctx = this.ctx
     if (!ctx || !this.isRunning || this.isPaused) return
+    if (ctx.state !== 'running') return
     const now = ctx.currentTime
 
     // 1. 音符增益
@@ -287,54 +296,103 @@ class BgmSynthEngine {
     next()
   }
 
+  /**
+   * 启动。
+   *
+   * 关键约束（M9）：必须等 AudioContext 真的 running 了再建图、再排调度。
+   * suspended 时 ctx.currentTime 是冻住的，但 setTimeout 照跑——之前的实现在锁着的
+   * Context 上把前 16 秒的和弦与整段旋律全部排在同一个时间点上，
+   * 等手势真的解锁时这些包络已经全部“跑完”了，于是一片寂静；
+   * 而戳立绘的音效是当场新建振荡器，所以只有它能响。
+   * 这就是“必须先戳立绘才发声”的真正成因。
+   */
   public start(targetVolume = DEFAULT_VOLUME): Promise<void> {
     const ctx = this.ensureContext()
     if (!ctx) return Promise.reject(new Error('No Web Audio Support'))
 
-    // 如果已经在跑但处于挂起状态（如等待首次手势），在恢复时对齐音量
+    this.wantedVolume = targetVolume
+    this.bindStateWatcher(ctx)
+
+    // 已经在跑：对齐音量，需要时拉回暂停态
     if (this.isRunning) {
-      if (ctx.state === 'suspended') {
-        ctx.resume().catch(() => {})
-      }
-      if (this.masterGain) {
+      if (this.masterGain && isAudioRunning()) {
         const now = ctx.currentTime
         this.masterGain.gain.cancelScheduledValues(now)
         this.masterGain.gain.setValueAtTime(Math.max(0.00001, this.masterGain.gain.value), now)
         this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + 0.5)
       }
-      if (this.isPaused) {
-        this.resume()
+      if (this.isPaused) this.resume(targetVolume)
+      return Promise.resolve()
+    }
+
+    // 还没解锁：一行图都不建，只挂一个等待者，解锁那一刻再真开始
+    if (!isAudioRunning()) {
+      if (!this.pendingUnlock) {
+        this.pendingUnlock = onAudioUnlocked(() => {
+          this.pendingUnlock = null
+          this.launch(this.wantedVolume)
+        })
       }
       return Promise.resolve()
     }
+
+    this.launch(targetVolume)
+    return Promise.resolve()
+  }
+
+  /** 真正建图与开跑。只在 Context 已 running 时进入。 */
+  private launch(targetVolume: number) {
+    const ctx = this.ensureContext()
+    if (!ctx || this.isRunning) return
 
     this.isRunning = true
     this.isPaused = false
     this.currentStep = 0
 
-    // 监听 AudioContext 状态变化，从 suspended 变为 running 时平滑淡入
-    ctx.onstatechange = () => {
-      if (ctx.state === 'running' && this.isRunning && !this.isPaused) {
-        this.resume(targetVolume)
-      }
-    }
-
     this.setupMaster(ctx)
 
-    // 平滑淡入（若 Context 此时还未 resume，待手势触发后自动生效）
     if (this.masterGain) {
       const now = ctx.currentTime
+      this.masterGain.gain.cancelScheduledValues(now)
       this.masterGain.gain.setValueAtTime(0.00001, now)
-    }
-    if (ctx.state === 'suspended') {
-      ctx.resume().catch(() => {})
+      this.masterGain.gain.linearRampToValueAtTime(targetVolume, now + FADE_MS / 1000)
     }
 
     this.schedule()
-    return Promise.resolve()
+  }
+
+  /**
+   * 监听 Context 状态。
+   *
+   * 用 addEventListener 而不是 onstatechange：后者是单槽位，sound.ts 里也要听同一个事件，
+   * 赋值会把对方直接覆盖掉。iOS 接电话后 state 会变 interrupted，回来需要自愈。
+   */
+  private bindStateWatcher(ctx: AudioContext) {
+    if (this.stateWatcherBound) return
+    this.stateWatcherBound = true
+    ctx.addEventListener('statechange', () => {
+      if (ctx.state !== 'running') return
+      if (!this.isRunning) return
+      if (!this.isPaused) this.resume(this.wantedVolume)
+      // 挂起期间被丢掉的和弦不会自己回来，重新起一轮调度而不是等下一个 16 秒
+      if (this.padOscs.length === 0) this.restartSchedule()
+    })
+  }
+
+  /** 清掉待执行定时器，从当前乐句重新起一轮。 */
+  private restartSchedule() {
+    if (this.loopTimer) clearTimeout(this.loopTimer)
+    this.activeTimers.forEach((t) => clearTimeout(t))
+    this.activeTimers = []
+    this.schedule()
   }
 
   public stop(): void {
+    // 还在等解锁就被关掉：取消等待，别在用户下一次点屏时突然响起来
+    if (this.pendingUnlock) {
+      this.pendingUnlock()
+      this.pendingUnlock = null
+    }
     if (!this.isRunning) return
     this.isRunning = false
     this.isPaused = false
@@ -366,8 +424,12 @@ class BgmSynthEngine {
   }
 
   public resume(targetVolume = DEFAULT_VOLUME): void {
-    if (!this.isRunning || !this.isPaused) return
+    if (!this.isRunning) return
+    this.wantedVolume = targetVolume
     this.isPaused = false
+    if (this.ctx && this.ctx.state !== 'running') {
+      this.ctx.resume().catch(() => {})
+    }
     if (this.ctx && this.masterGain) {
       const now = this.ctx.currentTime
       this.masterGain.gain.cancelScheduledValues(now)
@@ -376,6 +438,9 @@ class BgmSynthEngine {
   }
 
   private cleanup(): void {
+    // stop() 后 1.7s 才跑到这里；这期间用户可能已经又把 BGM 开回来了，
+    // 那就不能再拆新建的那张图
+    if (this.isRunning) return
     try {
       this.bassOsc?.stop()
       this.bassOsc?.disconnect()
@@ -385,10 +450,15 @@ class BgmSynthEngine {
           o.disconnect()
         } catch {}
       })
+      this.masterGain?.disconnect()
+      this.delaySend?.disconnect()
     } catch {}
     this.padOscs = []
     this.bassOsc = null
     this.padGain = null
+    // 下一次 launch() 重建一张干净的图，别拿旧节点接着用
+    this.masterGain = null
+    this.delaySend = null
   }
 }
 
