@@ -13,6 +13,7 @@
  *   event: error  data: {"code":"rate_limited"|"upstream"|"off_topic"}
  */
 import {
+  MAX_SESSION_TOKENS,
   QA_ENDPOINT,
   appendDelta,
   beginTurn,
@@ -50,6 +51,12 @@ export function abortAsk(): void {
 export async function ask(raw: string): Promise<void> {
   const q = sanitizeQuestion(raw)
   if (!q) return
+
+  // 检查本轮对话总 Token 是否已超过 50,000 阈值
+  if (qaStore.get().totalTokens >= MAX_SESSION_TOKENS) {
+    failTurn('本轮对话累计 Token 已超过 50,000 上限，上下文已达极限。请点击右上角「↺ 新对话」开启新的对话吧！')
+    return
+  }
 
   abortAsk()
   const ctl = new AbortController()
@@ -165,9 +172,12 @@ function handle(frame: string): boolean {
       if (chunk?.t) appendDelta(chunk.t)
       return false
     }
-    case 'done':
-      finishTurn()
+    case 'done': {
+      const payload = parse<{ chars?: number; usage?: { total_tokens?: number } }>(data)
+      const tokens = payload?.usage?.total_tokens ?? (payload?.chars ? Math.ceil(payload.chars * 1.5) : 0)
+      finishTurn(tokens)
       return true
+    }
     case 'error': {
       const err = parse<{ code?: string }>(data)
       failTurn(messageOf(err?.code ?? 'upstream'))

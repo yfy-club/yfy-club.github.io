@@ -18,7 +18,7 @@ import { QA_KIND_NOTE, QA_PROMPTS } from '@/data/qa-prompts'
 import { playClick } from '@/lib/sound'
 import { useStore } from '@/lib/store'
 import { MarkdownRenderer } from './markdown'
-import { MAX_QUESTION, dismissTip, qaStore, resetQa } from './store'
+import { MAX_QUESTION, MAX_SESSION_TOKENS, dismissTip, qaStore, resetQa } from './store'
 import { abortAsk, ask } from './stream'
 import './qa.css'
 
@@ -40,6 +40,7 @@ export function QaPanel({ onClose }: PanelProps) {
   const log = useRef<HTMLDivElement>(null)
 
   const busy = qa.status === 'pending' || qa.status === 'streaming'
+  const isTokenExceeded = qa.totalTokens >= MAX_SESSION_TOKENS
 
   useEffect(() => {
     input.current?.focus()
@@ -79,12 +80,12 @@ export function QaPanel({ onClose }: PanelProps) {
   }, [qa.turns, qa.status])
 
   const submit = useCallback((q: string) => {
-    if (!q.trim()) return
+    if (!q.trim() || qa.totalTokens >= MAX_SESSION_TOKENS) return
     playClick()
     dismissTip()
     setText('')
     void ask(q)
-  }, [])
+  }, [qa.totalTokens])
 
   const handleNewChat = useCallback(() => {
     playClick()
@@ -111,6 +112,14 @@ export function QaPanel({ onClose }: PanelProps) {
           {expanded && (
             <span className="qa-badge-expanded" aria-hidden="true">
               EXPANDED
+            </span>
+          )}
+          {qa.totalTokens > 0 && (
+            <span
+              className={`qa-badge-tokens ${isTokenExceeded ? 'is-exceeded' : ''}`}
+              title={`本轮对话累计 Token 消耗: ${qa.totalTokens.toLocaleString()} / ${MAX_SESSION_TOKENS.toLocaleString()}`}
+            >
+              {qa.totalTokens >= 1000 ? `${(qa.totalTokens / 1000).toFixed(1)}k` : qa.totalTokens} / 50k
             </span>
           )}
         </div>
@@ -182,6 +191,7 @@ export function QaPanel({ onClose }: PanelProps) {
                     className="qa-prompt"
                     data-kind={p.kind}
                     onClick={() => submit(p.text)}
+                    disabled={busy || isTokenExceeded}
                   >
                     <Diamond tone={p.kind === 'archive' ? 'pink' : 'sky'} />
                     <span>{p.text}</span>
@@ -262,6 +272,27 @@ export function QaPanel({ onClose }: PanelProps) {
                 {qa.error}
               </p>
             )}
+
+            {isTokenExceeded && (
+              <div className="qa-token-warning" role="alert">
+                <div className="qa-token-warning-content">
+                  <span className="qa-token-warning-icon">⚠️</span>
+                  <div>
+                    <strong>本轮对话累计已达 50,000 Token 上限</strong>
+                    <p>
+                      当前会话已累计消耗 <strong>{qa.totalTokens.toLocaleString()}</strong> Tokens，上下文已达极限。请点击下方按钮开启新的一轮对话。
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="qa-token-warning-btn"
+                  onClick={handleNewChat}
+                >
+                  ↺ 开启新对话
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -284,12 +315,12 @@ export function QaPanel({ onClose }: PanelProps) {
             type="text"
             autoComplete="off"
             maxLength={MAX_QUESTION}
-            placeholder="问点什么…"
+            placeholder={isTokenExceeded ? '对话已超过 50,000 Token 上限，请开启新对话…' : '问点什么…'}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            disabled={busy}
+            disabled={busy || isTokenExceeded}
           />
-          <button className="qa-send" type="submit" disabled={busy || !text.trim()}>
+          <button className="qa-send" type="submit" disabled={busy || isTokenExceeded || !text.trim()}>
             {busy ? '…' : '问'}
           </button>
         </div>

@@ -32,8 +32,14 @@ export const QA_ENABLED = QA_ENDPOINT.length > 0
 /** 单问上限。超出的部分在提交前截掉，代理端还会再截一次。 */
 export const MAX_QUESTION = 500
 
+/** 单轮对话累计 Token 上限（50,000 Tokens）。超过后阻断并提示开启新对话。 */
+export const MAX_SESSION_TOKENS = 50_000
+
 /** 首访提示读过没有。 */
 const KEY_TIP = 'yfy.qa.seen'
+
+/** 浏览器存储历史对话与会话状态的 Key。 */
+const KEY_HISTORY = 'yfy.qa.history'
 
 /** 出处。链接由代理按标题算好给出，模型不许输出 URL——它会编。 */
 export interface QaCite {
@@ -76,6 +82,8 @@ export interface QaState {
   tip: boolean
   /** 当前会话序号（0, 1, 2...），每次开启全新对话时递增，用于多模型确定性顺序轮询。 */
   sessionId: number
+  /** 当前会话累计消耗的 Token 数。超过 MAX_SESSION_TOKENS (50,000) 提示超限。 */
+  totalTokens: number
 }
 
 const INITIAL: QaState = {
@@ -85,22 +93,56 @@ const INITIAL: QaState = {
   error: null,
   tip: false,
   sessionId: 0,
+  totalTokens: 0,
 }
 
 export const qaStore = createStore<QaState>(INITIAL)
 
-const patch = (next: Partial<QaState>) => qaStore.set({ ...qaStore.get(), ...next })
+const patch = (next: Partial<QaState>) => {
+  const updated = { ...qaStore.get(), ...next }
+  qaStore.set(updated)
+  persistSession(updated)
+}
 
-/** 挂载后补上只有浏览器知道的那部分。 */
+/** 持久化当前对话记录到浏览器本地存储。 */
+function persistSession(s: QaState): void {
+  try {
+    const payload = JSON.stringify({
+      sessionId: s.sessionId,
+      turns: s.turns,
+      totalTokens: s.totalTokens,
+    })
+    localStorage.setItem(KEY_HISTORY, payload)
+  } catch {
+    // 隐身模式或存满异常静默处理
+  }
+}
+
+/** 挂载后补上只有浏览器知道的那部分，并恢复历史对话。 */
 export function initQa(): void {
   if (!QA_ENABLED) return
   let seen = false
+  let savedHistory: { sessionId?: number; turns?: QaTurn[]; totalTokens?: number } | null = null
+
   try {
     seen = localStorage.getItem(KEY_TIP) === '1'
+    const raw = localStorage.getItem(KEY_HISTORY)
+    if (raw) savedHistory = JSON.parse(raw)
   } catch {
-    // 隐身模式禁 localStorage。当作没读过，提示出一次，收起后这一会话不再出。
+    // 隐身模式禁 localStorage
   }
-  patch({ tip: !seen })
+
+  const restoredTurns = Array.isArray(savedHistory?.turns) ? savedHistory.turns : []
+  const restoredSessionId = typeof savedHistory?.sessionId === 'number' ? savedHistory.sessionId : 0
+  const restoredTokens = typeof savedHistory?.totalTokens === 'number' ? savedHistory.totalTokens : 0
+
+  qaStore.set({
+    ...qaStore.get(),
+    tip: !seen,
+    turns: restoredTurns,
+    sessionId: restoredSessionId,
+    totalTokens: restoredTokens,
+  })
 }
 
 export function dismissTip(): void {
@@ -115,23 +157,24 @@ export function dismissTip(): void {
 export function toggleQa(): void {
   const s = qaStore.get()
   const open = !s.open
-  // 开面板即算读过提示：人已经找到入口了，再提示是噪音
   if (open) dismissTip()
-  // 若上一轮对话已结束并重新打开面板开启新对话，递增 sessionId 触发确定性模型轮换
-  const nextSessionId = open && s.turns.length > 0 && s.status !== 'pending' && s.status !== 'streaming'
-    ? s.sessionId + 1
-    : s.sessionId
-  patch({ open, sessionId: nextSessionId })
+  patch({ open })
 }
 
 export function closeQa(): void {
   patch({ open: false })
 }
 
-/** 开启全新对话：清空历史并递增会话序号以轮询下一款模型。 */
+/** 开启全新对话：清空历史、重置 Token 计数并递增会话序号以轮询下一款模型。 */
 export function resetQa(): void {
   const s = qaStore.get()
-  patch({ turns: [], status: 'idle', error: null, sessionId: s.sessionId + 1 })
+  patch({
+    turns: [],
+    status: 'idle',
+    error: null,
+    totalTokens: 0,
+    sessionId: s.sessionId + 1,
+  })
 }
 
 /** 归一化。截长、压空白、砍掉分隔符伪造——代理端还会再校一遍。 */
@@ -147,7 +190,7 @@ export function beginTurn(q: string): void {
     settleTimer = null
   }
   const s = qaStore.get()
-  qaStore.set({ ...s, status: 'pending', error: null, turns: [...s.turns, { q, a: '', cites: [] }] })
+  patch({ status: 'pending', error: null, turns: [...s.turns, { q, a: '', cites: [] }] })
 }
 
 export function setCites(cites: readonly QaCite[]): void {
@@ -159,8 +202,10 @@ export function appendDelta(text: string): void {
   mapLast((turn) => ({ ...turn, a: turn.a + text }))
 }
 
-export function finishTurn(): void {
-  patch({ status: 'done' })
+export function finishTurn(turnTokens = 0): void {
+  const s = qaStore.get()
+  const nextTotalTokens = s.totalTokens + turnTokens
+  patch({ status: 'done', totalTokens: nextTotalTokens })
   scheduleSettle()
 }
 
@@ -197,5 +242,5 @@ function mapLast(fn: (turn: QaTurn) => QaTurn): void {
   if (s.turns.length === 0) return
   const turns = s.turns.slice()
   turns[turns.length - 1] = fn(turns[turns.length - 1]!)
-  qaStore.set({ ...s, turns })
+  patch({ turns })
 }

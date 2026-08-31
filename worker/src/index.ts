@@ -301,6 +301,7 @@ async function relay(
       let usage: unknown = null
       let chars = 0
       let streamedAny = false
+      let rawContentBuf = ''
       const toolCallsMap = new Map<number, { id: string; name: string; arguments: string }>()
 
       for await (const frame of sseFrames(res.body)) {
@@ -331,14 +332,28 @@ async function relay(
         const delta = parsed.choices?.[0]?.delta
         if (!delta) continue
 
-        // 1. 模型直接输出正文
+        // 1. 处理文本流（支持标准 delta.content 以及模型内联 tool_call 文本捕获）
         if (delta.content) {
+          rawContentBuf += delta.content
+
+          // 只要开头或内容包含 tool_call 标签模式，全部拦截在缓冲区，不透传给前端
+          const isToolCallTag =
+            rawContentBuf.includes('<|tool_call') ||
+            rawContentBuf.includes('<tool_call') ||
+            rawContentBuf.trimStart().startsWith('<|') ||
+            rawContentBuf.trimStart().startsWith('call:web_search')
+
+          if (isToolCallTag) {
+            continue
+          }
+
+          // 正常文本流式输出给用户
           streamedAny = true
           chars += delta.content.length
           await send('delta', { t: delta.content })
         }
 
-        // 2. 模型自主发起 Tool Call
+        // 2. 模型通过标准 API 结构发起 Tool Call
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {
             const idx = tc.index ?? 0
@@ -354,6 +369,21 @@ async function relay(
             if (tc.function?.name) existing.name = tc.function.name
             if (tc.function?.arguments) existing.arguments += tc.function.arguments
           }
+        }
+      }
+
+      // 检查缓冲区中是否有内联 tool_call 需要解析
+      if (!streamedAny && rawContentBuf.includes('web_search')) {
+        const queryMatch =
+          rawContentBuf.match(/query\s*:\s*(?:<\|"\|>|")?([^"<\r\n\}]+)/i) ||
+          rawContentBuf.match(/\{[\s\S]*?"query"\s*:\s*"([^"]+)"[\s\S]*?\}/)
+        const query = queryMatch ? queryMatch[1]!.replace(/<\|"\|>/g, '').trim() : ''
+        if (query && !toolCallsMap.has(0)) {
+          toolCallsMap.set(0, {
+            id: `call_inline_${Date.now()}`,
+            name: 'web_search',
+            arguments: JSON.stringify({ query }),
+          })
         }
       }
 
