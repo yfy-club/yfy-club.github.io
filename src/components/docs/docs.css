@@ -405,12 +405,22 @@
   color: var(--ink-900);
 }
 
+.doc-h4 {
+  /* 二级标题下的推演子单元：不抢节标题的视觉位，正文阶加粗即可 */
+  margin-top: var(--space-3);
+  color: var(--ink-900);
+  font-size: var(--text-body);
+  font-weight: 700;
+  line-height: var(--leading-body);
+}
+
 .doc-line {
   display: block;
 }
 
 .doc-para code,
 .doc-h3 code,
+.doc-h4 code,
 .doc-table code {
   padding: 1px 5px;
   background: var(--bg-sunk);

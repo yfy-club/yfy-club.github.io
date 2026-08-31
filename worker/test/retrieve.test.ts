@@ -56,16 +56,18 @@ const CASES: { q: string; slug: string }[] = [
   { q: '提交信息怎么写', slug: 'git-flow' },
   { q: '第一周该做什么', slug: 'first-week' },
   { q: '环境怎么配', slug: 'env-setup' },
-  { q: '前端有什么约定', slug: 'frontend' },
-  { q: '后端约定在哪', slug: 'backend' },
+  { q: '前端有什么约定', slug: 'frontend-spec' },
+  { q: '后端约定在哪', slug: 'backend-spec' },
   { q: '接口契约怎么定的', slug: 'api-contract' },
-  { q: '测试要测什么', slug: 'testing' },
-  { q: '代码评审的要求', slug: 'testing' },
+  { q: '测试要测什么', slug: 'testing-review' },
+  { q: '代码评审的要求', slug: 'testing-review' },
   { q: '学习路线是怎样的', slug: 'training-roadmap' },
   { q: '指针和内存怎么学', slug: 'roadmap-foundation' },
   { q: 'Web 基础学什么', slug: 'roadmap-web-basics' },
   { q: '数据库怎么入门', slug: 'roadmap-system-database' },
   { q: '人工智能方向的实践', slug: 'roadmap-practice-ai' },
+  { q: '跨域问题怎么排查', slug: 'troubleshooting' },
+  { q: '社团自研项目有哪些', slug: 'project-case-study' },
 ]
 
 test('检索命中率 ≥ 80%（top 3 里有目标篇）', () => {

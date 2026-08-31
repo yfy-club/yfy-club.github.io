@@ -37,6 +37,11 @@ function Block({
         </h2>
       )
 
+    case 'h4':
+      // 标签是 h3（篇名 h1、节标题 h2，不能跳级），字号按正文阶加粗。
+      // 不进目录树也不做锚点，不给 data-focus-unit。
+      return <h3 className="doc-h4">{block.text}</h3>
+
     case 'para':
       return (
         <p className="doc-para" data-focus-unit="">
@@ -58,15 +63,12 @@ function Block({
       )
 
     case 'details':
+      // 折叠区内部是完整的块序列（段落、代码块、表格），递归走同一套渲染。
       return (
         <details className="doc-details">
           <summary className="doc-details-summary">{block.title}</summary>
           <div className="doc-details-body">
-            {block.lines.map((line, i) => (
-              <p className="doc-details-line" key={i}>
-                <Runs runs={line} onOpenVideo={onOpenVideo} />
-              </p>
-            ))}
+            <DocBlocks blocks={block.blocks} />
           </div>
         </details>
       )

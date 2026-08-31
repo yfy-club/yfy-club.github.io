@@ -1,5 +1,5 @@
 [
-  { "id": "setup", "label": "上手" },
-  { "id": "convention", "label": "约定" },
-  { "id": "quality", "label": "质量" }
+  { "id": "roadmap", "label": "阶梯路线" },
+  { "id": "engineering", "label": "工程规范" },
+  { "id": "handbook", "label": "实战手册" }
 ]

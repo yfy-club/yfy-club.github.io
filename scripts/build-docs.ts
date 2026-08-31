@@ -29,7 +29,7 @@ const OUT = fileURLToPath(new URL('../src/data/docs.ts', import.meta.url))
 /**
  * 问答索引。规格 3.6（M9）。
  *
- * 只有**篇名与节标题**，不含正文。整份 15 篇 × 77 节约 1.9k 字符，
+ * 只有**篇名与节标题**，不含正文。整份 17 篇 × 约 90 节，
  * 一次请求就能全部塞进 prompt——不需要分块、不需要向量库。
  *
  * 为什么与 docs.ts 同一个脚本产：两份东西必须永远同源。
@@ -37,8 +37,11 @@ const OUT = fileURLToPath(new URL('../src/data/docs.ts', import.meta.url))
  */
 const QA_INDEX_OUT = fileURLToPath(new URL('../worker/src/qa-index.json', import.meta.url))
 
-/** 高亮语言。成稿里只有这三种，多的不打进来。 */
-const LANGS = ['bash', 'ts', 'css'] as const
+/**
+ * 高亮语言。成稿里出现的才打进来，多的不加载。
+ * 档案库重构后成稿覆盖 C/C++、Java、数据库与工程配置，语言面相应扩开。
+ */
+const LANGS = ['bash', 'ts', 'css', 'sql', 'json', 'java', 'c', 'cpp'] as const
 
 /**
  * 哨兵主题。
@@ -112,12 +115,15 @@ interface Inline {
 
 type Block =
   | { kind: 'h3'; id: string; text: string }
+  | { kind: 'h4'; text: string }
   | { kind: 'para'; lines: Inline[][] }
   | { kind: 'code'; lang: string; html: string; raw?: string }
   | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
   | { kind: 'iframe'; src: string; title: string }
   | { kind: 'video'; provider: 'youtube' | 'bilibili'; id: string; title: string; bvid?: string }
-  | { kind: 'details'; title: string; lines: Inline[][] }
+  | { kind: 'details'; title: string; blocks: Block[] }
+
+type Highlighter = Awaited<ReturnType<typeof createHighlighter>>
 
 interface Article {
   slug: string
@@ -180,6 +186,90 @@ const cells = (line: string) =>
     .replace(/\|$/, '')
     .split('|')
     .map((c) => inline(c.trim()))
+
+/**
+ * 围栏后的代码块。主循环与折叠区嵌套循环共用。
+ * 返回 next：闭合围栏所在行（没有闭合围栏时为末行之后）。
+ */
+function readCode(lines: string[], start: number, lang: string, hl: Highlighter) {
+  const body: string[] = []
+  let i = start
+  while (i < lines.length && !/^```\s*$/.test(lines[i]!.trim())) {
+    body.push(lines[i]!)
+    i += 1
+  }
+  const code = body.join('\n')
+  const known = LANGS.find((l) => l === lang)
+  const block: Block = {
+    kind: 'code',
+    lang: known ?? '',
+    raw: code,
+    html: known ? highlight(hl, code, known) : escapeHtml(code),
+  }
+  return { block, next: i }
+}
+
+/**
+ * 表头行开始的表格。主循环与折叠区嵌套循环共用。
+ * 返回 next：表格最后一行（调用方循环自增后正好从表后一行继续）。
+ */
+function readTable(lines: string[], start: number) {
+  const head = cells(lines[start]!)
+  const rows: Inline[][][] = []
+  let i = start + 1
+  if (/^\|\s*-/.test(lines[i]?.trim() ?? '')) i += 1 // 分隔行
+  while (i < lines.length && /^\|/.test(lines[i]!.trim())) {
+    rows.push(cells(lines[i]!))
+    i += 1
+  }
+  const block: Block = { kind: 'table', head, rows }
+  return { block, next: i - 1 }
+}
+
+/**
+ * 折叠区块内部的嵌套块。支持段落、代码块与表格。
+ * 不收节标题：折叠里的标题对外层目录树与锚点都没有意义。
+ */
+function parseInnerBlocks(lines: string[], hl: Highlighter): Block[] {
+  const blocks: Block[] = []
+  let paragraph: string[] = []
+  const flush = () => {
+    if (paragraph.length === 0) return
+    blocks.push({ kind: 'para', lines: paragraph.map(inline) })
+    paragraph = []
+  }
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]!
+    const trimmed = line.trim()
+
+    if (trimmed === '') {
+      flush()
+      continue
+    }
+
+    const fence = trimmed.match(/^```(\w*)\s*$/)
+    if (fence) {
+      flush()
+      const r = readCode(lines, i + 1, fence[1] ?? '', hl)
+      blocks.push(r.block)
+      i = r.next
+      continue
+    }
+
+    if (/^\|/.test(trimmed)) {
+      flush()
+      const r = readTable(lines, i)
+      blocks.push(r.block)
+      i = r.next
+      continue
+    }
+
+    paragraph.push(trimmed)
+  }
+  flush()
+  return blocks
+}
 
 async function main() {
   const highlighter = await createHighlighter({ themes: [THEME], langs: [...LANGS] })
@@ -258,6 +348,14 @@ async function main() {
         continue
       }
 
+      // 四级子标题：不进目录树、不做锚点，只是二级标题下的推演子单元分界。
+      // 必须先于 h3 判断——`#### ` 同样以 `###` 开头。
+      if (/^#### /.test(trimmed)) {
+        flushParagraph()
+        current.blocks.push({ kind: 'h4', text: trimmed.slice(5).trim() })
+        continue
+      }
+
       if (/^### /.test(trimmed)) {
         flushParagraph()
         const id = `sec-${current.headings.length + 1}`
@@ -302,32 +400,42 @@ async function main() {
       }
 
       // 折叠详情块 <details><summary>标题</summary>内容</details>
+      // 内部允许嵌套段落、代码块与表格：超过 25 行的配置与完整类定义收在这里。
       const detailsMatch = trimmed.match(/^<details>\s*<summary>(.*?)<\/summary>([\s\S]*?)<\/details>$/i)
       if (detailsMatch) {
         flushParagraph()
         const title = detailsMatch[1]!.trim()
-        const inner = detailsMatch[2]!.trim()
-        const innerLines = inner.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
-        current.blocks.push({ kind: 'details', title, lines: innerLines.map(inline) })
+        const innerLines = detailsMatch[2]!.split(/\r?\n/)
+        current.blocks.push({
+          kind: 'details',
+          title,
+          blocks: parseInnerBlocks(innerLines, highlighter),
+        })
         continue
       }
 
       if (/^<details>/i.test(trimmed)) {
         flushParagraph()
         let summaryTitle = '点击查看详情'
+        const inlineSum = trimmed.match(/<summary>(.*?)<\/summary>/i)
+        if (inlineSum) summaryTitle = inlineSum[1]!.trim()
         const innerLines: string[] = []
         i += 1
         while (i < lines.length && !/<\/details>/i.test(lines[i]!.trim())) {
-          const l = lines[i]!.trim()
-          const sumMatch = l.match(/<summary>(.*?)<\/summary>/i)
+          const l = lines[i]!
+          const sumMatch = l.trim().match(/<summary>(.*?)<\/summary>/i)
           if (sumMatch) {
             summaryTitle = sumMatch[1]!.trim()
-          } else if (l) {
+          } else {
             innerLines.push(l)
           }
           i += 1
         }
-        current.blocks.push({ kind: 'details', title: summaryTitle, lines: innerLines.map(inline) })
+        current.blocks.push({
+          kind: 'details',
+          title: summaryTitle,
+          blocks: parseInnerBlocks(innerLines, highlighter),
+        })
         continue
       }
 
@@ -335,37 +443,18 @@ async function main() {
       const fence = trimmed.match(/^```(\w*)\s*$/)
       if (fence) {
         flushParagraph()
-        const lang = fence[1] ?? ''
-        const body: string[] = []
-        i += 1
-        while (i < lines.length && !/^```\s*$/.test(lines[i]!.trim())) {
-          body.push(lines[i]!)
-          i += 1
-        }
-        const code = body.join('\n')
-        const known = LANGS.find((l) => l === lang)
-        current.blocks.push({
-          kind: 'code',
-          lang: known ?? '',
-          raw: code,
-          html: known ? highlight(highlighter, code, known) : escapeHtml(code),
-        })
+        const r = readCode(lines, i + 1, fence[1] ?? '', highlighter)
+        current.blocks.push(r.block)
+        i = r.next
         continue
       }
 
       // 表格
       if (/^\|/.test(trimmed)) {
         flushParagraph()
-        const head = cells(trimmed)
-        const rows: Inline[][][] = []
-        i += 1
-        if (/^\|\s*-/.test(lines[i]?.trim() ?? '')) i += 1 // 分隔行
-        while (i < lines.length && /^\|/.test(lines[i]!.trim())) {
-          rows.push(cells(lines[i]!))
-          i += 1
-        }
-        i -= 1
-        current.blocks.push({ kind: 'table', head, rows })
+        const r = readTable(lines, i)
+        current.blocks.push(r.block)
+        i = r.next
         continue
       }
 
@@ -508,6 +597,8 @@ function renderBlock(b: Block): string {
   switch (b.kind) {
     case 'h3':
       return `    { kind: 'h3', id: '${b.id}', text: ${j(b.text)} },`
+    case 'h4':
+      return `    { kind: 'h4', text: ${j(b.text)} },`
     case 'para':
       return `    { kind: 'para', lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
     case 'code':
@@ -522,7 +613,7 @@ function renderBlock(b: Block): string {
     case 'video':
       return `    { kind: 'video', provider: '${b.provider}', id: ${j(b.id)}, title: ${j(b.title)}${b.bvid ? `, bvid: ${j(b.bvid)}` : ''} },`
     case 'details':
-      return `    { kind: 'details', title: ${j(b.title)}, lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
+      return `    { kind: 'details', title: ${j(b.title)}, blocks: [\n${b.blocks.map(renderBlock).join('\n')}\n    ] },`
   }
 }
 
@@ -570,6 +661,7 @@ export interface DocInline {
  */
 export type DocBlock =
   | { kind: 'h3'; id: string; text: string }
+  | { kind: 'h4'; text: string }
   | { kind: 'para'; lines: readonly (readonly DocInline[])[] }
   | { kind: 'code'; lang: string; html: string; raw?: string }
   | {
@@ -588,7 +680,7 @@ export type DocBlock =
   | {
       kind: 'details'
       title: string
-      lines: readonly (readonly DocInline[])[]
+      blocks: readonly DocBlock[]
     }
 
 export interface DocCategory {
