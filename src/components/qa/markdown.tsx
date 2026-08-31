@@ -19,9 +19,19 @@ interface MarkdownProps {
   content: string
 }
 
+function cleanMarkdownContent(raw: string): string {
+  if (!raw) return ''
+  return raw
+    .replace(/<\|?tool_call[\s\S]*?(?:<\/tool_call>|<\|?tool_call\|?>|<tool_call\|>)/gi, '')
+    .replace(/call:web_search\{[\s\S]*?\}/gi, '')
+    .replace(/<\|(?:im_end|endoftext|im_start)[^>]*>/gi, '')
+    .trim()
+}
+
 export function MarkdownRenderer({ content }: MarkdownProps) {
-  if (!content) return null
-  const blocks = parseMarkdownBlocks(content)
+  const cleaned = cleanMarkdownContent(content)
+  if (!cleaned) return null
+  const blocks = parseMarkdownBlocks(cleaned)
 
   return (
     <div className="qa-markdown">

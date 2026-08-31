@@ -234,6 +234,49 @@ const WEB_SEARCH_TOOL = {
   },
 }
 
+/**
+ * 解析并提取模型内联 Tool Call 的搜索词。
+ * 兼容以下所有常见大模型内联调用格式：
+ * 1. Minimax XML 格式: <parameter name="query">...</parameter> 或 <parameter>...</parameter>
+ * 2. Gemma / Qwen 特殊标记格式: <|tool_call>call:web_search{query:<|"|>...<|"|>}<tool_call|>
+ * 3. JSON 格式: {"name": "web_search", "arguments": {"query": "..."}} 或 {"query": "..."}
+ * 4. 内联调用: call:web_search{query: ...}
+ */
+export function extractToolCallQuery(rawText: string): string | null {
+  if (!rawText) return null
+  const trimmed = rawText.trim()
+
+  // 1. Minimax XML: <parameter name="query">Java 24 new features</parameter>
+  const mXml = trimmed.match(/<parameter[^>]*>([\s\S]*?)<\/parameter>/i)
+  if (mXml && mXml[1]) {
+    const q = mXml[1].replace(/<[^>]+>/g, '').trim()
+    if (q) return q
+  }
+
+  // 2. Gemma / Qwen: <|tool_call>call:web_search{query:<|"|>Java 23<|"|>}<tool_call|>
+  const mGemma = trimmed.match(/web_search\s*\{[\s\S]*?query\s*:\s*(?:<\|"\|>|")?([\s\S]*?)(?:<\|"\|>|"|\})/i)
+  if (mGemma && mGemma[1]) {
+    const q = mGemma[1].replace(/<\|"\|>/g, '').replace(/["}]/g, '').trim()
+    if (q) return q
+  }
+
+  // 3. JSON: {"name": "web_search", "arguments": {"query": "..."}} or {"query": "..."}
+  const mJson = trimmed.match(/"query"\s*:\s*"([^"]+)"/i)
+  if (mJson && mJson[1]) {
+    const q = mJson[1].trim()
+    if (q) return q
+  }
+
+  // 4. call:web_search{query: ...}
+  const mCall = trimmed.match(/web_search[^{]*\{[^}]*query\s*:\s*([^}\r\n]+)\}/i)
+  if (mCall && mCall[1]) {
+    const q = mCall[1].replace(/<\|"\|>/g, '').replace(/["']/g, '').trim()
+    if (q) return q
+  }
+
+  return null
+}
+
 async function relay(
   env: Env,
   messages: {
@@ -300,8 +343,8 @@ async function relay(
 
       let usage: unknown = null
       let chars = 0
-      let streamedAny = false
       let rawContentBuf = ''
+      let isStreamingDirectly = false
       const toolCallsMap = new Map<number, { id: string; name: string; arguments: string }>()
 
       for await (const frame of sseFrames(res.body)) {
@@ -310,6 +353,7 @@ async function relay(
           choices?: {
             delta?: {
               content?: string | null
+              reasoning?: string | null
               tool_calls?: {
                 index: number
                 id?: string
@@ -332,28 +376,7 @@ async function relay(
         const delta = parsed.choices?.[0]?.delta
         if (!delta) continue
 
-        // 1. 处理文本流（支持标准 delta.content 以及模型内联 tool_call 文本捕获）
-        if (delta.content) {
-          rawContentBuf += delta.content
-
-          // 只要开头或内容包含 tool_call 标签模式，全部拦截在缓冲区，不透传给前端
-          const isToolCallTag =
-            rawContentBuf.includes('<|tool_call') ||
-            rawContentBuf.includes('<tool_call') ||
-            rawContentBuf.trimStart().startsWith('<|') ||
-            rawContentBuf.trimStart().startsWith('call:web_search')
-
-          if (isToolCallTag) {
-            continue
-          }
-
-          // 正常文本流式输出给用户
-          streamedAny = true
-          chars += delta.content.length
-          await send('delta', { t: delta.content })
-        }
-
-        // 2. 模型通过标准 API 结构发起 Tool Call
+        // 1. 模型通过标准 API 结构发起 Tool Call
         if (delta.tool_calls) {
           for (const tc of delta.tool_calls) {
             const idx = tc.index ?? 0
@@ -370,25 +393,59 @@ async function relay(
             if (tc.function?.arguments) existing.arguments += tc.function.arguments
           }
         }
+
+        // 2. 处理文本流（支持标准 delta.content 以及模型内联 tool_call 文本捕获与缓冲隔离）
+        if (delta.content) {
+          rawContentBuf += delta.content
+
+          if (isStreamingDirectly) {
+            chars += delta.content.length
+            await send('delta', { t: delta.content })
+          } else {
+            // 尚未决定直流模式：检测是否是 Tool Call 相关前缀或标签
+            const hasToolTagPrefix =
+              rawContentBuf.includes('tool_call') ||
+              rawContentBuf.includes('web_search') ||
+              rawContentBuf.includes('<minimax:') ||
+              rawContentBuf.includes('<invoke') ||
+              rawContentBuf.includes('<parameter') ||
+              rawContentBuf.trimStart().startsWith('<|') ||
+              rawContentBuf.trimStart().startsWith('<tool') ||
+              rawContentBuf.trimStart().startsWith('<minimax') ||
+              rawContentBuf.trimStart().startsWith('call:')
+
+            if (!hasToolTagPrefix && toolCallsMap.size === 0) {
+              const trimmed = rawContentBuf.trim()
+              // 如果已有非空白正文且不以 < 或 { 开头，立即切换为直通流式，首字毫无延迟
+              if (trimmed.length > 0 && !trimmed.startsWith('<') && !trimmed.startsWith('{')) {
+                isStreamingDirectly = true
+                chars += rawContentBuf.length
+                await send('delta', { t: rawContentBuf })
+                rawContentBuf = ''
+              }
+            }
+          }
+        }
       }
 
-      // 检查缓冲区中是否有内联 tool_call 需要解析
-      if (!streamedAny && rawContentBuf.includes('web_search')) {
-        const queryMatch =
-          rawContentBuf.match(/query\s*:\s*(?:<\|"\|>|")?([^"<\r\n\}]+)/i) ||
-          rawContentBuf.match(/\{[\s\S]*?"query"\s*:\s*"([^"]+)"[\s\S]*?\}/)
-        const query = queryMatch ? queryMatch[1]!.replace(/<\|"\|>/g, '').trim() : ''
-        if (query && !toolCallsMap.has(0)) {
+      // 检查是否提取到 Tool Call：
+      // 方式 A: 标准 API delta.tool_calls
+      // 方式 B: rawContentBuf 内联文本标签解析
+      let isToolCalling = toolCallsMap.size > 0
+      if (!isToolCalling && !isStreamingDirectly) {
+        const inlineQuery = extractToolCallQuery(rawContentBuf)
+        if (inlineQuery) {
+          isToolCalling = true
           toolCallsMap.set(0, {
             id: `call_inline_${Date.now()}`,
             name: 'web_search',
-            arguments: JSON.stringify({ query }),
+            arguments: JSON.stringify({ query: inlineQuery }),
           })
         }
       }
 
       // 3. 模型自主决定触发了联网搜索
-      if (!streamedAny && toolCallsMap.size > 0) {
+      if (isToolCalling) {
         const toolCallsList = Array.from(toolCallsMap.values())
         const toolMessages: { role: string; tool_call_id: string; name: string; content: string }[] = []
 
@@ -398,16 +455,20 @@ async function relay(
             const parsedArgs = JSON.parse(tc.arguments)
             query = parsedArgs.query || ''
           } catch {
-            const match = tc.arguments.match(/"query"\s*:\s*"([^"]+)"/)
-            query = match ? match[1]! : tc.arguments
+            query = extractToolCallQuery(tc.arguments) || tc.arguments
           }
 
           const searchResults = query ? await searchWeb(query, env.BRAVE_API_KEY) : []
+          const toolContent =
+            searchResults.length > 0
+              ? JSON.stringify(searchResults)
+              : '未检索到外部新网页，请结合你自带的专业知识与推理直接给出最详尽权威的解答。'
+
           toolMessages.push({
             role: 'tool',
             tool_call_id: tc.id,
             name: tc.name,
-            content: JSON.stringify(searchResults),
+            content: toolContent,
           })
         }
 
@@ -462,6 +523,15 @@ async function relay(
               chars += t2.length
               await send('delta', { t: t2 })
             }
+          }
+        }
+      } else {
+        // 非 Tool Call 回复：如果缓冲区还有未直冲的内容，冲给客户端
+        if (!isStreamingDirectly && rawContentBuf.length > 0) {
+          const cleanText = rawContentBuf.replace(/<\|(?:tool_call|im_end|endoftext)[^>]*>/gi, '').trim()
+          if (cleanText) {
+            chars += cleanText.length
+            await send('delta', { t: cleanText })
           }
         }
       }

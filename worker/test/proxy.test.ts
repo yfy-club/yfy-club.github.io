@@ -532,3 +532,139 @@ test('未知路径 404', async () => {
   })
   assert.equal((await worker.fetch(req, fakeEnv(), ctx)).status, 404)
 })
+
+/* ----------------------------------------------------------- Tool Calling */
+
+test('Tool Calling: 捕获内联 tool_call 文本标签并触发联网搜索二阶段流式输出', async () => {
+  const calls: { url: string; messages: unknown[] }[] = []
+  const original = globalThis.fetch
+
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = String(url)
+    if (urlStr.includes('duckduckgo') || urlStr.includes('brave') || !init?.body) {
+      return new Response('<html><body>DuckDuckGo Java 23 Release Info</body></html>', { status: 200 })
+    }
+    const body = JSON.parse(String(init.body))
+    calls.push({ url: urlStr, messages: body.messages })
+
+    // 第一阶段：模型输出内联 tool_call 文本
+    if (calls.length === 1) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          const enc = new TextEncoder()
+          c.enqueue(
+            enc.encode(
+              `data: ${JSON.stringify({
+                choices: [
+                  {
+                    delta: {
+                      content: '<|tool_call>call:web_search{query:<|"|>Java 23 release features<|"|>}<tool_call|>',
+                    },
+                  },
+                ],
+              })}\n\n`,
+            ),
+          )
+          c.enqueue(enc.encode('data: [DONE]\n\n'))
+          c.close()
+        },
+      })
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+    }
+
+    // 第二阶段：模型根据搜索结果输出正文
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        const enc = new TextEncoder()
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Java 23' } }] })}\n\n`))
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: ' 特性介绍' } }] })}\n\n`))
+        c.enqueue(enc.encode('data: [DONE]\n\n'))
+        c.close()
+      },
+    })
+    return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+  }) as typeof fetch
+
+  try {
+    const res = await worker.fetch(ask({ question: '介绍Java 23' }), fakeEnv(), ctx)
+    const frames = await readSse(res)
+
+    assert.equal(res.status, 200)
+    assert.equal(calls.length, 2, '应当发起两次模型调用（工具调用 + 注入结果二阶段）')
+
+    const deltas = frames.filter((f) => f.event === 'delta').map((d) => (d.data as { t: string }).t)
+    assert.deepEqual(deltas, ['Java 23', ' 特性介绍'])
+    assert.ok(!deltas.some((d) => d.includes('tool_call')), '内联 tool_call 标签绝不外泄给前端')
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+test('Tool Calling: 处理 Minimax 式前置换行 + delta.tool_calls 标准调用', async () => {
+  const calls: { url: string; messages: unknown[] }[] = []
+  const original = globalThis.fetch
+
+  globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = String(url)
+    if (urlStr.includes('duckduckgo') || urlStr.includes('brave') || !init?.body) {
+      return new Response('<html><body>Search Results</body></html>', { status: 200 })
+    }
+    const body = JSON.parse(String(init.body))
+    calls.push({ url: urlStr, messages: body.messages })
+
+    if (calls.length === 1) {
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          const enc = new TextEncoder()
+          c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: '\n\n\n' } }] })}\n\n`))
+          c.enqueue(
+            enc.encode(
+              `data: ${JSON.stringify({
+                choices: [
+                  {
+                    delta: {
+                      tool_calls: [
+                        {
+                          index: 0,
+                          id: 'call_123',
+                          type: 'function',
+                          function: { name: 'web_search', arguments: '{"query":"Spring Boot 3.4"}' },
+                        },
+                      ],
+                    },
+                  },
+                ],
+              })}\n\n`,
+            ),
+          )
+          c.enqueue(enc.encode('data: [DONE]\n\n'))
+          c.close()
+        },
+      })
+      return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+    }
+
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        const enc = new TextEncoder()
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'Spring Boot 3.4 发布' } }] })}\n\n`))
+        c.enqueue(enc.encode('data: [DONE]\n\n'))
+        c.close()
+      },
+    })
+    return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+  }) as typeof fetch
+
+  try {
+    const res = await worker.fetch(ask({ question: 'Spring Boot 3.4 怎么样' }), fakeEnv(), ctx)
+    const frames = await readSse(res)
+
+    assert.equal(res.status, 200)
+    assert.equal(calls.length, 2, '应当触发两阶段调用')
+
+    const deltas = frames.filter((f) => f.event === 'delta').map((d) => (d.data as { t: string }).t)
+    assert.deepEqual(deltas, ['Spring Boot 3.4 发布'])
+  } finally {
+    globalThis.fetch = original
+  }
+})
