@@ -117,6 +117,9 @@ type Block =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'h4'; text: string }
   | { kind: 'para'; lines: Inline[][] }
+  | { kind: 'ul'; items: Inline[][] }
+  | { kind: 'ol'; items: Inline[][] }
+  | { kind: 'quote'; lines: Inline[][] }
   | { kind: 'code'; lang: string; html: string; raw?: string }
   | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
   | { kind: 'iframe'; src: string; title: string }
@@ -147,12 +150,50 @@ function parseStrongAndText(segment: string, out: Inline[]) {
   }
 }
 
+function cleanMathAndArrows(text: string): string {
+  return text
+    .replace(/\$(?:\\rightarrow|\\to)\$/g, '→')
+    .replace(/\\rightarrow\b/g, '→')
+    .replace(/\\to\b/g, '→')
+    .replace(/\$(?:\\Rightarrow|\\implies)\$/g, '⇒')
+    .replace(/\\Rightarrow\b/g, '⇒')
+    .replace(/\\implies\b/g, '⇒')
+    .replace(/\$(?:\\leftarrow|\\gets)\$/g, '←')
+    .replace(/\\leftarrow\b/g, '←')
+    .replace(/\\gets\b/g, '←')
+    .replace(/\$\\Leftarrow\$/g, '⇐')
+    .replace(/\\Leftarrow\b/g, '⇐')
+    .replace(/\$(?:\\leftrightarrow|\\iff)\$/g, '↔')
+    .replace(/\\leftrightarrow\b/g, '↔')
+    .replace(/\$\\Leftrightarrow\$/g, '⇔')
+    .replace(/\\Leftrightarrow\b/g, '⇔')
+    .replace(/\$\\uparrow\$/g, '↑')
+    .replace(/\\uparrow\b/g, '↑')
+    .replace(/\$\\downarrow\$/g, '↓')
+    .replace(/\\downarrow\b/g, '↓')
+    .replace(/\$(?:\\cdot|\\bullet)\$/g, '·')
+    .replace(/\\cdot\b|\\bullet\b/g, '·')
+    .replace(/\$\\times\$/g, '×')
+    .replace(/\\times\b/g, '×')
+    .replace(/\$\\ne\b|\$\\neq\$/g, '≠')
+    .replace(/\\ne\b|\\neq\b/g, '≠')
+    .replace(/\$\\le\b|\$\\leq\$/g, '≤')
+    .replace(/\\le\b|\\leq\b/g, '≤')
+    .replace(/\$\\ge\b|\$\\geq\$/g, '≥')
+    .replace(/\\ge\b|\\geq\b/g, '≥')
+    .replace(/\$\\approx\$/g, '≈')
+    .replace(/\\approx\b/g, '≈')
+    .replace(/\$\\pm\$/g, '±')
+    .replace(/\\pm\b/g, '±')
+}
+
 /**
  * 行内标记。先切 `code`，再切 [link](url)，再在剩下的文本里切 **strong**。
  */
 function inline(text: string): Inline[] {
+  const sanitized = cleanMathAndArrows(text)
   const out: Inline[] = []
-  for (const piece of text.split(/(`[^`]+`)/g)) {
+  for (const piece of sanitized.split(/(`[^`]+`)/g)) {
     if (!piece) continue
     if (piece.startsWith('`') && piece.endsWith('`')) {
       out.push({ t: 'code', v: piece.slice(1, -1) })
@@ -254,6 +295,45 @@ function parseInnerBlocks(lines: string[], hl: Highlighter): Block[] {
       const r = readCode(lines, i + 1, fence[1] ?? '', hl)
       blocks.push(r.block)
       i = r.next
+      continue
+    }
+
+    if (/^\s*[-*+]\s+/.test(trimmed)) {
+      flush()
+      const items: Inline[][] = []
+      while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i]!.trim())) {
+        const itemText = lines[i]!.trim().replace(/^\s*[-*+]\s+/, '')
+        items.push(inline(itemText))
+        i += 1
+      }
+      blocks.push({ kind: 'ul', items })
+      i -= 1
+      continue
+    }
+
+    if (/^\s*\d+\.\s+/.test(trimmed)) {
+      flush()
+      const items: Inline[][] = []
+      while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i]!.trim())) {
+        const itemText = lines[i]!.trim().replace(/^\s*\d+\.\s+/, '')
+        items.push(inline(itemText))
+        i += 1
+      }
+      blocks.push({ kind: 'ol', items })
+      i -= 1
+      continue
+    }
+
+    if (/^\s*>\s*/.test(trimmed)) {
+      flush()
+      const quoteLines: Inline[][] = []
+      while (i < lines.length && /^\s*>\s*/.test(lines[i]!.trim())) {
+        const qText = lines[i]!.trim().replace(/^\s*>\s*/, '')
+        quoteLines.push(inline(qText))
+        i += 1
+      }
+      blocks.push({ kind: 'quote', lines: quoteLines })
+      i -= 1
       continue
     }
 
@@ -449,6 +529,48 @@ async function main() {
         continue
       }
 
+      // 无序列表
+      if (/^\s*[-*+]\s+/.test(trimmed)) {
+        flushParagraph()
+        const items: Inline[][] = []
+        while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i]!.trim())) {
+          const itemText = lines[i]!.trim().replace(/^\s*[-*+]\s+/, '')
+          items.push(inline(itemText))
+          i += 1
+        }
+        current.blocks.push({ kind: 'ul', items })
+        i -= 1
+        continue
+      }
+
+      // 有序列表
+      if (/^\s*\d+\.\s+/.test(trimmed)) {
+        flushParagraph()
+        const items: Inline[][] = []
+        while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i]!.trim())) {
+          const itemText = lines[i]!.trim().replace(/^\s*\d+\.\s+/, '')
+          items.push(inline(itemText))
+          i += 1
+        }
+        current.blocks.push({ kind: 'ol', items })
+        i -= 1
+        continue
+      }
+
+      // 引用块
+      if (/^\s*>\s*/.test(trimmed)) {
+        flushParagraph()
+        const quoteLines: Inline[][] = []
+        while (i < lines.length && /^\s*>\s*/.test(lines[i]!.trim())) {
+          const qText = lines[i]!.trim().replace(/^\s*>\s*/, '')
+          quoteLines.push(inline(qText))
+          i += 1
+        }
+        current.blocks.push({ kind: 'quote', lines: quoteLines })
+        i -= 1
+        continue
+      }
+
       // 表格
       if (/^\|/.test(trimmed)) {
         flushParagraph()
@@ -601,6 +723,12 @@ function renderBlock(b: Block): string {
       return `    { kind: 'h4', text: ${j(b.text)} },`
     case 'para':
       return `    { kind: 'para', lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
+    case 'ul':
+      return `    { kind: 'ul', items: [\n${b.items.map((it) => `      ${renderInline(it)},`).join('\n')}\n    ] },`
+    case 'ol':
+      return `    { kind: 'ol', items: [\n${b.items.map((it) => `      ${renderInline(it)},`).join('\n')}\n    ] },`
+    case 'quote':
+      return `    { kind: 'quote', lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
     case 'code':
       return `    { kind: 'code', lang: '${b.lang}', html: ${j(b.html)}, raw: ${j(b.raw || '')} },`
     case 'table':
@@ -663,6 +791,9 @@ export type DocBlock =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'h4'; text: string }
   | { kind: 'para'; lines: readonly (readonly DocInline[])[] }
+  | { kind: 'ul'; items: readonly (readonly DocInline[])[] }
+  | { kind: 'ol'; items: readonly (readonly DocInline[])[] }
+  | { kind: 'quote'; lines: readonly (readonly DocInline[])[] }
   | { kind: 'code'; lang: string; html: string; raw?: string }
   | {
       kind: 'table'

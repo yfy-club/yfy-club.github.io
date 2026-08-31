@@ -53,6 +53,39 @@ function Block({
         </p>
       )
 
+    case 'ul':
+      return (
+        <ul className="doc-list doc-ul" data-focus-unit="">
+          {block.items.map((item, i) => (
+            <li className="doc-list-item" key={i}>
+              <Runs runs={item} onOpenVideo={onOpenVideo} />
+            </li>
+          ))}
+        </ul>
+      )
+
+    case 'ol':
+      return (
+        <ol className="doc-list doc-ol" data-focus-unit="">
+          {block.items.map((item, i) => (
+            <li className="doc-list-item" key={i}>
+              <Runs runs={item} onOpenVideo={onOpenVideo} />
+            </li>
+          ))}
+        </ol>
+      )
+
+    case 'quote':
+      return (
+        <blockquote className="doc-quote" data-focus-unit="">
+          {block.lines.map((line, i) => (
+            <p className="doc-quote-line" key={i}>
+              <Runs runs={line} onOpenVideo={onOpenVideo} />
+            </p>
+          ))}
+        </blockquote>
+      )
+
     case 'code':
       return (
         <DocCodeBlock

@@ -20,6 +20,9 @@ export type DocBlock =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'h4'; text: string }
   | { kind: 'para'; lines: readonly (readonly DocInline[])[] }
+  | { kind: 'ul'; items: readonly (readonly DocInline[])[] }
+  | { kind: 'ol'; items: readonly (readonly DocInline[])[] }
+  | { kind: 'quote'; lines: readonly (readonly DocInline[])[] }
   | { kind: 'code'; lang: string; html: string; raw?: string }
   | {
       kind: 'table'
@@ -230,11 +233,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'c', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;stdio.h&gt;</span>\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>(<span class=\"tk-k\">void</span>) {\n    <span class=\"tk-k\">int</span> age = <span class=\"tk-s\">18</span>;\n    <span class=\"tk-k\">double</span> score = <span class=\"tk-s\">95.5</span>;\n    <span class=\"tk-k\">char</span> grade = <span class=\"tk-s\">'A'</span>;\n\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"年龄: %d\\n\"</span>, age);\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"得分: %.1f\\n\"</span>, score);\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"评级: %c\\n\"</span>, grade);\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <stdio.h>\n\nint main(void) {\n    int age = 18;\n    double score = 95.5;\n    char grade = 'A';\n\n    printf(\"年龄: %d\\n\", age);\n    printf(\"得分: %.1f\\n\", score);\n    printf(\"评级: %c\\n\", grade);\n\n    return 0;\n}" },
     { kind: 'h4', text: "实例解析" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'code', v: "#include <stdio.h>" }, { t: 'text', v: "：引入标准输入输出库头文件，提供 " }, { t: 'code', v: "printf" }, { t: 'text', v: " 与 " }, { t: 'code', v: "scanf" }, { t: 'text', v: " 等函数支持。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "int main(void)" }, { t: 'text', v: "：主函数，是 C 语言程序的执行入口。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "printf(\"年龄: %d\\n\", age)" }, { t: 'text', v: "：通过格式化占位符 " }, { t: 'code', v: "%d" }, { t: 'text', v: " 输出整型变量 " }, { t: 'code', v: "age" }, { t: 'text', v: " 的值，" }, { t: 'code', v: "\\n" }, { t: 'text', v: " 表示换行。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "return 0;" }, { t: 'text', v: "：主函数返回 0 表示程序正常退出。" }],
+    { kind: 'ul', items: [
+      [{ t: 'code', v: "#include <stdio.h>" }, { t: 'text', v: "：引入标准输入输出库头文件，提供 " }, { t: 'code', v: "printf" }, { t: 'text', v: " 与 " }, { t: 'code', v: "scanf" }, { t: 'text', v: " 等函数支持。" }],
+      [{ t: 'code', v: "int main(void)" }, { t: 'text', v: "：主函数，是 C 语言程序的执行入口。" }],
+      [{ t: 'code', v: "printf(\"年龄: %d\\n\", age)" }, { t: 'text', v: "：通过格式化占位符 " }, { t: 'code', v: "%d" }, { t: 'text', v: " 输出整型变量 " }, { t: 'code', v: "age" }, { t: 'text', v: " 的值，" }, { t: 'code', v: "\\n" }, { t: 'text', v: " 表示换行。" }],
+      [{ t: 'code', v: "return 0;" }, { t: 'text', v: "：主函数返回 0 表示程序正常退出。" }],
     ] },
     { kind: 'h4', text: "运行结果" },
     { kind: 'code', lang: '', html: "年龄: 18\n得分: 95.5\n评级: A", raw: "年龄: 18\n得分: 95.5\n评级: A" },
@@ -263,9 +266,9 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'c', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;stdio.h&gt;</span>\n\n<span class=\"tk-c\">/* 函数声明与定义：计算两个整数的最大值 */</span>\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">get_max</span>(<span class=\"tk-k\">int</span> num1, <span class=\"tk-k\">int</span> num2) {\n    <span class=\"tk-k\">if</span> (num1 &gt; num2) {\n        <span class=\"tk-k\">return</span> num1;\n    }\n    <span class=\"tk-k\">return</span> num2;\n}\n\n<span class=\"tk-c\">/* 值传递演示：形参改变不影响实参 */</span>\n<span class=\"tk-k\">void</span> <span class=\"tk-k\">swap_by_value</span>(<span class=\"tk-k\">int</span> a, <span class=\"tk-k\">int</span> b) {\n    <span class=\"tk-k\">int</span> temp = a;\n    a = b;\n    b = temp;\n}\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>(<span class=\"tk-k\">void</span>) {\n    <span class=\"tk-k\">int</span> x = <span class=\"tk-s\">10</span>;\n    <span class=\"tk-k\">int</span> y = <span class=\"tk-s\">20</span>;\n\n    <span class=\"tk-k\">int</span> max_val = <span class=\"tk-k\">get_max</span>(x, y);\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"较大值: %d\\n\"</span>, max_val);\n\n    <span class=\"tk-k\">swap_by_value</span>(x, y);\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"值传递后 x=%d, y=%d (原值未变)\\n\"</span>, x, y);\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <stdio.h>\n\n/* 函数声明与定义：计算两个整数的最大值 */\nint get_max(int num1, int num2) {\n    if (num1 > num2) {\n        return num1;\n    }\n    return num2;\n}\n\n/* 值传递演示：形参改变不影响实参 */\nvoid swap_by_value(int a, int b) {\n    int temp = a;\n    a = b;\n    b = temp;\n}\n\nint main(void) {\n    int x = 10;\n    int y = 20;\n\n    int max_val = get_max(x, y);\n    printf(\"较大值: %d\\n\", max_val);\n\n    swap_by_value(x, y);\n    printf(\"值传递后 x=%d, y=%d (原值未变)\\n\", x, y);\n\n    return 0;\n}" },
     { kind: 'h4', text: "实例解析" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* C 语言默认采用" }, { t: 'strong', v: "值传递" }, { t: 'text', v: "：调用函数时，实参的值被复制一份传递给形参，函数内部修改形参不会影响外部实参。" }],
-      [{ t: 'text', v: "* 若需要在函数内部修改外部变量的值，必须传递指针（地址）。" }],
+    { kind: 'ul', items: [
+      [{ t: 'text', v: "C 语言默认采用" }, { t: 'strong', v: "值传递" }, { t: 'text', v: "：调用函数时，实参的值被复制一份传递给形参，函数内部修改形参不会影响外部实参。" }],
+      [{ t: 'text', v: "若需要在函数内部修改外部变量的值，必须传递指针（地址）。" }],
     ] },
     { kind: 'h3', id: 'sec-5', text: "数组与字符串" },
     { kind: 'para', lines: [
@@ -292,9 +295,9 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "运行结果" },
     { kind: 'code', lang: '', html: "num 的值: 100\nnum 的地址: 0x7ffd5e3e4a2c\np 存储的地址: 0x7ffd5e3e4a2c\n*p 访问的值: 100\n通过指针修改后 num 的值: 200\n交换后 x=2, y=1", raw: "num 的值: 100\nnum 的地址: 0x7ffd5e3e4a2c\np 存储的地址: 0x7ffd5e3e4a2c\n*p 访问的值: 100\n通过指针修改后 num 的值: 200\n交换后 x=2, y=1" },
     { kind: 'h4', text: "关键注意事项" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "野指针防范" }, { t: 'text', v: "：声明指针变量后若暂不指向有效内存，必须显式赋为 " }, { t: 'code', v: "NULL" }, { t: 'text', v: " 或 " }, { t: 'code', v: "nullptr" }, { t: 'text', v: "（如 " }, { t: 'code', v: "int *p = NULL;" }, { t: 'text', v: "）。严禁对未初始化的指针执行解引用操作。" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "数组名与指针" }, { t: 'text', v: "：在大多数表达式中，数组名会自动退化为指向数组首元素的指针（即 " }, { t: 'code', v: "arr" }, { t: 'text', v: " 等价于 " }, { t: 'code', v: "&arr[0]" }, { t: 'text', v: "）。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "野指针防范" }, { t: 'text', v: "：声明指针变量后若暂不指向有效内存，必须显式赋为 " }, { t: 'code', v: "NULL" }, { t: 'text', v: " 或 " }, { t: 'code', v: "nullptr" }, { t: 'text', v: "（如 " }, { t: 'code', v: "int *p = NULL;" }, { t: 'text', v: "）。严禁对未初始化的指针执行解引用操作。" }],
+      [{ t: 'strong', v: "数组名与指针" }, { t: 'text', v: "：在大多数表达式中，数组名会自动退化为指向数组首元素的指针（即 " }, { t: 'code', v: "arr" }, { t: 'text', v: " 等价于 " }, { t: 'code', v: "&arr[0]" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h3', id: 'sec-7', text: "结构体与自定义数据类型" },
     { kind: 'para', lines: [
@@ -303,9 +306,9 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'c', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;stdio.h&gt;</span>\n#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;string.h&gt;</span>\n\n<span class=\"tk-c\">/* 定义学生结构体 */</span>\n<span class=\"tk-k\">struct</span> Student {\n    <span class=\"tk-k\">int</span> id;\n    <span class=\"tk-k\">char</span> name[<span class=\"tk-s\">20</span>];\n    <span class=\"tk-k\">double</span> score;\n};\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>(<span class=\"tk-k\">void</span>) {\n<span class=\"tk-c\">    /* 声明并初始化结构体变量 */</span>\n    <span class=\"tk-k\">struct</span> Student s1;\n    s1.id = <span class=\"tk-s\">1001</span>;\n    <span class=\"tk-k\">strcpy</span>(s1.name, <span class=\"tk-s\">\"张三\"</span>);\n    s1.score = <span class=\"tk-s\">88.5</span>;\n\n<span class=\"tk-c\">    /* 结构体指针 */</span>\n    <span class=\"tk-k\">struct</span> Student *p = &amp;s1;\n\n<span class=\"tk-c\">    /* 通过点号 . 访问结构体成员 */</span>\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"学生学号: %d, 姓名: %s, 成绩: %.1f\\n\"</span>, s1.id, s1.name, s1.score);\n\n<span class=\"tk-c\">    /* 通过箭头 -&gt; 通过指针访问结构体成员 */</span>\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"通过指针访问: 学号 %d, 姓名 %s\\n\"</span>, p-&gt;id, p-&gt;name);\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <stdio.h>\n#include <string.h>\n\n/* 定义学生结构体 */\nstruct Student {\n    int id;\n    char name[20];\n    double score;\n};\n\nint main(void) {\n    /* 声明并初始化结构体变量 */\n    struct Student s1;\n    s1.id = 1001;\n    strcpy(s1.name, \"张三\");\n    s1.score = 88.5;\n\n    /* 结构体指针 */\n    struct Student *p = &s1;\n\n    /* 通过点号 . 访问结构体成员 */\n    printf(\"学生学号: %d, 姓名: %s, 成绩: %.1f\\n\", s1.id, s1.name, s1.score);\n\n    /* 通过箭头 -> 通过指针访问结构体成员 */\n    printf(\"通过指针访问: 学号 %d, 姓名 %s\\n\", p->id, p->name);\n\n    return 0;\n}" },
     { kind: 'h4', text: "访问操作符对比" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* **点号操作符 " }, { t: 'code', v: "." }, { t: 'text', v: "**：适用于结构体变量本身，如 " }, { t: 'code', v: "s1.name" }, { t: 'text', v: "。" }],
-      [{ t: 'text', v: "* **箭头操作符 " }, { t: 'code', v: "->" }, { t: 'text', v: "**：适用于结构体指针，如 " }, { t: 'code', v: "p->name" }, { t: 'text', v: "（等价于 " }, { t: 'code', v: "(*p).name" }, { t: 'text', v: "）。" }],
+    { kind: 'ul', items: [
+      [{ t: 'text', v: "**点号操作符 " }, { t: 'code', v: "." }, { t: 'text', v: "**：适用于结构体变量本身，如 " }, { t: 'code', v: "s1.name" }, { t: 'text', v: "。" }],
+      [{ t: 'text', v: "**箭头操作符 " }, { t: 'code', v: "->" }, { t: 'text', v: "**：适用于结构体指针，如 " }, { t: 'code', v: "p->name" }, { t: 'text', v: "（等价于 " }, { t: 'code', v: "(*p).name" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h3', id: 'sec-8', text: "动态内存管理" },
     { kind: 'para', lines: [
@@ -321,9 +324,9 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'c', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;stdio.h&gt;</span>\n#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;stdlib.h&gt;</span>\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>(<span class=\"tk-k\">void</span>) {\n    <span class=\"tk-k\">int</span> n = <span class=\"tk-s\">5</span>;\n\n<span class=\"tk-c\">    /* 在堆上动态分配 5 个整数大小的内存空间 */</span>\n    <span class=\"tk-k\">int</span> *arr = (<span class=\"tk-k\">int</span> *)<span class=\"tk-k\">malloc</span>(n * sizeof(<span class=\"tk-k\">int</span>));\n\n<span class=\"tk-c\">    /* 检查分配是否成功 */</span>\n    <span class=\"tk-k\">if</span> (arr == <span class=\"tk-s\">NULL</span>) {\n        <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"内存分配失败\\n\"</span>);\n        <span class=\"tk-k\">return</span> <span class=\"tk-s\">1</span>;\n    }\n\n<span class=\"tk-c\">    /* 写入并读取数据 */</span>\n    <span class=\"tk-k\">for</span> (<span class=\"tk-k\">int</span> i = <span class=\"tk-s\">0</span>; i &lt; n; i += <span class=\"tk-s\">1</span>) {\n        arr[i] = (i + <span class=\"tk-s\">1</span>) * <span class=\"tk-s\">10</span>;\n        <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"%d \"</span>, arr[i]);\n    }\n    <span class=\"tk-k\">printf</span>(<span class=\"tk-s\">\"\\n\"</span>);\n\n<span class=\"tk-c\">    /* 释放堆内存并将指针置空 */</span>\n    <span class=\"tk-k\">free</span>(arr);\n    arr = <span class=\"tk-s\">NULL</span>;\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <stdio.h>\n#include <stdlib.h>\n\nint main(void) {\n    int n = 5;\n\n    /* 在堆上动态分配 5 个整数大小的内存空间 */\n    int *arr = (int *)malloc(n * sizeof(int));\n\n    /* 检查分配是否成功 */\n    if (arr == NULL) {\n        printf(\"内存分配失败\\n\");\n        return 1;\n    }\n\n    /* 写入并读取数据 */\n    for (int i = 0; i < n; i += 1) {\n        arr[i] = (i + 1) * 10;\n        printf(\"%d \", arr[i]);\n    }\n    printf(\"\\n\");\n\n    /* 释放堆内存并将指针置空 */\n    free(arr);\n    arr = NULL;\n\n    return 0;\n}" },
     { kind: 'h4', text: "内存使用纪律" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "谁申请谁释放" }, { t: 'text', v: "：使用 " }, { t: 'code', v: "malloc" }, { t: 'text', v: " 分配的内存必须配合 " }, { t: 'code', v: "free" }, { t: 'text', v: " 释放，否则会导致内存泄漏。" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "释放后置空" }, { t: 'text', v: "：调用 " }, { t: 'code', v: "free(ptr)" }, { t: 'text', v: " 后，指针变量中存储的地址依然存在，此时应立即执行 " }, { t: 'code', v: "ptr = NULL" }, { t: 'text', v: "，防止意外使用悬空指针。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "谁申请谁释放" }, { t: 'text', v: "：使用 " }, { t: 'code', v: "malloc" }, { t: 'text', v: " 分配的内存必须配合 " }, { t: 'code', v: "free" }, { t: 'text', v: " 释放，否则会导致内存泄漏。" }],
+      [{ t: 'strong', v: "释放后置空" }, { t: 'text', v: "：调用 " }, { t: 'code', v: "free(ptr)" }, { t: 'text', v: " 后，指针变量中存储的地址依然存在，此时应立即执行 " }, { t: 'code', v: "ptr = NULL" }, { t: 'text', v: "，防止意外使用悬空指针。" }],
     ] },
     { kind: 'h3', id: 'sec-9', text: "C++ 面向对象与标准库入门" },
     { kind: 'para', lines: [
@@ -332,9 +335,9 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "1. 类与对象基础" },
     { kind: 'code', lang: 'cpp', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;iostream&gt;</span>\n#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;string&gt;</span>\n\n<span class=\"tk-k\">class</span> <span class=\"tk-k\">User</span> {\n<span class=\"tk-k\">private</span>:\n    <span class=\"tk-k\">int</span> id;\n    std::<span class=\"tk-k\">string</span> name;\n\n<span class=\"tk-k\">public</span>:\n<span class=\"tk-c\">    // 构造函数</span>\n    <span class=\"tk-k\">User</span>(<span class=\"tk-k\">int</span> userId, <span class=\"tk-k\">const</span> std::<span class=\"tk-k\">string</span> <span class=\"tk-k\">&amp;</span>userName) : <span class=\"tk-k\">id</span>(userId), <span class=\"tk-k\">name</span>(userName) {}\n\n<span class=\"tk-c\">    // 成员方法</span>\n    <span class=\"tk-k\">void</span> <span class=\"tk-k\">printInfo</span>() <span class=\"tk-k\">const</span> {\n        std::cout &lt;&lt; <span class=\"tk-s\">\"用户ID: \"</span> &lt;&lt; id &lt;&lt; <span class=\"tk-s\">\", 用户名: \"</span> &lt;&lt; name &lt;&lt; std::endl;\n    }\n};\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>() {\n<span class=\"tk-c\">    // 实例化对象</span>\n    <span class=\"tk-k\">User</span> <span class=\"tk-k\">u1</span>(<span class=\"tk-s\">101</span>, <span class=\"tk-s\">\"李四\"</span>);\n    u1.<span class=\"tk-k\">printInfo</span>();\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <iostream>\n#include <string>\n\nclass User {\nprivate:\n    int id;\n    std::string name;\n\npublic:\n    // 构造函数\n    User(int userId, const std::string &userName) : id(userId), name(userName) {}\n\n    // 成员方法\n    void printInfo() const {\n        std::cout << \"用户ID: \" << id << \", 用户名: \" << name << std::endl;\n    }\n};\n\nint main() {\n    // 实例化对象\n    User u1(101, \"李四\");\n    u1.printInfo();\n\n    return 0;\n}" },
     { kind: 'h4', text: "2. C++ 引用与动态数组容器" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* **引用 " }, { t: 'code', v: "&" }, { t: 'text', v: "**：变量的别名，不产生多余拷贝，比指针更安全直观。" }],
-      [{ t: 'text', v: "* **动态数组 " }, { t: 'code', v: "std::vector" }, { t: 'text', v: "**：可自动扩容的动态数组。" }],
+    { kind: 'ul', items: [
+      [{ t: 'text', v: "**引用 " }, { t: 'code', v: "&" }, { t: 'text', v: "**：变量的别名，不产生多余拷贝，比指针更安全直观。" }],
+      [{ t: 'text', v: "**动态数组 " }, { t: 'code', v: "std::vector" }, { t: 'text', v: "**：可自动扩容的动态数组。" }],
     ] },
     { kind: 'code', lang: 'cpp', html: "#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;iostream&gt;</span>\n#<span class=\"tk-k\">include</span> <span class=\"tk-s\">&lt;vector&gt;</span>\n\n<span class=\"tk-c\">// 使用常量引用传参，避免内存复制</span>\n<span class=\"tk-k\">void</span> <span class=\"tk-k\">printVector</span>(<span class=\"tk-k\">const</span> std::<span class=\"tk-k\">vector</span>&lt;<span class=\"tk-k\">int</span>&gt; <span class=\"tk-k\">&amp;</span>vec) {\n    std::cout &lt;&lt; <span class=\"tk-s\">\"容器元素: \"</span>;\n    <span class=\"tk-k\">for</span> (<span class=\"tk-k\">int</span> val : vec) {\n        std::cout &lt;&lt; val &lt;&lt; <span class=\"tk-s\">\" \"</span>;\n    }\n    std::cout &lt;&lt; <span class=\"tk-s\">\"\\n\"</span>;\n}\n\n<span class=\"tk-k\">int</span> <span class=\"tk-k\">main</span>() {\n    std::<span class=\"tk-k\">vector</span>&lt;<span class=\"tk-k\">int</span>&gt; nums;\n\n<span class=\"tk-c\">    // 向末尾追加元素</span>\n    nums.<span class=\"tk-k\">push_back</span>(<span class=\"tk-s\">10</span>);\n    nums.<span class=\"tk-k\">push_back</span>(<span class=\"tk-s\">20</span>);\n    nums.<span class=\"tk-k\">push_back</span>(<span class=\"tk-s\">30</span>);\n\n    <span class=\"tk-k\">printVector</span>(nums);\n    std::cout &lt;&lt; <span class=\"tk-s\">\"元素总数: \"</span> &lt;&lt; nums.<span class=\"tk-k\">size</span>() &lt;&lt; std::endl;\n\n<span class=\"tk-c\">    // 删除末尾元素</span>\n    nums.<span class=\"tk-k\">pop_back</span>();\n    <span class=\"tk-k\">printVector</span>(nums);\n\n    <span class=\"tk-k\">return</span> <span class=\"tk-s\">0</span>;\n}", raw: "#include <iostream>\n#include <vector>\n\n// 使用常量引用传参，避免内存复制\nvoid printVector(const std::vector<int> &vec) {\n    std::cout << \"容器元素: \";\n    for (int val : vec) {\n        std::cout << val << \" \";\n    }\n    std::cout << \"\\n\";\n}\n\nint main() {\n    std::vector<int> nums;\n\n    // 向末尾追加元素\n    nums.push_back(10);\n    nums.push_back(20);\n    nums.push_back(30);\n\n    printVector(nums);\n    std::cout << \"元素总数: \" << nums.size() << std::endl;\n\n    // 删除末尾元素\n    nums.pop_back();\n    printVector(nums);\n\n    return 0;\n}" },
     { kind: 'h4', text: "运行结果" },
@@ -342,9 +345,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-10', text: "阶段实战大作业" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "编写一个简易动态顺序表：" }],
-      [{ t: 'text', v: "1. 使用结构体管理底层整型动态数组指针、当前元素个数与总容量；" }],
-      [{ t: 'text', v: "2. 实现初始化、尾部插入（容量满时扩容为 2 倍）、按索引删除与内存销毁函数；" }],
-      [{ t: 'text', v: "3. 使用 " }, { t: 'code', v: "valgrind" }, { t: 'text', v: " 检查确保无任何内存泄漏。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "使用结构体管理底层整型动态数组指针、当前元素个数与总容量；" }],
+      [{ t: 'text', v: "实现初始化、尾部插入（容量满时扩容为 2 倍）、按索引删除与内存销毁函数；" }],
+      [{ t: 'text', v: "使用 " }, { t: 'code', v: "valgrind" }, { t: 'text', v: " 检查确保无任何内存泄漏。" }],
     ] },
     ],
   },
@@ -411,10 +416,12 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "2. CSS 盒子模型" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "每一个 HTML 元素在页面中都表现为一个矩形盒子，由内到外由四部分组成：" }],
-      [{ t: 'text', v: "1. " }, { t: 'strong', v: "内容区" }, { t: 'text', v: "：呈现文本与图像的实际区域（由 " }, { t: 'code', v: "width" }, { t: 'text', v: " 和 " }, { t: 'code', v: "height" }, { t: 'text', v: " 控制）。" }],
-      [{ t: 'text', v: "2. " }, { t: 'strong', v: "内边距" }, { t: 'text', v: "：内容与边框之间的空白区域（" }, { t: 'code', v: "padding" }, { t: 'text', v: "）。" }],
-      [{ t: 'text', v: "3. " }, { t: 'strong', v: "边框" }, { t: 'text', v: "：包围内边距与内容的线条（" }, { t: 'code', v: "border" }, { t: 'text', v: "）。" }],
-      [{ t: 'text', v: "4. " }, { t: 'strong', v: "外边距" }, { t: 'text', v: "：盒子与其他相邻元素之间的距离（" }, { t: 'code', v: "margin" }, { t: 'text', v: "）。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "内容区" }, { t: 'text', v: "：呈现文本与图像的实际区域（由 " }, { t: 'code', v: "width" }, { t: 'text', v: " 和 " }, { t: 'code', v: "height" }, { t: 'text', v: " 控制）。" }],
+      [{ t: 'strong', v: "内边距" }, { t: 'text', v: "：内容与边框之间的空白区域（" }, { t: 'code', v: "padding" }, { t: 'text', v: "）。" }],
+      [{ t: 'strong', v: "边框" }, { t: 'text', v: "：包围内边距与内容的线条（" }, { t: 'code', v: "border" }, { t: 'text', v: "）。" }],
+      [{ t: 'strong', v: "外边距" }, { t: 'text', v: "：盒子与其他相邻元素之间的距离（" }, { t: 'code', v: "margin" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'html', html: "&lt;!<span class=\"tk-k\">DOCTYPE</span> <span class=\"tk-k\">html</span>&gt;\n&lt;<span class=\"tk-k\">html</span>&gt;\n&lt;<span class=\"tk-k\">head</span>&gt;\n    &lt;<span class=\"tk-k\">style</span>&gt;\n        <span class=\"tk-c\">/* 全局将所有元素设为边框盒子模型，尺寸计算更直观 */</span>\n        <span class=\"tk-k\">*</span> {\n            <span class=\"tk-k\">box-sizing</span>: <span class=\"tk-s\">border-box</span>;\n            <span class=\"tk-k\">margin</span>: <span class=\"tk-s\">0</span>;\n            <span class=\"tk-k\">padding</span>: <span class=\"tk-s\">0</span>;\n        }\n\n        .<span class=\"tk-k\">card</span> {\n            <span class=\"tk-k\">width</span>: <span class=\"tk-s\">300</span><span class=\"tk-k\">px</span>;\n            <span class=\"tk-k\">padding</span>: <span class=\"tk-s\">20</span><span class=\"tk-k\">px</span>;            <span class=\"tk-c\">/* 内边距 */</span>\n            <span class=\"tk-k\">border</span>: <span class=\"tk-s\">2</span><span class=\"tk-k\">px</span> <span class=\"tk-s\">solid</span> #0088cc; <span class=\"tk-c\">/* 边框 */</span>\n            <span class=\"tk-k\">margin</span>: <span class=\"tk-s\">20</span><span class=\"tk-k\">px</span> <span class=\"tk-s\">auto</span>;        <span class=\"tk-c\">/* 外边距：上下 20px，左右自动居中 */</span>\n            <span class=\"tk-k\">background-color</span>: #f9fbff;\n            <span class=\"tk-k\">border-radius</span>: <span class=\"tk-s\">8</span><span class=\"tk-k\">px</span>;\n        }\n\n        .<span class=\"tk-k\">card-title</span> {\n            <span class=\"tk-k\">color</span>: #0088cc;\n            <span class=\"tk-k\">margin-bottom</span>: <span class=\"tk-s\">10</span><span class=\"tk-k\">px</span>;\n        }\n    &lt;/<span class=\"tk-k\">style</span>&gt;\n&lt;/<span class=\"tk-k\">head</span>&gt;\n&lt;<span class=\"tk-k\">body</span>&gt;\n    &lt;<span class=\"tk-k\">div</span> <span class=\"tk-k\">class</span>=<span class=\"tk-s\">\"card\"</span>&gt;\n        &lt;<span class=\"tk-k\">h3</span> <span class=\"tk-k\">class</span>=<span class=\"tk-s\">\"card-title\"</span>&gt;标准盒子模型卡片&lt;/<span class=\"tk-k\">h3</span>&gt;\n        &lt;<span class=\"tk-k\">p</span>&gt;内边距、边框和外边距协同控制了元素的呼吸空间。&lt;/<span class=\"tk-k\">p</span>&gt;\n    &lt;/<span class=\"tk-k\">div</span>&gt;\n&lt;/<span class=\"tk-k\">body</span>&gt;\n&lt;/<span class=\"tk-k\">html</span>&gt;", raw: "<!DOCTYPE html>\n<html>\n<head>\n    <style>\n        /* 全局将所有元素设为边框盒子模型，尺寸计算更直观 */\n        * {\n            box-sizing: border-box;\n            margin: 0;\n            padding: 0;\n        }\n\n        .card {\n            width: 300px;\n            padding: 20px;            /* 内边距 */\n            border: 2px solid #0088cc; /* 边框 */\n            margin: 20px auto;        /* 外边距：上下 20px，左右自动居中 */\n            background-color: #f9fbff;\n            border-radius: 8px;\n        }\n\n        .card-title {\n            color: #0088cc;\n            margin-bottom: 10px;\n        }\n    </style>\n</head>\n<body>\n    <div class=\"card\">\n        <h3 class=\"card-title\">标准盒子模型卡片</h3>\n        <p>内边距、边框和外边距协同控制了元素的呼吸空间。</p>\n    </div>\n</body>\n</html>" },
@@ -447,11 +454,11 @@ export const DOCS: readonly Doc[] = [
       [{ t: 'text', v: "DOM 将网页解析为节点树，JavaScript 可以通过 DOM 接口查询节点、修改文本、动态增删样式与响应用户点击。" }],
     ] },
     { kind: 'h4', text: "常用 DOM 接口" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'code', v: "document.querySelector(selector)" }, { t: 'text', v: "：按 CSS 选择器查找首个匹配元素。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "element.textContent" }, { t: 'text', v: "：安全地获取或设置元素纯文本。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "element.classList.add/remove/toggle" }, { t: 'text', v: "：操作元素的 class 类名。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "element.addEventListener(event, callback)" }, { t: 'text', v: "：绑定事件监听器。" }],
+    { kind: 'ul', items: [
+      [{ t: 'code', v: "document.querySelector(selector)" }, { t: 'text', v: "：按 CSS 选择器查找首个匹配元素。" }],
+      [{ t: 'code', v: "element.textContent" }, { t: 'text', v: "：安全地获取或设置元素纯文本。" }],
+      [{ t: 'code', v: "element.classList.add/remove/toggle" }, { t: 'text', v: "：操作元素的 class 类名。" }],
+      [{ t: 'code', v: "element.addEventListener(event, callback)" }, { t: 'text', v: "：绑定事件监听器。" }],
     ] },
     { kind: 'h4', text: "实例代码：计数器与事件处理" },
     { kind: 'code', lang: 'html', html: "&lt;!<span class=\"tk-k\">DOCTYPE</span> <span class=\"tk-k\">html</span>&gt;\n&lt;<span class=\"tk-k\">html</span>&gt;\n&lt;<span class=\"tk-k\">body</span>&gt;\n    &lt;<span class=\"tk-k\">h2</span>&gt;简易计数器&lt;/<span class=\"tk-k\">h2</span>&gt;\n    &lt;<span class=\"tk-k\">p</span>&gt;当前计数值: &lt;<span class=\"tk-k\">span</span> <span class=\"tk-k\">id</span>=<span class=\"tk-s\">\"counter-value\"</span>&gt;0&lt;/<span class=\"tk-k\">span</span>&gt;&lt;/<span class=\"tk-k\">p</span>&gt;\n    &lt;<span class=\"tk-k\">button</span> <span class=\"tk-k\">id</span>=<span class=\"tk-s\">\"btn-add\"</span> <span class=\"tk-k\">type</span>=<span class=\"tk-s\">\"button\"</span>&gt;点击加 1&lt;/<span class=\"tk-k\">button</span>&gt;\n    &lt;<span class=\"tk-k\">button</span> <span class=\"tk-k\">id</span>=<span class=\"tk-s\">\"btn-reset\"</span> <span class=\"tk-k\">type</span>=<span class=\"tk-s\">\"button\"</span>&gt;重置&lt;/<span class=\"tk-k\">button</span>&gt;\n\n    &lt;<span class=\"tk-k\">script</span>&gt;\n        <span class=\"tk-c\">// 获取 DOM 元素</span>\n        <span class=\"tk-k\">const</span> <span class=\"tk-s\">valSpan</span> = document.<span class=\"tk-k\">querySelector</span>(<span class=\"tk-s\">\"#counter-value\"</span>);\n        <span class=\"tk-k\">const</span> <span class=\"tk-s\">addBtn</span> = document.<span class=\"tk-k\">querySelector</span>(<span class=\"tk-s\">\"#btn-add\"</span>);\n        <span class=\"tk-k\">const</span> <span class=\"tk-s\">resetBtn</span> = document.<span class=\"tk-k\">querySelector</span>(<span class=\"tk-s\">\"#btn-reset\"</span>);\n\n        <span class=\"tk-k\">let</span> count = <span class=\"tk-s\">0</span>;\n\n        <span class=\"tk-c\">// 绑定点击事件</span>\n        addBtn.<span class=\"tk-k\">addEventListener</span>(<span class=\"tk-s\">\"click\"</span>, () =&gt; {\n            count += <span class=\"tk-s\">1</span>;\n            valSpan.textContent = <span class=\"tk-k\">String</span>(count);\n        });\n\n        resetBtn.<span class=\"tk-k\">addEventListener</span>(<span class=\"tk-s\">\"click\"</span>, () =&gt; {\n            count = <span class=\"tk-s\">0</span>;\n            valSpan.textContent = <span class=\"tk-k\">String</span>(count);\n        });\n    &lt;/<span class=\"tk-k\">script</span>&gt;\n&lt;/<span class=\"tk-k\">body</span>&gt;\n&lt;/<span class=\"tk-k\">html</span>&gt;", raw: "<!DOCTYPE html>\n<html>\n<body>\n    <h2>简易计数器</h2>\n    <p>当前计数值: <span id=\"counter-value\">0</span></p>\n    <button id=\"btn-add\" type=\"button\">点击加 1</button>\n    <button id=\"btn-reset\" type=\"button\">重置</button>\n\n    <script>\n        // 获取 DOM 元素\n        const valSpan = document.querySelector(\"#counter-value\");\n        const addBtn = document.querySelector(\"#btn-add\");\n        const resetBtn = document.querySelector(\"#btn-reset\");\n\n        let count = 0;\n\n        // 绑定点击事件\n        addBtn.addEventListener(\"click\", () => {\n            count += 1;\n            valSpan.textContent = String(count);\n        });\n\n        resetBtn.addEventListener(\"click\", () => {\n            count = 0;\n            valSpan.textContent = String(count);\n        });\n    </script>\n</body>\n</html>" },
@@ -464,9 +471,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-8', text: "阶段实战大作业" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "编写一个原生待办事项交互应用：" }],
-      [{ t: 'text', v: "1. 顶部提供输入框与“添加”按钮，输入文本回车或点击按钮向列表中追加待办项；" }],
-      [{ t: 'text', v: "2. 每一个待办项提供“完成/未完成”勾选框与“删除”按钮；" }],
-      [{ t: 'text', v: "3. 纯原生 HTML + CSS + JavaScript 编写，不引入任何外部框架。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "顶部提供输入框与“添加”按钮，输入文本回车或点击按钮向列表中追加待办项；" }],
+      [{ t: 'text', v: "每一个待办项提供“完成/未完成”勾选框与“删除”按钮；" }],
+      [{ t: 'text', v: "纯原生 HTML + CSS + JavaScript 编写，不引入任何外部框架。" }],
     ] },
     ],
   },
@@ -506,10 +515,10 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码" },
     { kind: 'code', lang: 'java', html: "<span class=\"tk-k\">import</span> <span class=\"tk-k\">java</span>.<span class=\"tk-k\">util</span>.<span class=\"tk-k\">Scanner</span>;\n\n<span class=\"tk-k\">public</span> <span class=\"tk-k\">class</span> <span class=\"tk-k\">HelloWorld</span> {\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">static</span> <span class=\"tk-k\">void</span> <span class=\"tk-k\">main</span>(<span class=\"tk-k\">String</span>[] args) {\n        <span class=\"tk-c\">// 1. 控制台输出</span>\n        System.out.<span class=\"tk-k\">println</span>(<span class=\"tk-s\">\"欢迎来到 Java 的世界！\"</span>);\n\n        <span class=\"tk-c\">// 2. 控制台用户输入</span>\n        <span class=\"tk-k\">Scanner</span> scanner = <span class=\"tk-k\">new</span> <span class=\"tk-k\">Scanner</span>(System.in);\n        System.out.<span class=\"tk-k\">print</span>(<span class=\"tk-s\">\"请输入你的姓名: \"</span>);\n        <span class=\"tk-k\">String</span> name = scanner.<span class=\"tk-k\">nextLine</span>();\n\n        System.out.<span class=\"tk-k\">print</span>(<span class=\"tk-s\">\"请输入你的年龄: \"</span>);\n        <span class=\"tk-k\">int</span> age = scanner.<span class=\"tk-k\">nextInt</span>();\n\n        System.out.<span class=\"tk-k\">println</span>(<span class=\"tk-s\">\"你好，\"</span> + name + <span class=\"tk-s\">\"！明年你将 \"</span> + (age + <span class=\"tk-s\">1</span>) + <span class=\"tk-s\">\" 岁。\"</span>);\n        scanner.<span class=\"tk-k\">close</span>();\n    }\n}", raw: "import java.util.Scanner;\n\npublic class HelloWorld {\n    public static void main(String[] args) {\n        // 1. 控制台输出\n        System.out.println(\"欢迎来到 Java 的世界！\");\n\n        // 2. 控制台用户输入\n        Scanner scanner = new Scanner(System.in);\n        System.out.print(\"请输入你的姓名: \");\n        String name = scanner.nextLine();\n\n        System.out.print(\"请输入你的年龄: \");\n        int age = scanner.nextInt();\n\n        System.out.println(\"你好，\" + name + \"！明年你将 \" + (age + 1) + \" 岁。\");\n        scanner.close();\n    }\n}" },
     { kind: 'h4', text: "实例解析" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'code', v: "public class HelloWorld" }, { t: 'text', v: "：定义公开类，类名必须与文件名 " }, { t: 'code', v: "HelloWorld.java" }, { t: 'text', v: " 严格一致。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "public static void main(String[] args)" }, { t: 'text', v: "：Java 程序的执行入口主方法。" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "Scanner scanner = new Scanner(System.in)" }, { t: 'text', v: "：创建扫描器对象，用于读取键盘控制台输入。" }],
+    { kind: 'ul', items: [
+      [{ t: 'code', v: "public class HelloWorld" }, { t: 'text', v: "：定义公开类，类名必须与文件名 " }, { t: 'code', v: "HelloWorld.java" }, { t: 'text', v: " 严格一致。" }],
+      [{ t: 'code', v: "public static void main(String[] args)" }, { t: 'text', v: "：Java 程序的执行入口主方法。" }],
+      [{ t: 'code', v: "Scanner scanner = new Scanner(System.in)" }, { t: 'text', v: "：创建扫描器对象，用于读取键盘控制台输入。" }],
     ] },
     { kind: 'h3', id: 'sec-3', text: "面向对象核心特性" },
     { kind: 'para', lines: [
@@ -575,10 +584,12 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-8', text: "阶段实战大作业" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "编写一个单机控制台学生管理系统：" }],
-      [{ t: 'text', v: "1. 包含 " }, { t: 'code', v: "Student" }, { t: 'text', v: " 实体类（包含学号、姓名、专业、成绩）；" }],
-      [{ t: 'text', v: "2. 使用 " }, { t: 'code', v: "ArrayList" }, { t: 'text', v: " 或 " }, { t: 'code', v: "HashMap" }, { t: 'text', v: " 管理学生列表；" }],
-      [{ t: 'text', v: "3. 提供控制台菜单：1. 添加学生、2. 查询学生、3. 删除学生、4. 导出保存到文本文件；" }],
-      [{ t: 'text', v: "4. 包含完善的输入格式校验与异常处理，输入非法数据不报错退出。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "包含 " }, { t: 'code', v: "Student" }, { t: 'text', v: " 实体类（包含学号、姓名、专业、成绩）；" }],
+      [{ t: 'text', v: "使用 " }, { t: 'code', v: "ArrayList" }, { t: 'text', v: " 或 " }, { t: 'code', v: "HashMap" }, { t: 'text', v: " 管理学生列表；" }],
+      [{ t: 'text', v: "提供控制台菜单：1. 添加学生、2. 查询学生、3. 删除学生、4. 导出保存到文本文件；" }],
+      [{ t: 'text', v: "包含完善的输入格式校验与异常处理，输入非法数据不报错退出。" }],
     ] },
     ],
   },
@@ -686,10 +697,10 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "实例代码：用户与订单表联查" },
     { kind: 'code', lang: 'sql', html: "<span class=\"tk-c\">-- 订单表定义</span>\n<span class=\"tk-k\">CREATE</span> <span class=\"tk-k\">TABLE</span> <span class=\"tk-k\">IF</span> <span class=\"tk-k\">NOT</span> <span class=\"tk-k\">EXISTS</span> orders (\n    order_id <span class=\"tk-k\">BIGINT</span> <span class=\"tk-k\">PRIMARY KEY</span> AUTO_INCREMENT,\n    user_id <span class=\"tk-k\">BIGINT</span> <span class=\"tk-k\">NOT NULL</span>,\n    amount <span class=\"tk-k\">DECIMAL</span>(<span class=\"tk-s\">10</span>, <span class=\"tk-s\">2</span>) <span class=\"tk-k\">NOT NULL</span>,\n    order_date <span class=\"tk-k\">DATETIME</span> <span class=\"tk-k\">DEFAULT</span> CURRENT_TIMESTAMP\n);\n\n<span class=\"tk-c\">-- 内连接查询：仅返回有订单的用户及其订单信息</span>\n<span class=\"tk-k\">SELECT</span> u.username, o.order_id, o.amount, o.order_date\n<span class=\"tk-k\">FROM</span> users u\n<span class=\"tk-k\">INNER JOIN</span> orders o <span class=\"tk-k\">ON</span> u.id = o.user_id;\n\n<span class=\"tk-c\">-- 左连接查询：返回所有用户，无论其是否有订单（无订单则订单字段为 NULL）</span>\n<span class=\"tk-k\">SELECT</span> u.username, o.order_id, o.amount\n<span class=\"tk-k\">FROM</span> users u\n<span class=\"tk-k\">LEFT JOIN</span> orders o <span class=\"tk-k\">ON</span> u.id = o.user_id;", raw: "-- 订单表定义\nCREATE TABLE IF NOT EXISTS orders (\n    order_id BIGINT PRIMARY KEY AUTO_INCREMENT,\n    user_id BIGINT NOT NULL,\n    amount DECIMAL(10, 2) NOT NULL,\n    order_date DATETIME DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 内连接查询：仅返回有订单的用户及其订单信息\nSELECT u.username, o.order_id, o.amount, o.order_date\nFROM users u\nINNER JOIN orders o ON u.id = o.user_id;\n\n-- 左连接查询：返回所有用户，无论其是否有订单（无订单则订单字段为 NULL）\nSELECT u.username, o.order_id, o.amount\nFROM users u\nLEFT JOIN orders o ON u.id = o.user_id;" },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在本地或 Linux 服务器上安装运行 MySQL 数据库服务；" }],
-      [{ t: 'text', v: "2. 设计一套图书管理系统表结构（图书表、读者表、借阅记录表）；" }],
-      [{ t: 'text', v: "3. 插入测试数据，编写 SQL 完成借阅排行统计、超期未还读者查询与多表连接。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在本地或 Linux 服务器上安装运行 MySQL 数据库服务；" }],
+      [{ t: 'text', v: "设计一套图书管理系统表结构（图书表、读者表、借阅记录表）；" }],
+      [{ t: 'text', v: "插入测试数据，编写 SQL 完成借阅排行统计、超期未还读者查询与多表连接。" }],
     ] },
     ],
   },
@@ -766,9 +777,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-6', text: "阶段实战大作业" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "搭建一个基于 Spring Boot 的商品信息管理微服务：" }],
-      [{ t: 'text', v: "1. 建立数据库商品表，配置 " }, { t: 'code', v: "application.yml" }, { t: 'text', v: " 数据源连接；" }],
-      [{ t: 'text', v: "2. 按照三层架构规范编写商品信息的增加、删除、修改与按 ID 查询接口；" }],
-      [{ t: 'text', v: "3. 使用 Postman 或 Apifox 测试所有接口，验证统一响应格式。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "建立数据库商品表，配置 " }, { t: 'code', v: "application.yml" }, { t: 'text', v: " 数据源连接；" }],
+      [{ t: 'text', v: "按照三层架构规范编写商品信息的增加、删除、修改与按 ID 查询接口；" }],
+      [{ t: 'text', v: "使用 Postman 或 Apifox 测试所有接口，验证统一响应格式。" }],
     ] },
     ],
   },
@@ -991,9 +1004,9 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: '', html: "# 一级标题\n## 二级标题\n### 三级标题\n#### 四级标题\n##### 五级标题\n###### 六级标题", raw: "# 一级标题\n## 二级标题\n### 三级标题\n#### 四级标题\n##### 五级标题\n###### 六级标题" },
     { kind: 'h4', text: "段落与换行规则" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "普通段落" }, { t: 'text', v: "：前后保留一个空行即可自动识别为一个独立段落；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "硬换行" }, { t: 'text', v: "：在行尾连续敲入两个空格再按回车，或在行间插入空行。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "普通段落" }, { t: 'text', v: "：前后保留一个空行即可自动识别为一个独立段落；" }],
+      [{ t: 'strong', v: "硬换行" }, { t: 'text', v: "：在行尾连续敲入两个空格再按回车，或在行间插入空行。" }],
     ] },
     { kind: 'h3', id: 'sec-3', text: "文本修饰与字体样式" },
     { kind: 'para', lines: [
@@ -1036,16 +1049,18 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: '', html: "| 左对齐（默认） | 居中对齐 | 右对齐（数值） |\n|:---|:---:|---:|\n| 商品名称 | 规格型号 | 单价（元） |\n| 机械键盘 | 红轴 87 键 | 299.00 |\n| 显示器支架 | 双臂气压款 | 159.00 |", raw: "| 左对齐（默认） | 居中对齐 | 右对齐（数值） |\n|:---|:---:|---:|\n| 商品名称 | 规格型号 | 单价（元） |\n| 机械键盘 | 红轴 87 键 | 299.00 |\n| 显示器支架 | 双臂气压款 | 159.00 |" },
     { kind: 'h3', id: 'sec-7', text: "分割线与转义字符" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "水平分割线" }, { t: 'text', v: "：使用三个或更多连字符 " }, { t: 'code', v: "---" }, { t: 'text', v: " 或星号 " }, { t: 'code', v: "***" }, { t: 'text', v: " 单独成行。" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "特殊字符转义" }, { t: 'text', v: "：如果需要在正文中显示 Markdown 保留符号（如 " }, { t: 'code', v: "*" }, { t: 'text', v: "、" }, { t: 'code', v: "#" }, { t: 'text', v: "、" }, { t: 'code', v: "_" }, { t: 'text', v: "），在符号前加反斜杠 " }, { t: 'code', v: "\\" }, { t: 'text', v: " 转义（例如 " }, { t: 'code', v: "\\*不倾斜\\*" }, { t: 'text', v: "）。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "水平分割线" }, { t: 'text', v: "：使用三个或更多连字符 " }, { t: 'code', v: "---" }, { t: 'text', v: " 或星号 " }, { t: 'code', v: "***" }, { t: 'text', v: " 单独成行。" }],
+      [{ t: 'strong', v: "特殊字符转义" }, { t: 'text', v: "：如果需要在正文中显示 Markdown 保留符号（如 " }, { t: 'code', v: "*" }, { t: 'text', v: "、" }, { t: 'code', v: "#" }, { t: 'text', v: "、" }, { t: 'code', v: "_" }, { t: 'text', v: "），在符号前加反斜杠 " }, { t: 'code', v: "\\" }, { t: 'text', v: " 转义（例如 " }, { t: 'code', v: "\\*不倾斜\\*" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h3', id: 'sec-8', text: "阶段实战大作业" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "使用 Markdown 编写一份完整的个人技术简历或项目 " }, { t: 'code', v: "README.md" }, { t: 'text', v: "：" }],
-      [{ t: 'text', v: "1. 包含各级标题与项目技术栈徽标/列表；" }],
-      [{ t: 'text', v: "2. 包含一个多语言代码块展示核心算法或核心类；" }],
-      [{ t: 'text', v: "3. 包含一张表格展示项目模块分工与完成状态。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "包含各级标题与项目技术栈徽标/列表；" }],
+      [{ t: 'text', v: "包含一个多语言代码块展示核心算法或核心类；" }],
+      [{ t: 'text', v: "包含一张表格展示项目模块分工与完成状态。" }],
     ] },
     ],
   },
@@ -1083,9 +1098,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-2', text: "Git 核心概念与区域模型" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "Git 在本地维护三个核心区域：" }],
-      [{ t: 'text', v: "1. " }, { t: 'strong', v: "工作区" }, { t: 'text', v: "：在操作系统文件管理器中直接看到的项目文件目录。" }],
-      [{ t: 'text', v: "2. " }, { t: 'strong', v: "暂存区" }, { t: 'text', v: "：临时保存待提交修改的索引区域。" }],
-      [{ t: 'text', v: "3. " }, { t: 'strong', v: "本地版本库" }, { t: 'text', v: "：保存所有历史提交快照的核心仓库（" }, { t: 'code', v: ".git" }, { t: 'text', v: " 隐藏目录）。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "工作区" }, { t: 'text', v: "：在操作系统文件管理器中直接看到的项目文件目录。" }],
+      [{ t: 'strong', v: "暂存区" }, { t: 'text', v: "：临时保存待提交修改的索引区域。" }],
+      [{ t: 'strong', v: "本地版本库" }, { t: 'text', v: "：保存所有历史提交快照的核心仓库（" }, { t: 'code', v: ".git" }, { t: 'text', v: " 隐藏目录）。" }],
     ] },
     { kind: 'code', lang: '', html: "工作区 ──(git add)──&gt; 暂存区 ──(git commit)──&gt; 本地版本库 ──(git push)──&gt; 远程仓库", raw: "工作区 ──(git add)──> 暂存区 ──(git commit)──> 本地版本库 ──(git push)──> 远程仓库" },
     { kind: 'h3', id: 'sec-3', text: "首次使用身份配置" },
@@ -1124,10 +1141,10 @@ export const DOCS: readonly Doc[] = [
         [[{ t: 'code', v: "git push" }], [{ t: 'text', v: "推送本地提交到远端" }], [{ t: 'text', v: "备份与分享代码" }]],
       ] },
     { kind: 'h3', id: 'sec-11', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在本地初始化一个 Git 仓库并创建 " }, { t: 'code', v: ".gitignore" }, { t: 'text', v: "；" }],
-      [{ t: 'text', v: "2. 新建 " }, { t: 'code', v: "feat/init" }, { t: 'text', v: " 特性分支，编写代码并提交；" }],
-      [{ t: 'text', v: "3. 切换回 " }, { t: 'code', v: "main" }, { t: 'text', v: " 分支完成合并，并推送到 GitHub 远程仓库。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在本地初始化一个 Git 仓库并创建 " }, { t: 'code', v: ".gitignore" }, { t: 'text', v: "；" }],
+      [{ t: 'text', v: "新建 " }, { t: 'code', v: "feat/init" }, { t: 'text', v: " 特性分支，编写代码并提交；" }],
+      [{ t: 'text', v: "切换回 " }, { t: 'code', v: "main" }, { t: 'text', v: " 分支完成合并，并推送到 GitHub 远程仓库。" }],
     ] },
     ],
   },
@@ -1168,9 +1185,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-3', text: "GAV 坐标体系与 pom.xml 核心配置" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "Maven 使用一组唯一的坐标在仓库中精准定位一个组件：" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "groupId" }, { t: 'text', v: "：组织或公司的唯一标识（通常是反向域名，如 " }, { t: 'code', v: "org.springframework.boot" }, { t: 'text', v: "）；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "artifactId" }, { t: 'text', v: "：项目或模块的唯一名称（如 " }, { t: 'code', v: "spring-boot-starter-web" }, { t: 'text', v: "）；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "version" }, { t: 'text', v: "：当前构件的版本号（如 " }, { t: 'code', v: "3.2.0" }, { t: 'text', v: " 或 " }, { t: 'code', v: "1.0.0-SNAPSHOT" }, { t: 'text', v: "）。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'code', v: "groupId" }, { t: 'text', v: "：组织或公司的唯一标识（通常是反向域名，如 " }, { t: 'code', v: "org.springframework.boot" }, { t: 'text', v: "）；" }],
+      [{ t: 'code', v: "artifactId" }, { t: 'text', v: "：项目或模块的唯一名称（如 " }, { t: 'code', v: "spring-boot-starter-web" }, { t: 'text', v: "）；" }],
+      [{ t: 'code', v: "version" }, { t: 'text', v: "：当前构件的版本号（如 " }, { t: 'code', v: "3.2.0" }, { t: 'text', v: " 或 " }, { t: 'code', v: "1.0.0-SNAPSHOT" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h4', text: "pom.xml 核心结构实例" },
     { kind: 'code', lang: '', html: "&lt;?xml version=\"1.0\" encoding=\"UTF-8\"?&gt;\n&lt;project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 \n         https://maven.apache.org/xsd/maven-4.0.0.xsd\"&gt;\n    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;\n\n    &lt;groupId&gt;tech.yunfeiyang&lt;/groupId&gt;\n    &lt;artifactId&gt;demo-app&lt;/artifactId&gt;\n    &lt;version&gt;1.0.0&lt;/version&gt;\n    &lt;packaging&gt;jar&lt;/packaging&gt;\n\n    &lt;properties&gt;\n        &lt;maven.compiler.source&gt;17&lt;/maven.compiler.source&gt;\n        &lt;maven.compiler.target&gt;17&lt;/maven.compiler.target&gt;\n        &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;\n    &lt;/properties&gt;\n\n    &lt;dependencies&gt;\n        &lt;!-- 引入第三方依赖组件 --&gt;\n        &lt;dependency&gt;\n            &lt;groupId&gt;com.google.code.gson&lt;/groupId&gt;\n            &lt;artifactId&gt;gson&lt;/artifactId&gt;\n            &lt;version&gt;2.10.1&lt;/version&gt;\n        &lt;/dependency&gt;\n    &lt;/dependencies&gt;\n&lt;/project&gt;", raw: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<project xmlns=\"http://maven.apache.org/POM/4.0.0\"\n         xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n         xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 \n         https://maven.apache.org/xsd/maven-4.0.0.xsd\">\n    <modelVersion>4.0.0</modelVersion>\n\n    <groupId>tech.yunfeiyang</groupId>\n    <artifactId>demo-app</artifactId>\n    <version>1.0.0</version>\n    <packaging>jar</packaging>\n\n    <properties>\n        <maven.compiler.source>17</maven.compiler.source>\n        <maven.compiler.target>17</maven.compiler.target>\n        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>\n    </properties>\n\n    <dependencies>\n        <!-- 引入第三方依赖组件 -->\n        <dependency>\n            <groupId>com.google.code.gson</groupId>\n            <artifactId>gson</artifactId>\n            <version>2.10.1</version>\n        </dependency>\n    </dependencies>\n</project>" },
@@ -1207,17 +1226,19 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-7', text: "依赖冲突仲裁与手动排除" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "当项目中引入的多个依赖间接依赖了同一个组件的不同版本时，Maven 会根据仲裁规则自动选择一个版本：" }],
-      [{ t: 'text', v: "1. " }, { t: 'strong', v: "路径最短优先原则" }, { t: 'text', v: "：直接依赖的版本优先于间接传递依赖；" }],
-      [{ t: 'text', v: "2. " }, { t: 'strong', v: "声明先者优先原则" }, { t: 'text', v: "：当路径长度相同时，在 " }, { t: 'code', v: "pom.xml" }, { t: 'text', v: " 中先声明的依赖生效。" }],
+    ] },
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "路径最短优先原则" }, { t: 'text', v: "：直接依赖的版本优先于间接传递依赖；" }],
+      [{ t: 'strong', v: "声明先者优先原则" }, { t: 'text', v: "：当路径长度相同时，在 " }, { t: 'code', v: "pom.xml" }, { t: 'text', v: " 中先声明的依赖生效。" }],
     ] },
     { kind: 'h4', text: "手动排除冲突依赖示例" },
     { kind: 'code', lang: '', html: "&lt;dependency&gt;\n    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;\n    &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;\n    &lt;exclusions&gt;\n        &lt;!-- 排除 Spring Boot 默认自带的 Tomcat 容器 --&gt;\n        &lt;exclusion&gt;\n            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;\n            &lt;artifactId&gt;spring-boot-starter-tomcat&lt;/artifactId&gt;\n        &lt;/exclusion&gt;\n    &lt;/exclusions&gt;\n&lt;/dependency&gt;", raw: "<dependency>\n    <groupId>org.springframework.boot</groupId>\n    <artifactId>spring-boot-starter-web</artifactId>\n    <exclusions>\n        <!-- 排除 Spring Boot 默认自带的 Tomcat 容器 -->\n        <exclusion>\n            <groupId>org.springframework.boot</groupId>\n            <artifactId>spring-boot-starter-tomcat</artifactId>\n        </exclusion>\n    </exclusions>\n</dependency>" },
     { kind: 'h3', id: 'sec-8', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在 IntelliJ IDEA 中创建一个标准 Maven 模块；" }],
-      [{ t: 'text', v: "2. 在 " }, { t: 'code', v: "pom.xml" }, { t: 'text', v: " 中引入 " }, { t: 'code', v: "fastjson2" }, { t: 'text', v: " 或 " }, { t: 'code', v: "gson" }, { t: 'text', v: " 依赖；" }],
-      [{ t: 'text', v: "3. 编写一个实体类并将其序列化为 JSON 字符串输出；" }],
-      [{ t: 'text', v: "4. 执行 " }, { t: 'code', v: "mvn clean package" }, { t: 'text', v: " 并在 " }, { t: 'code', v: "target/" }, { t: 'text', v: " 目录下找到生成的 JAR 文件。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在 IntelliJ IDEA 中创建一个标准 Maven 模块；" }],
+      [{ t: 'text', v: "在 " }, { t: 'code', v: "pom.xml" }, { t: 'text', v: " 中引入 " }, { t: 'code', v: "fastjson2" }, { t: 'text', v: " 或 " }, { t: 'code', v: "gson" }, { t: 'text', v: " 依赖；" }],
+      [{ t: 'text', v: "编写一个实体类并将其序列化为 JSON 字符串输出；" }],
+      [{ t: 'text', v: "执行 " }, { t: 'code', v: "mvn clean package" }, { t: 'text', v: " 并在 " }, { t: 'code', v: "target/" }, { t: 'text', v: " 目录下找到生成的 JAR 文件。" }],
     ] },
     ],
   },
@@ -1297,10 +1318,10 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: 'sql', html: "<span class=\"tk-c\">-- 1. 创建订单表</span>\n<span class=\"tk-k\">CREATE</span> <span class=\"tk-k\">TABLE</span> <span class=\"tk-k\">IF</span> <span class=\"tk-k\">NOT</span> <span class=\"tk-k\">EXISTS</span> orders (\n    order_id <span class=\"tk-k\">BIGINT</span> <span class=\"tk-k\">PRIMARY KEY</span> AUTO_INCREMENT,\n    product_id <span class=\"tk-k\">BIGINT</span> <span class=\"tk-k\">NOT NULL</span>,\n    buy_count <span class=\"tk-k\">INT</span> <span class=\"tk-k\">NOT NULL</span>,\n    total_amount <span class=\"tk-k\">DECIMAL</span>(<span class=\"tk-s\">10</span>, <span class=\"tk-s\">2</span>) <span class=\"tk-k\">NOT NULL</span>,\n    order_time <span class=\"tk-k\">DATETIME</span> <span class=\"tk-k\">DEFAULT</span> CURRENT_TIMESTAMP\n);\n\n<span class=\"tk-c\">-- 2. 内连接查询：同时输出订单及其对应的商品名称与单价</span>\n<span class=\"tk-k\">SELECT</span> o.order_id, p.title <span class=\"tk-k\">AS</span> product_name, p.price, o.buy_count, o.total_amount\n<span class=\"tk-k\">FROM</span> orders o\n<span class=\"tk-k\">INNER JOIN</span> products p <span class=\"tk-k\">ON</span> o.product_id = p.id;\n\n<span class=\"tk-c\">-- 3. 左连接查询：返回所有商品及其订单（无订单则订单字段为 NULL）</span>\n<span class=\"tk-k\">SELECT</span> p.title, o.order_id, o.buy_count\n<span class=\"tk-k\">FROM</span> products p\n<span class=\"tk-k\">LEFT JOIN</span> orders o <span class=\"tk-k\">ON</span> p.id = o.product_id;", raw: "-- 1. 创建订单表\nCREATE TABLE IF NOT EXISTS orders (\n    order_id BIGINT PRIMARY KEY AUTO_INCREMENT,\n    product_id BIGINT NOT NULL,\n    buy_count INT NOT NULL,\n    total_amount DECIMAL(10, 2) NOT NULL,\n    order_time DATETIME DEFAULT CURRENT_TIMESTAMP\n);\n\n-- 2. 内连接查询：同时输出订单及其对应的商品名称与单价\nSELECT o.order_id, p.title AS product_name, p.price, o.buy_count, o.total_amount\nFROM orders o\nINNER JOIN products p ON o.product_id = p.id;\n\n-- 3. 左连接查询：返回所有商品及其订单（无订单则订单字段为 NULL）\nSELECT p.title, o.order_id, o.buy_count\nFROM products p\nLEFT JOIN orders o ON p.id = o.product_id;" },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 搭建本地 MySQL 服务并创建数据库；" }],
-      [{ t: 'text', v: "2. 设计一套学生选课系统（学生表、课程表、选课记录表）；" }],
-      [{ t: 'text', v: "3. 编写 SQL 语句完成：统计每门课程的选课人数、查询某学生选修的所有课程名称与授课教师。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "搭建本地 MySQL 服务并创建数据库；" }],
+      [{ t: 'text', v: "设计一套学生选课系统（学生表、课程表、选课记录表）；" }],
+      [{ t: 'text', v: "编写 SQL 语句完成：统计每门课程的选课人数、查询某学生选修的所有课程名称与授课教师。" }],
     ] },
     ],
   },
@@ -1334,9 +1355,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-2', text: "什么是 MyBatis 与核心优势" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "MyBatis 免除了几乎所有的 JDBC 代码以及设置参数和获取结果集的工作：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "SQL 与 Java 代码解耦" }, { t: 'text', v: "：可在注解或 XML 文件中统一集中管理 SQL；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "灵活高效" }, { t: 'text', v: "：支持原生 SQL 编写，便于精细化性能调优与索引命中；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "动态 SQL" }, { t: 'text', v: "：内置强大的标签体系，轻松应对多条件组合查询。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "SQL 与 Java 代码解耦" }, { t: 'text', v: "：可在注解或 XML 文件中统一集中管理 SQL；" }],
+      [{ t: 'strong', v: "灵活高效" }, { t: 'text', v: "：支持原生 SQL 编写，便于精细化性能调优与索引命中；" }],
+      [{ t: 'strong', v: "动态 SQL" }, { t: 'text', v: "：内置强大的标签体系，轻松应对多条件组合查询。" }],
     ] },
     { kind: 'h3', id: 'sec-3', text: "引入依赖与数据源配置" },
     { kind: 'para', lines: [
@@ -1367,15 +1390,15 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "UserMapper.xml 实战实例" },
     { kind: 'code', lang: '', html: "&lt;?xml version=\"1.0\" encoding=\"UTF-8\" ?&gt;\n&lt;!DOCTYPE mapper PUBLIC \"-//mybatis.org//DTD Mapper 3.0//EN\"\n        \"http://mybatis.org/dtd/mybatis-3-mapper.dtd\"&gt;\n\n&lt;mapper namespace=\"tech.yunfeiyang.demo.mapper.UserMapper\"&gt;\n\n    &lt;!-- 多条件动态组合查询 --&gt;\n    &lt;select id=\"searchUsers\" resultType=\"tech.yunfeiyang.demo.entity.User\"&gt;\n        SELECT id, username, age, email\n        FROM users\n        &lt;where&gt;\n            &lt;if test=\"username != null and username != ''\"&gt;\n                AND username LIKE CONCAT('%', #{username}, '%')\n            &lt;/if&gt;\n            &lt;if test=\"minAge != null\"&gt;\n                AND age &amp;gt;= #{minAge}\n            &lt;/if&gt;\n        &lt;/where&gt;\n        ORDER BY id DESC\n    &lt;/select&gt;\n\n    &lt;!-- 批量根据 ID 集合查询（foreach 标签） --&gt;\n    &lt;select id=\"findByIds\" resultType=\"tech.yunfeiyang.demo.entity.User\"&gt;\n        SELECT * FROM users\n        WHERE id IN\n        &lt;foreach collection=\"ids\" item=\"id\" open=\"(\" separator=\",\" close=\")\"&gt;\n            #{id}\n        &lt;/foreach&gt;\n    &lt;/select&gt;\n\n&lt;/mapper&gt;", raw: "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<!DOCTYPE mapper PUBLIC \"-//mybatis.org//DTD Mapper 3.0//EN\"\n        \"http://mybatis.org/dtd/mybatis-3-mapper.dtd\">\n\n<mapper namespace=\"tech.yunfeiyang.demo.mapper.UserMapper\">\n\n    <!-- 多条件动态组合查询 -->\n    <select id=\"searchUsers\" resultType=\"tech.yunfeiyang.demo.entity.User\">\n        SELECT id, username, age, email\n        FROM users\n        <where>\n            <if test=\"username != null and username != ''\">\n                AND username LIKE CONCAT('%', #{username}, '%')\n            </if>\n            <if test=\"minAge != null\">\n                AND age &gt;= #{minAge}\n            </if>\n        </where>\n        ORDER BY id DESC\n    </select>\n\n    <!-- 批量根据 ID 集合查询（foreach 标签） -->\n    <select id=\"findByIds\" resultType=\"tech.yunfeiyang.demo.entity.User\">\n        SELECT * FROM users\n        WHERE id IN\n        <foreach collection=\"ids\" item=\"id\" open=\"(\" separator=\",\" close=\")\">\n            #{id}\n        </foreach>\n    </select>\n\n</mapper>" },
     { kind: 'h3', id: 'sec-6', text: "参数占位符：#{} 与 ${} 的核心区别" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* **" }, { t: 'code', v: "#{}" }, { t: 'text', v: "（预编译占位符，强烈推荐）" }, { t: 'strong', v: "：参数会被当做字符串字面量处理，由底层 PreparedStatement 自动转义，" }, { t: 'text', v: "天然彻底杜绝 SQL 注入**；" }],
-      [{ t: 'text', v: "* **" }, { t: 'code', v: "${}" }, { t: 'text', v: "（字符串直接拼接，极度慎用）**：将参数原封不动拼接进 SQL 语句中，存在严重的 SQL 注入漏洞隐患，仅可在传入表名、列名或排序关键字（如 " }, { t: 'code', v: "ORDER BY ${column}" }, { t: 'text', v: "）等无法预编译的场景下经过严格白名单校验后使用。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "" }, { t: 'code', v: "#{}" }, { t: 'text', v: "（预编译占位符，强烈推荐）" }, { t: 'strong', v: "：参数会被当做字符串字面量处理，由底层 PreparedStatement 自动转义，" }, { t: 'text', v: "天然彻底杜绝 SQL 注入**；" }],
+      [{ t: 'strong', v: "" }, { t: 'code', v: "${}" }, { t: 'text', v: "（字符串直接拼接，极度慎用）**：将参数原封不动拼接进 SQL 语句中，存在严重的 SQL 注入漏洞隐患，仅可在传入表名、列名或排序关键字（如 " }, { t: 'code', v: "ORDER BY ${column}" }, { t: 'text', v: "）等无法预编译的场景下经过严格白名单校验后使用。" }],
     ] },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 创建商品表 " }, { t: 'code', v: "products" }, { t: 'text', v: "；" }],
-      [{ t: 'text', v: "2. 编写 " }, { t: 'code', v: "ProductMapper" }, { t: 'text', v: " 接口，使用 XML 实现带商品名称模糊查询、价格区间筛选与分类过滤的动态 SQL 查询方法；" }],
-      [{ t: 'text', v: "3. 编写单元测试验证各种条件组合下生成的 SQL 执行结果。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "创建商品表 " }, { t: 'code', v: "products" }, { t: 'text', v: "；" }],
+      [{ t: 'text', v: "编写 " }, { t: 'code', v: "ProductMapper" }, { t: 'text', v: " 接口，使用 XML 实现带商品名称模糊查询、价格区间筛选与分类过滤的动态 SQL 查询方法；" }],
+      [{ t: 'text', v: "编写单元测试验证各种条件组合下生成的 SQL 执行结果。" }],
     ] },
     ],
   },
@@ -1398,9 +1421,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-1', text: "什么是 MyBatis-Plus 与核心优势" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "在企业级业务开发中，大部分数据库交互都是基础的单表增删改查。MyBatis-Plus 提供了极高的开发效率：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "零 SQL 单表操作" }, { t: 'text', v: "：Mapper 接口只需继承 " }, { t: 'code', v: "BaseMapper<T>" }, { t: 'text', v: "，即可直接获得全套基础 CRUD 方法；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "类型安全条件构造" }, { t: 'text', v: "：通过 " }, { t: 'code', v: "LambdaQueryWrapper" }, { t: 'text', v: " 消除 SQL 字段字符串硬编码，重构更安全；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "内置通用插件" }, { t: 'text', v: "：自带物理分页插件、性能分析、逻辑删除与字段自动填充功能。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "零 SQL 单表操作" }, { t: 'text', v: "：Mapper 接口只需继承 " }, { t: 'code', v: "BaseMapper<T>" }, { t: 'text', v: "，即可直接获得全套基础 CRUD 方法；" }],
+      [{ t: 'strong', v: "类型安全条件构造" }, { t: 'text', v: "：通过 " }, { t: 'code', v: "LambdaQueryWrapper" }, { t: 'text', v: " 消除 SQL 字段字符串硬编码，重构更安全；" }],
+      [{ t: 'strong', v: "内置通用插件" }, { t: 'text', v: "：自带物理分页插件、性能分析、逻辑删除与字段自动填充功能。" }],
     ] },
     { kind: 'h3', id: 'sec-2', text: "引入依赖与实体类注解" },
     { kind: 'para', lines: [
@@ -1425,10 +1450,10 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "2. 分页查询调用" },
     { kind: 'code', lang: 'java', html: "<span class=\"tk-k\">public</span> <span class=\"tk-k\">Page</span>&lt;Product&gt; <span class=\"tk-k\">getProductPage</span>(<span class=\"tk-k\">int</span> pageNum, <span class=\"tk-k\">int</span> pageSize, <span class=\"tk-k\">String</span> category) {\n    <span class=\"tk-c\">// 构造分页对象（当前页码，每页条数）</span>\n    <span class=\"tk-k\">Page</span>&lt;<span class=\"tk-k\">Product</span>&gt; page = <span class=\"tk-k\">new</span> <span class=\"tk-k\">Page</span>&lt;&gt;(pageNum, pageSize);\n\n    <span class=\"tk-k\">LambdaQueryWrapper</span>&lt;<span class=\"tk-k\">Product</span>&gt; wrapper = <span class=\"tk-k\">new</span> <span class=\"tk-k\">LambdaQueryWrapper</span>&lt;&gt;();\n    wrapper.<span class=\"tk-k\">eq</span>(category != <span class=\"tk-s\">null</span>, Product<span class=\"tk-k\">::</span>getCategory, category);\n\n    <span class=\"tk-c\">// 执行分页查询，MyBatis-Plus 自动执行 COUNT 统计总数并完成分页限制</span>\n    <span class=\"tk-k\">return</span> productMapper.<span class=\"tk-k\">selectPage</span>(page, wrapper);\n}", raw: "public Page<Product> getProductPage(int pageNum, int pageSize, String category) {\n    // 构造分页对象（当前页码，每页条数）\n    Page<Product> page = new Page<>(pageNum, pageSize);\n\n    LambdaQueryWrapper<Product> wrapper = new LambdaQueryWrapper<>();\n    wrapper.eq(category != null, Product::getCategory, category);\n\n    // 执行分页查询，MyBatis-Plus 自动执行 COUNT 统计总数并完成分页限制\n    return productMapper.selectPage(page, wrapper);\n}" },
     { kind: 'h3', id: 'sec-6', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 搭建 Spring Boot 工程并引入 MyBatis-Plus；" }],
-      [{ t: 'text', v: "2. 编写 " }, { t: 'code', v: "Student" }, { t: 'text', v: " 实体类并继承 " }, { t: 'code', v: "BaseMapper<Student>" }, { t: 'text', v: "；" }],
-      [{ t: 'text', v: "3. 使用 " }, { t: 'code', v: "LambdaQueryWrapper" }, { t: 'text', v: " 实现多条件组合查询与分页，并配置 " }, { t: 'code', v: "@TableLogic" }, { t: 'text', v: " 逻辑删除。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "搭建 Spring Boot 工程并引入 MyBatis-Plus；" }],
+      [{ t: 'text', v: "编写 " }, { t: 'code', v: "Student" }, { t: 'text', v: " 实体类并继承 " }, { t: 'code', v: "BaseMapper<Student>" }, { t: 'text', v: "；" }],
+      [{ t: 'text', v: "使用 " }, { t: 'code', v: "LambdaQueryWrapper" }, { t: 'text', v: " 实现多条件组合查询与分页，并配置 " }, { t: 'code', v: "@TableLogic" }, { t: 'text', v: " 逻辑删除。" }],
     ] },
     ],
   },
@@ -1506,19 +1531,19 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: 'java', html: "<span class=\"tk-k\">package</span> <span class=\"tk-k\">tech</span>.<span class=\"tk-k\">yunfeiyang</span>.<span class=\"tk-k\">demo</span>.<span class=\"tk-k\">service</span>;\n\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">lombok</span>.<span class=\"tk-k\">extern</span>.<span class=\"tk-k\">slf4j</span>.<span class=\"tk-k\">Slf4j</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">stereotype</span>.<span class=\"tk-k\">Service</span>;\n\n@<span class=\"tk-k\">Slf4j</span>\n@<span class=\"tk-k\">Service</span>\n<span class=\"tk-k\">public</span> <span class=\"tk-k\">class</span> <span class=\"tk-k\">OrderService</span> {\n\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">void</span> <span class=\"tk-k\">processOrder</span>(<span class=\"tk-k\">Long</span> orderId) {\n        log.<span class=\"tk-k\">info</span>(<span class=\"tk-s\">\"开始处理订单，订单号: {}\"</span>, orderId);\n\n        <span class=\"tk-k\">try</span> {\n            <span class=\"tk-c\">// 业务处理逻辑</span>\n            log.<span class=\"tk-k\">debug</span>(<span class=\"tk-s\">\"正在执行扣款与库存锁定...\"</span>);\n        } <span class=\"tk-k\">catch</span> (<span class=\"tk-k\">Exception</span> e) {\n            log.<span class=\"tk-k\">error</span>(<span class=\"tk-s\">\"订单处理发生异常，订单号: {}\"</span>, orderId, e);\n        }\n    }\n}", raw: "package tech.yunfeiyang.demo.service;\n\nimport lombok.extern.slf4j.Slf4j;\nimport org.springframework.stereotype.Service;\n\n@Slf4j\n@Service\npublic class OrderService {\n\n    public void processOrder(Long orderId) {\n        log.info(\"开始处理订单，订单号: {}\", orderId);\n\n        try {\n            // 业务处理逻辑\n            log.debug(\"正在执行扣款与库存锁定...\");\n        } catch (Exception e) {\n            log.error(\"订单处理发生异常，订单号: {}\", orderId, e);\n        }\n    }\n}" },
     { kind: 'h3', id: 'sec-8', text: "注意事项与高频避坑" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. " }, { t: 'strong', v: "循环引用与栈溢出" }, { t: 'text', v: "：在双向关联关系（例如订单类包含用户对象，用户类又包含订单列表）中，直接使用 " }, { t: 'code', v: "@ToString" }, { t: 'text', v: " 或 " }, { t: 'code', v: "@EqualsAndHashCode" }, { t: 'text', v: " 会导致相互调用引发死循环栈溢出（StackOverflowError）。解决方法是使用 " }, { t: 'code', v: "@ToString.Exclude" }, { t: 'text', v: " 排除关联字段：" }],
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "循环引用与栈溢出" }, { t: 'text', v: "：在双向关联关系（例如订单类包含用户对象，用户类又包含订单列表）中，直接使用 " }, { t: 'code', v: "@ToString" }, { t: 'text', v: " 或 " }, { t: 'code', v: "@EqualsAndHashCode" }, { t: 'text', v: " 会导致相互调用引发死循环栈溢出（StackOverflowError）。解决方法是使用 " }, { t: 'code', v: "@ToString.Exclude" }, { t: 'text', v: " 排除关联字段：" }],
     ] },
     { kind: 'code', lang: 'java', html: "   @<span class=\"tk-k\">ToString</span>.Exclude\n   <span class=\"tk-k\">private</span> <span class=\"tk-k\">List</span>&lt;<span class=\"tk-k\">Order</span>&gt; orders;", raw: "   @ToString.Exclude\n   private List<Order> orders;" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "2. " }, { t: 'strong', v: "子类判等" }, { t: 'text', v: "：当实体类存在继承关系时，默认生成的 " }, { t: 'code', v: "equals" }, { t: 'text', v: " 不会比对父类字段。需在子类显式声明：" }],
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "子类判等" }, { t: 'text', v: "：当实体类存在继承关系时，默认生成的 " }, { t: 'code', v: "equals" }, { t: 'text', v: " 不会比对父类字段。需在子类显式声明：" }],
     ] },
     { kind: 'code', lang: 'java', html: "   @<span class=\"tk-k\">EqualsAndHashCode</span>(callSuper = <span class=\"tk-s\">true</span>)", raw: "   @EqualsAndHashCode(callSuper = true)" },
     { kind: 'h3', id: 'sec-9', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 创建带有 " }, { t: 'code', v: "@Data" }, { t: 'text', v: "、" }, { t: 'code', v: "@Builder" }, { t: 'text', v: "、" }, { t: 'code', v: "@NoArgsConstructor" }, { t: 'text', v: "、" }, { t: 'code', v: "@AllArgsConstructor" }, { t: 'text', v: " 的用户与角色实体类；" }],
-      [{ t: 'text', v: "2. 编写一个测试类，使用 " }, { t: 'code', v: ".builder()" }, { t: 'text', v: " 链式创建测试对象；" }],
-      [{ t: 'text', v: "3. 使用 " }, { t: 'code', v: "@Slf4j" }, { t: 'text', v: " 输出带参数占位符的运行日志。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "创建带有 " }, { t: 'code', v: "@Data" }, { t: 'text', v: "、" }, { t: 'code', v: "@Builder" }, { t: 'text', v: "、" }, { t: 'code', v: "@NoArgsConstructor" }, { t: 'text', v: "、" }, { t: 'code', v: "@AllArgsConstructor" }, { t: 'text', v: " 的用户与角色实体类；" }],
+      [{ t: 'text', v: "编写一个测试类，使用 " }, { t: 'code', v: ".builder()" }, { t: 'text', v: " 链式创建测试对象；" }],
+      [{ t: 'text', v: "使用 " }, { t: 'code', v: "@Slf4j" }, { t: 'text', v: " 输出带参数占位符的运行日志。" }],
     ] },
     ],
   },
@@ -1552,9 +1577,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-2', text: "什么是 Redis 与核心优势" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "Redis 是一个开源的使用 ANSI C 语言编写、支持网络、可基于内存亦可持久化的日志型、Key-Value 数据库：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "读写极速" }, { t: 'text', v: "：全内存操作，读写性能达 10 万次每秒（QPS）；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "丰富数据类型" }, { t: 'text', v: "：支持字符串（String）、哈希（Hash）、列表（List）、集合（Set）与有序集合（ZSet）；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "原子性与过期支持" }, { t: 'text', v: "：所有单条命令执行均为原子性，支持为键设置过期时间（TTL）自动清理。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "读写极速" }, { t: 'text', v: "：全内存操作，读写性能达 10 万次每秒（QPS）；" }],
+      [{ t: 'strong', v: "丰富数据类型" }, { t: 'text', v: "：支持字符串（String）、哈希（Hash）、列表（List）、集合（Set）与有序集合（ZSet）；" }],
+      [{ t: 'strong', v: "原子性与过期支持" }, { t: 'text', v: "：所有单条命令执行均为原子性，支持为键设置过期时间（TTL）自动清理。" }],
     ] },
     { kind: 'h3', id: 'sec-3', text: "五大核心数据结构及常用命令" },
     { kind: 'h4', text: "1. 字符串（String）" },
@@ -1610,10 +1637,10 @@ export const DOCS: readonly Doc[] = [
         [[{ t: 'strong', v: "缓存雪崩" }], [{ t: 'text', v: "大量缓存在同一时间大面积集中过期失效，数据库压力暴增崩溃" }], [{ t: 'text', v: "1. 缓存过期时间加上随机浮动值（如 1~5 分钟随机扰动）<br>2. 搭建 Redis 高可用集群" }]],
       ] },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在本地启动 Redis 服务并通过控制台完成五大基本数据类型的增删改查；" }],
-      [{ t: 'text', v: "2. 在 Spring Boot 中整合 Redis，编写商品详情查询缓存逻辑（优先查 Redis，未命中查 MySQL 并回填 Redis）；" }],
-      [{ t: 'text', v: "3. 验证设置过期时间与随机扰动防雪崩策略。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在本地启动 Redis 服务并通过控制台完成五大基本数据类型的增删改查；" }],
+      [{ t: 'text', v: "在 Spring Boot 中整合 Redis，编写商品详情查询缓存逻辑（优先查 Redis，未命中查 MySQL 并回填 Redis）；" }],
+      [{ t: 'text', v: "验证设置过期时间与随机扰动防雪崩策略。" }],
     ] },
     ],
   },
@@ -1637,10 +1664,12 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-1', text: "什么是 Nginx 与核心应用场景" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "Nginx 采用异步非阻塞的事件驱动模型，具备极高的并发连接处理能力（单机可支撑数万并发连接）与极低的内存消耗：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "静态资源托管" }, { t: 'text', v: "：高效托管前端 HTML、CSS、JS 与图片视频等静态文件；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "反向代理" }, { t: 'text', v: "：作为网关隐藏后端真实服务 IP，转发客户端请求并注入请求头；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "负载均衡" }, { t: 'text', v: "：将流量按预设算法分发到后端多个应用实例节点；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "跨域与安全防护" }, { t: 'text', v: "：统一配置 SSL 证书（HTTPS）与跨域 CORS 响应头。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "静态资源托管" }, { t: 'text', v: "：高效托管前端 HTML、CSS、JS 与图片视频等静态文件；" }],
+      [{ t: 'strong', v: "反向代理" }, { t: 'text', v: "：作为网关隐藏后端真实服务 IP，转发客户端请求并注入请求头；" }],
+      [{ t: 'strong', v: "负载均衡" }, { t: 'text', v: "：将流量按预设算法分发到后端多个应用实例节点；" }],
+      [{ t: 'strong', v: "跨域与安全防护" }, { t: 'text', v: "：统一配置 SSL 证书（HTTPS）与跨域 CORS 响应头。" }],
     ] },
     { kind: 'h3', id: 'sec-2', text: "常用管理控制命令" },
     { kind: 'para', lines: [
@@ -1668,10 +1697,10 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: '', html: "# 定义后端集群池\nupstream app_cluster {\n    # 1. 权重轮询：按 weight 比例分发请求\n    server 192.168.1.101:8080 weight=3;\n    server 192.168.1.102:8080 weight=1;\n    \n    # 2. 备用节点：主节点全挂时才启用\n    server 192.168.1.103:8080 backup;\n}\n\nserver {\n    listen 80;\n    server_name app.yunfeiyang.tech;\n\n    location / {\n        proxy_pass http://app_cluster;\n        proxy_set_header Host $host;\n    }\n}", raw: "# 定义后端集群池\nupstream app_cluster {\n    # 1. 权重轮询：按 weight 比例分发请求\n    server 192.168.1.101:8080 weight=3;\n    server 192.168.1.102:8080 weight=1;\n    \n    # 2. 备用节点：主节点全挂时才启用\n    server 192.168.1.103:8080 backup;\n}\n\nserver {\n    listen 80;\n    server_name app.yunfeiyang.tech;\n\n    location / {\n        proxy_pass http://app_cluster;\n        proxy_set_header Host $host;\n    }\n}" },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在本地或 Linux 服务器安装 Nginx；" }],
-      [{ t: 'text', v: "2. 部署一个前端构建产物并配置 " }, { t: 'code', v: "try_files" }, { t: 'text', v: "，验证路由刷新不报 404；" }],
-      [{ t: 'text', v: "3. 配置反向代理转发 " }, { t: 'code', v: "/api/" }, { t: 'text', v: " 请求到 Spring Boot 8080 端口，并通过浏览器验证数据联通。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在本地或 Linux 服务器安装 Nginx；" }],
+      [{ t: 'text', v: "部署一个前端构建产物并配置 " }, { t: 'code', v: "try_files" }, { t: 'text', v: "，验证路由刷新不报 404；" }],
+      [{ t: 'text', v: "配置反向代理转发 " }, { t: 'code', v: "/api/" }, { t: 'text', v: " 请求到 Spring Boot 8080 端口，并通过浏览器验证数据联通。" }],
     ] },
     ],
   },
@@ -1707,10 +1736,10 @@ export const DOCS: readonly Doc[] = [
       [{ t: 'text', v: "Docker 是一个开源的容器引擎，它允许开发者将应用及其所有依赖项打包进一个可移植的容器镜像中，实现“一次构建，到处运行”。" }],
     ] },
     { kind: 'code', lang: '', html: "镜像仓库 (Registry) ──(docker pull)──&gt; 镜像 (Image) ──(docker run)──&gt; 容器 (Container)", raw: "镜像仓库 (Registry) ──(docker pull)──> 镜像 (Image) ──(docker run)──> 容器 (Container)" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. " }, { t: 'strong', v: "镜像（Image）" }, { t: 'text', v: "：只读的应用运行环境模版（类似于类 Class 或安装光盘）。" }],
-      [{ t: 'text', v: "2. " }, { t: 'strong', v: "容器（Container）" }, { t: 'text', v: "：由镜像运行生成的独立进程实例（类似于对象 Object 或运行中的虚拟机）。" }],
-      [{ t: 'text', v: "3. " }, { t: 'strong', v: "镜像仓库（Registry）" }, { t: 'text', v: "：集中存储和分发镜像的平台（如 Docker Hub、阿里云镜像服务）。" }],
+    { kind: 'ol', items: [
+      [{ t: 'strong', v: "镜像（Image）" }, { t: 'text', v: "：只读的应用运行环境模版（类似于类 Class 或安装光盘）。" }],
+      [{ t: 'strong', v: "容器（Container）" }, { t: 'text', v: "：由镜像运行生成的独立进程实例（类似于对象 Object 或运行中的虚拟机）。" }],
+      [{ t: 'strong', v: "镜像仓库（Registry）" }, { t: 'text', v: "：集中存储和分发镜像的平台（如 Docker Hub、阿里云镜像服务）。" }],
     ] },
     { kind: 'h3', id: 'sec-3', text: "镜像核心操作命令" },
     { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 1. 从远程仓库拉取镜像</span>\n<span class=\"tk-k\">docker</span> pull mysql:8.0\n<span class=\"tk-k\">docker</span> pull redis:7.0\n\n<span class=\"tk-c\"># 2. 列出本地已下载的所有镜像</span>\n<span class=\"tk-k\">docker</span> images\n\n<span class=\"tk-c\"># 3. 删除指定镜像</span>\n<span class=\"tk-k\">docker</span> rmi redis:7.0", raw: "# 1. 从远程仓库拉取镜像\ndocker pull mysql:8.0\ndocker pull redis:7.0\n\n# 2. 列出本地已下载的所有镜像\ndocker images\n\n# 3. 删除指定镜像\ndocker rmi redis:7.0" },
@@ -1745,10 +1774,10 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "Compose 常用命令" },
     { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 后台一键构建并启动所有编排服务</span>\n<span class=\"tk-k\">docker</span> compose up -d\n\n<span class=\"tk-c\"># 查看编排服务运行状态</span>\n<span class=\"tk-k\">docker</span> compose ps\n\n<span class=\"tk-c\"># 停止并清理编排的所有容器与网络</span>\n<span class=\"tk-k\">docker</span> compose down", raw: "# 后台一键构建并启动所有编排服务\ndocker compose up -d\n\n# 查看编排服务运行状态\ndocker compose ps\n\n# 停止并清理编排的所有容器与网络\ndocker compose down" },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在本地或 Linux 虚拟机中安装 Docker 与 Docker Compose；" }],
-      [{ t: 'text', v: "2. 编写 " }, { t: 'code', v: "docker-compose.yml" }, { t: 'text', v: " 文件一键拉起 MySQL 8.0 与 Redis 7.0 实例；" }],
-      [{ t: 'text', v: "3. 为自己的 Spring Boot 项目编写 " }, { t: 'code', v: "Dockerfile" }, { t: 'text', v: "，成功构建并运行容器。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在本地或 Linux 虚拟机中安装 Docker 与 Docker Compose；" }],
+      [{ t: 'text', v: "编写 " }, { t: 'code', v: "docker-compose.yml" }, { t: 'text', v: " 文件一键拉起 MySQL 8.0 与 Redis 7.0 实例；" }],
+      [{ t: 'text', v: "为自己的 Spring Boot 项目编写 " }, { t: 'code', v: "Dockerfile" }, { t: 'text', v: "，成功构建并运行容器。" }],
     ] },
     ],
   },
@@ -1772,9 +1801,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h3', id: 'sec-1', text: "什么是 Sa-Token 与核心优势" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "在企业级 Web 开发中，安全与权限是核心基础模块。相比配置繁重庞大的传统安全框架，Sa-Token 提供了极致简单的 API：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "零繁琐配置" }, { t: 'text', v: "：无需实现数十个接口与过滤器链，引入依赖即开即用；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "功能全覆盖" }, { t: 'text', v: "：支持登录认证、权限认证、单点登录、多账号体系、踢人下线与无状态 Token；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "前后端分离友好" }, { t: 'text', v: "：天然适配 RESTful 接口架构，支持自定义 Header 传递 Token（默认 " }, { t: 'code', v: "satoken" }, { t: 'text', v: "）。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "零繁琐配置" }, { t: 'text', v: "：无需实现数十个接口与过滤器链，引入依赖即开即用；" }],
+      [{ t: 'strong', v: "功能全覆盖" }, { t: 'text', v: "：支持登录认证、权限认证、单点登录、多账号体系、踢人下线与无状态 Token；" }],
+      [{ t: 'strong', v: "前后端分离友好" }, { t: 'text', v: "：天然适配 RESTful 接口架构，支持自定义 Header 传递 Token（默认 " }, { t: 'code', v: "satoken" }, { t: 'text', v: "）。" }],
     ] },
     { kind: 'h3', id: 'sec-2', text: "引入依赖与核心配置" },
     { kind: 'para', lines: [
@@ -1807,11 +1838,11 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: 'java', html: "<span class=\"tk-k\">package</span> <span class=\"tk-k\">tech</span>.<span class=\"tk-k\">yunfeiyang</span>.<span class=\"tk-k\">demo</span>.<span class=\"tk-k\">exception</span>;\n\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">cn</span>.<span class=\"tk-k\">dev33</span>.<span class=\"tk-k\">satoken</span>.<span class=\"tk-k\">exception</span>.<span class=\"tk-k\">NotLoginException</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">cn</span>.<span class=\"tk-k\">dev33</span>.<span class=\"tk-k\">satoken</span>.<span class=\"tk-k\">exception</span>.<span class=\"tk-k\">NotPermissionException</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">cn</span>.<span class=\"tk-k\">dev33</span>.<span class=\"tk-k\">satoken</span>.<span class=\"tk-k\">exception</span>.<span class=\"tk-k\">NotRoleException</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">web</span>.<span class=\"tk-k\">bind</span>.<span class=\"tk-k\">annotation</span>.<span class=\"tk-k\">ExceptionHandler</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">web</span>.<span class=\"tk-k\">bind</span>.<span class=\"tk-k\">annotation</span>.<span class=\"tk-k\">RestControllerAdvice</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">tech</span>.<span class=\"tk-k\">yunfeiyang</span>.<span class=\"tk-k\">demo</span>.<span class=\"tk-k\">common</span>.<span class=\"tk-k\">ApiResponse</span>;\n\n@<span class=\"tk-k\">RestControllerAdvice</span>\n<span class=\"tk-k\">public</span> <span class=\"tk-k\">class</span> <span class=\"tk-k\">GlobalExceptionHandler</span> {\n\n    <span class=\"tk-c\">// 捕获未登录异常</span>\n    @<span class=\"tk-k\">ExceptionHandler</span>(NotLoginException.class)\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">ApiResponse</span>&lt;<span class=\"tk-k\">Void</span>&gt; <span class=\"tk-k\">handleNotLoginException</span>(<span class=\"tk-k\">NotLoginException</span> e) {\n        <span class=\"tk-k\">return</span> ApiResponse.<span class=\"tk-k\">error</span>(<span class=\"tk-s\">401</span>, <span class=\"tk-s\">\"当前未登录或会话已过期，请重新登录\"</span>);\n    }\n\n    <span class=\"tk-c\">// 捕获无权限异常</span>\n    @<span class=\"tk-k\">ExceptionHandler</span>(NotPermissionException.class)\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">ApiResponse</span>&lt;<span class=\"tk-k\">Void</span>&gt; <span class=\"tk-k\">handleNotPermissionException</span>(<span class=\"tk-k\">NotPermissionException</span> e) {\n        <span class=\"tk-k\">return</span> ApiResponse.<span class=\"tk-k\">error</span>(<span class=\"tk-s\">403</span>, <span class=\"tk-s\">\"无操作权限，缺少权限码: \"</span> + e.<span class=\"tk-k\">getPermission</span>());\n    }\n\n    <span class=\"tk-c\">// 捕获无角色异常</span>\n    @<span class=\"tk-k\">ExceptionHandler</span>(NotRoleException.class)\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">ApiResponse</span>&lt;<span class=\"tk-k\">Void</span>&gt; <span class=\"tk-k\">handleNotRoleException</span>(<span class=\"tk-k\">NotRoleException</span> e) {\n        <span class=\"tk-k\">return</span> ApiResponse.<span class=\"tk-k\">error</span>(<span class=\"tk-s\">403</span>, <span class=\"tk-s\">\"无操作权限，缺少角色: \"</span> + e.<span class=\"tk-k\">getRole</span>());\n    }\n}", raw: "package tech.yunfeiyang.demo.exception;\n\nimport cn.dev33.satoken.exception.NotLoginException;\nimport cn.dev33.satoken.exception.NotPermissionException;\nimport cn.dev33.satoken.exception.NotRoleException;\nimport org.springframework.web.bind.annotation.ExceptionHandler;\nimport org.springframework.web.bind.annotation.RestControllerAdvice;\nimport tech.yunfeiyang.demo.common.ApiResponse;\n\n@RestControllerAdvice\npublic class GlobalExceptionHandler {\n\n    // 捕获未登录异常\n    @ExceptionHandler(NotLoginException.class)\n    public ApiResponse<Void> handleNotLoginException(NotLoginException e) {\n        return ApiResponse.error(401, \"当前未登录或会话已过期，请重新登录\");\n    }\n\n    // 捕获无权限异常\n    @ExceptionHandler(NotPermissionException.class)\n    public ApiResponse<Void> handleNotPermissionException(NotPermissionException e) {\n        return ApiResponse.error(403, \"无操作权限，缺少权限码: \" + e.getPermission());\n    }\n\n    // 捕获无角色异常\n    @ExceptionHandler(NotRoleException.class)\n    public ApiResponse<Void> handleNotRoleException(NotRoleException e) {\n        return ApiResponse.error(403, \"无操作权限，缺少角色: \" + e.getRole());\n    }\n}" },
     { kind: 'h3', id: 'sec-7', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 搭建 Spring Boot 工程并引入 Sa-Token；" }],
-      [{ t: 'text', v: "2. 编写用户登录接口，返回生成的 Token；" }],
-      [{ t: 'text', v: "3. 配置全局路由拦截器并在接口上添加 " }, { t: 'code', v: "@SaCheckPermission(\"user:export\")" }, { t: 'text', v: " 注解；" }],
-      [{ t: 'text', v: "4. 使用 Postman 或 Apifox 验证未携带 Token 被拦截、携带 Token 正常访问。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "搭建 Spring Boot 工程并引入 Sa-Token；" }],
+      [{ t: 'text', v: "编写用户登录接口，返回生成的 Token；" }],
+      [{ t: 'text', v: "配置全局路由拦截器并在接口上添加 " }, { t: 'code', v: "@SaCheckPermission(\"user:export\")" }, { t: 'text', v: " 注解；" }],
+      [{ t: 'text', v: "使用 Postman 或 Apifox 验证未携带 Token 被拦截、携带 Token 正常访问。" }],
     ] },
     ],
   },
@@ -1837,16 +1868,18 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'para', lines: [
       [{ t: 'text', v: "Apifox 实现了“一套数据源贯穿整个研发生命周期”：" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "接口文档即调试界面" }, { t: 'text', v: "：定义好接口字段后，直接点击即可发起调试，无需重复填参；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "前后端并行开发" }, { t: 'text', v: "：后端定义好契约后，Apifox 自动生成高保真 Mock 数据，前端无需等待后端编码完成；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "自动化测试回归" }, { t: 'text', v: "：将多个接口按业务场景串联成测试套件，一键批量执行并生成通过率报告。" }],
+    ] },
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "接口文档即调试界面" }, { t: 'text', v: "：定义好接口字段后，直接点击即可发起调试，无需重复填参；" }],
+      [{ t: 'strong', v: "前后端并行开发" }, { t: 'text', v: "：后端定义好契约后，Apifox 自动生成高保真 Mock 数据，前端无需等待后端编码完成；" }],
+      [{ t: 'strong', v: "自动化测试回归" }, { t: 'text', v: "：将多个接口按业务场景串联成测试套件，一键批量执行并生成通过率报告。" }],
     ] },
     { kind: 'h3', id: 'sec-2', text: "接口设计与标准参数定义" },
     { kind: 'h4', text: "1. 基础信息定义" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "请求方法" }, { t: 'text', v: "：" }, { t: 'code', v: "GET" }, { t: 'text', v: "（查询）、" }, { t: 'code', v: "POST" }, { t: 'text', v: "（创建）、" }, { t: 'code', v: "PUT" }, { t: 'text', v: "（更新）、" }, { t: 'code', v: "DELETE" }, { t: 'text', v: "（删除）；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "接口路径" }, { t: 'text', v: "：推荐 RESTful 规范，如 " }, { t: 'code', v: "/api/v1/products/{id}" }, { t: 'text', v: "；" }],
-      [{ t: 'text', v: "* " }, { t: 'strong', v: "接口名称" }, { t: 'text', v: "：明确动宾短语，如 " }, { t: 'code', v: "根据商品ID查询详情" }, { t: 'text', v: "。" }],
+    { kind: 'ul', items: [
+      [{ t: 'strong', v: "请求方法" }, { t: 'text', v: "：" }, { t: 'code', v: "GET" }, { t: 'text', v: "（查询）、" }, { t: 'code', v: "POST" }, { t: 'text', v: "（创建）、" }, { t: 'code', v: "PUT" }, { t: 'text', v: "（更新）、" }, { t: 'code', v: "DELETE" }, { t: 'text', v: "（删除）；" }],
+      [{ t: 'strong', v: "接口路径" }, { t: 'text', v: "：推荐 RESTful 规范，如 " }, { t: 'code', v: "/api/v1/products/{id}" }, { t: 'text', v: "；" }],
+      [{ t: 'strong', v: "接口名称" }, { t: 'text', v: "：明确动宾短语，如 " }, { t: 'code', v: "根据商品ID查询详情" }, { t: 'text', v: "。" }],
     ] },
     { kind: 'h4', text: "2. 参数类型选择与规范" },
     { kind: 'table',
@@ -1884,12 +1917,12 @@ export const DOCS: readonly Doc[] = [
       [{ t: 'text', v: "在前后端联调前，前端可以直接调用 Apifox 提供的本地/云端 Mock 服务获取模拟数据。" }],
     ] },
     { kind: 'h4', text: "常用 Faker 智能 Mock 语法" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* " }, { t: 'code', v: "@name" }, { t: 'text', v: "：随机生成中文姓名（如“李强”）；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "@cparagraph(1, 3)" }, { t: 'text', v: "：随机生成 1 到 3 句中文段落文本；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "@integer(18, 60)" }, { t: 'text', v: "：生成 18 到 60 之间的随机整数；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "@datetime(\"yyyy-MM-dd HH:mm:ss\")" }, { t: 'text', v: "：生成标准格式的当前时间；" }],
-      [{ t: 'text', v: "* " }, { t: 'code', v: "@image('200x100', '#50B347', '#FFF', '商品图')" }, { t: 'text', v: "：生成指定尺寸的占位图 URL。" }],
+    { kind: 'ul', items: [
+      [{ t: 'code', v: "@name" }, { t: 'text', v: "：随机生成中文姓名（如“李强”）；" }],
+      [{ t: 'code', v: "@cparagraph(1, 3)" }, { t: 'text', v: "：随机生成 1 到 3 句中文段落文本；" }],
+      [{ t: 'code', v: "@integer(18, 60)" }, { t: 'text', v: "：生成 18 到 60 之间的随机整数；" }],
+      [{ t: 'code', v: "@datetime(\"yyyy-MM-dd HH:mm:ss\")" }, { t: 'text', v: "：生成标准格式的当前时间；" }],
+      [{ t: 'code', v: "@image('200x100', '#50B347', '#FFF', '商品图')" }, { t: 'text', v: "：生成指定尺寸的占位图 URL。" }],
     ] },
     { kind: 'h3', id: 'sec-5', text: "自动化测试用例集编排" },
     { kind: 'para', lines: [
@@ -1897,11 +1930,11 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: '', html: "1. 发起登录请求 ➔ 2. 断言 HTTP 状态码 200 且 code 为 0\n       ↓\n3. 创建新商品 ➔ 4. 自动提取返回的 productId\n       ↓\n5. 查询商品详情 ➔ 6. 断言商品名称与创建时一致\n       ↓\n7. 删除该商品 ➔ 8. 断言删除成功", raw: "1. 发起登录请求 ➔ 2. 断言 HTTP 状态码 200 且 code 为 0\n       ↓\n3. 创建新商品 ➔ 4. 自动提取返回的 productId\n       ↓\n5. 查询商品详情 ➔ 6. 断言商品名称与创建时一致\n       ↓\n7. 删除该商品 ➔ 8. 断言删除成功" },
     { kind: 'h3', id: 'sec-6', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 下载并安装 Apifox 客户端；" }],
-      [{ t: 'text', v: "2. 新建一个测试项目并设计一组用户与商品增删改查接口；" }],
-      [{ t: 'text', v: "3. 编写登录后置脚本实现 Token 自动提取；" }],
-      [{ t: 'text', v: "4. 运行一次自动化测试用例套件并导出测试报告。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "下载并安装 Apifox 客户端；" }],
+      [{ t: 'text', v: "新建一个测试项目并设计一组用户与商品增删改查接口；" }],
+      [{ t: 'text', v: "编写登录后置脚本实现 Token 自动提取；" }],
+      [{ t: 'text', v: "运行一次自动化测试用例套件并导出测试报告。" }],
     ] },
     ],
   },
@@ -1926,9 +1959,9 @@ export const DOCS: readonly Doc[] = [
       [{ t: 'text', v: "Shell 脚本是一个包含一系列 Linux 命令的纯文本文件。" }],
     ] },
     { kind: 'h4', text: "1. 脚本头部声明与执行" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* 必须以 " }, { t: 'code', v: "#!/bin/bash" }, { t: 'text', v: " 开头（指定解释器路径）；" }],
-      [{ t: 'text', v: "* 执行前必须赋予可执行权限：" }, { t: 'code', v: "chmod +x script.sh" }, { t: 'text', v: "。" }],
+    { kind: 'ul', items: [
+      [{ t: 'text', v: "必须以 " }, { t: 'code', v: "#!/bin/bash" }, { t: 'text', v: " 开头（指定解释器路径）；" }],
+      [{ t: 'text', v: "执行前必须赋予可执行权限：" }, { t: 'code', v: "chmod +x script.sh" }, { t: 'text', v: "。" }],
     ] },
     { kind: 'h4', text: "2. 第一个 Shell 脚本实例" },
     { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\">#!/bin/bash</span>\n\n<span class=\"tk-c\"># 这是一个单行注释</span>\n<span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"===== 开始执行自动化脚本 =====\"</span>\nCURRENT_TIME=$(<span class=\"tk-k\">date</span> <span class=\"tk-s\">\"+%Y-%m-%d %H:%M:%S\"</span>)\n<span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"当前服务器时间: </span>$<span class=\"tk-s\">CURRENT_TIME\"</span>\n<span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"当前主机名: </span>$(<span class=\"tk-k\">hostname</span>)<span class=\"tk-s\">\"</span>", raw: "#!/bin/bash\n\n# 这是一个单行注释\necho \"===== 开始执行自动化脚本 =====\"\nCURRENT_TIME=$(date \"+%Y-%m-%d %H:%M:%S\")\necho \"当前服务器时间: $CURRENT_TIME\"\necho \"当前主机名: $(hostname)\"" },
@@ -1958,11 +1991,11 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "3. 循环控制语句" },
     { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\">#!/bin/bash</span>\n\n<span class=\"tk-c\"># 遍历列表项</span>\n<span class=\"tk-k\">for</span> ENV <span class=\"tk-k\">in</span> <span class=\"tk-s\">\"dev\"</span> <span class=\"tk-s\">\"test\"</span> <span class=\"tk-s\">\"prod\"</span>; <span class=\"tk-k\">do</span>\n    <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"正在准备部署环境: </span>$<span class=\"tk-s\">ENV\"</span>\n<span class=\"tk-k\">done</span>", raw: "#!/bin/bash\n\n# 遍历列表项\nfor ENV in \"dev\" \"test\" \"prod\"; do\n    echo \"正在准备部署环境: $ENV\"\ndone" },
     { kind: 'h3', id: 'sec-4', text: "管道符与输出重定向" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "* **管道符 " }, { t: 'code', v: "|" }, { t: 'text', v: "**：将前一个命令的标准输出作为后一个命令的标准输入，如 " }, { t: 'code', v: "ps -ef | grep java" }, { t: 'text', v: "；" }],
-      [{ t: 'text', v: "* **覆盖重定向 " }, { t: 'code', v: ">" }, { t: 'text', v: "**：将输出覆盖写入文件；" }],
-      [{ t: 'text', v: "* **追加重定向 " }, { t: 'code', v: ">>" }, { t: 'text', v: "**：将输出追加写入文件末尾；" }],
-      [{ t: 'text', v: "* **后台日志重定向 " }, { t: 'code', v: "> app.log 2>&1 &" }, { t: 'text', v: "**：将标准输出（1）与标准错误（2）统一合并写入 " }, { t: 'code', v: "app.log" }, { t: 'text', v: " 并在后台脱离终端运行。" }],
+    { kind: 'ul', items: [
+      [{ t: 'text', v: "**管道符 " }, { t: 'code', v: "|" }, { t: 'text', v: "**：将前一个命令的标准输出作为后一个命令的标准输入，如 " }, { t: 'code', v: "ps -ef | grep java" }, { t: 'text', v: "；" }],
+      [{ t: 'text', v: "**覆盖重定向 " }, { t: 'code', v: ">" }, { t: 'text', v: "**：将输出覆盖写入文件；" }],
+      [{ t: 'text', v: "**追加重定向 " }, { t: 'code', v: ">>" }, { t: 'text', v: "**：将输出追加写入文件末尾；" }],
+      [{ t: 'text', v: "**后台日志重定向 " }, { t: 'code', v: "> app.log 2>&1 &" }, { t: 'text', v: "**：将标准输出（1）与标准错误（2）统一合并写入 " }, { t: 'code', v: "app.log" }, { t: 'text', v: " 并在后台脱离终端运行。" }],
     ] },
     { kind: 'h3', id: 'sec-5', text: "企业级 Spring Boot 生产运维管理脚本（app.sh）" },
     { kind: 'para', lines: [
@@ -1970,10 +2003,10 @@ export const DOCS: readonly Doc[] = [
     ] },
     { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\">#!/bin/bash</span>\n\n<span class=\"tk-c\"># 应用 JAR 文件名</span>\nJAR_NAME=<span class=\"tk-s\">\"demo-service-1.0.0.jar\"</span>\nLOG_FILE=<span class=\"tk-s\">\"app.log\"</span>\n\n<span class=\"tk-c\"># 获取应用当前运行的进程号 PID</span>\n<span class=\"tk-k\">get_pid</span>() {\n    <span class=\"tk-k\">echo</span> $(<span class=\"tk-k\">ps</span> -ef | <span class=\"tk-k\">grep</span> <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">JAR_NAME\"</span> | <span class=\"tk-k\">grep</span> -v grep | <span class=\"tk-k\">awk</span> <span class=\"tk-s\">'{print $2}'</span>)\n}\n\n<span class=\"tk-k\">start</span>() {\n    PID=$(<span class=\"tk-k\">get_pid</span>)\n    <span class=\"tk-k\">if</span> [ -n <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">PID\"</span> ]; <span class=\"tk-k\">then</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"应用已在运行中，进程号 PID: </span>$<span class=\"tk-s\">PID\"</span>\n        <span class=\"tk-k\">return</span>\n    <span class=\"tk-k\">fi</span>\n\n    <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"正在启动 </span>$<span class=\"tk-s\">JAR_NAME ...\"</span>\n    <span class=\"tk-c\"># 核心后台启动命令</span>\n    <span class=\"tk-k\">nohup</span> java -Xms512m -Xmx1024m -jar $JAR_NAME &gt; $LOG_FILE 2&gt;&amp;1 &amp;\n\n    <span class=\"tk-k\">sleep</span> <span class=\"tk-s\">2</span>\n    PID=$(<span class=\"tk-k\">get_pid</span>)\n    <span class=\"tk-k\">if</span> [ -n <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">PID\"</span> ]; <span class=\"tk-k\">then</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"启动成功！进程号 PID: </span>$<span class=\"tk-s\">PID，日志文件: </span>$<span class=\"tk-s\">LOG_FILE\"</span>\n    <span class=\"tk-k\">else</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"启动失败，请查看日志: </span>$<span class=\"tk-s\">LOG_FILE\"</span>\n    <span class=\"tk-k\">fi</span>\n}\n\n<span class=\"tk-k\">stop</span>() {\n    PID=$(<span class=\"tk-k\">get_pid</span>)\n    <span class=\"tk-k\">if</span> [ -z <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">PID\"</span> ]; <span class=\"tk-k\">then</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"应用未在运行\"</span>\n        <span class=\"tk-k\">return</span>\n    <span class=\"tk-k\">fi</span>\n\n    <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"正在停止进程 PID: </span>$<span class=\"tk-s\">PID ...\"</span>\n    <span class=\"tk-k\">kill</span> $PID\n    \n    <span class=\"tk-c\"># 循环等待进程优雅退出</span>\n    <span class=\"tk-k\">for</span> i <span class=\"tk-k\">in</span> {<span class=\"tk-k\">1..10}</span>; <span class=\"tk-k\">do</span>\n        <span class=\"tk-k\">sleep</span> <span class=\"tk-s\">1</span>\n        PID=$(<span class=\"tk-k\">get_pid</span>)\n        <span class=\"tk-k\">if</span> [ -z <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">PID\"</span> ]; <span class=\"tk-k\">then</span>\n            <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"应用已安全停止\"</span>\n            <span class=\"tk-k\">return</span>\n        <span class=\"tk-k\">fi</span>\n    <span class=\"tk-k\">done</span>\n\n    <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"优雅停止超时，执行强制 kill -9 ...\"</span>\n    <span class=\"tk-k\">kill</span> -9 $PID\n}\n\n<span class=\"tk-k\">status</span>() {\n    PID=$(<span class=\"tk-k\">get_pid</span>)\n    <span class=\"tk-k\">if</span> [ -n <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">PID\"</span> ]; <span class=\"tk-k\">then</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"应用正在运行，进程号 PID: </span>$<span class=\"tk-s\">PID\"</span>\n    <span class=\"tk-k\">else</span>\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"应用未运行\"</span>\n    <span class=\"tk-k\">fi</span>\n}\n\n<span class=\"tk-c\"># 根据传入的第一个参数分发执行</span>\n<span class=\"tk-k\">case</span> <span class=\"tk-s\">\"</span>$<span class=\"tk-s\">1\"</span> <span class=\"tk-k\">in</span>\n    <span class=\"tk-s\">\"start\"</span>)\n        <span class=\"tk-k\">start</span>\n        ;;\n    <span class=\"tk-s\">\"stop\"</span>)\n        <span class=\"tk-k\">stop</span>\n        ;;\n    <span class=\"tk-s\">\"restart\"</span>)\n        <span class=\"tk-k\">stop</span>\n        <span class=\"tk-k\">sleep</span> <span class=\"tk-s\">2</span>\n        <span class=\"tk-k\">start</span>\n        ;;\n    <span class=\"tk-s\">\"status\"</span>)\n        <span class=\"tk-k\">status</span>\n        ;;\n    *)\n        <span class=\"tk-k\">echo</span> <span class=\"tk-s\">\"使用方式: </span>$<span class=\"tk-s\">0 {start|stop|restart|status}\"</span>\n        <span class=\"tk-k\">exit</span> <span class=\"tk-s\">1</span>\n        ;;\n<span class=\"tk-k\">esac</span>", raw: "#!/bin/bash\n\n# 应用 JAR 文件名\nJAR_NAME=\"demo-service-1.0.0.jar\"\nLOG_FILE=\"app.log\"\n\n# 获取应用当前运行的进程号 PID\nget_pid() {\n    echo $(ps -ef | grep \"$JAR_NAME\" | grep -v grep | awk '{print $2}')\n}\n\nstart() {\n    PID=$(get_pid)\n    if [ -n \"$PID\" ]; then\n        echo \"应用已在运行中，进程号 PID: $PID\"\n        return\n    fi\n\n    echo \"正在启动 $JAR_NAME ...\"\n    # 核心后台启动命令\n    nohup java -Xms512m -Xmx1024m -jar $JAR_NAME > $LOG_FILE 2>&1 &\n\n    sleep 2\n    PID=$(get_pid)\n    if [ -n \"$PID\" ]; then\n        echo \"启动成功！进程号 PID: $PID，日志文件: $LOG_FILE\"\n    else\n        echo \"启动失败，请查看日志: $LOG_FILE\"\n    fi\n}\n\nstop() {\n    PID=$(get_pid)\n    if [ -z \"$PID\" ]; then\n        echo \"应用未在运行\"\n        return\n    fi\n\n    echo \"正在停止进程 PID: $PID ...\"\n    kill $PID\n    \n    # 循环等待进程优雅退出\n    for i in {1..10}; do\n        sleep 1\n        PID=$(get_pid)\n        if [ -z \"$PID\" ]; then\n            echo \"应用已安全停止\"\n            return\n        fi\n    done\n\n    echo \"优雅停止超时，执行强制 kill -9 ...\"\n    kill -9 $PID\n}\n\nstatus() {\n    PID=$(get_pid)\n    if [ -n \"$PID\" ]; then\n        echo \"应用正在运行，进程号 PID: $PID\"\n    else\n        echo \"应用未运行\"\n    fi\n}\n\n# 根据传入的第一个参数分发执行\ncase \"$1\" in\n    \"start\")\n        start\n        ;;\n    \"stop\")\n        stop\n        ;;\n    \"restart\")\n        stop\n        sleep 2\n        start\n        ;;\n    \"status\")\n        status\n        ;;\n    *)\n        echo \"使用方式: $0 {start|stop|restart|status}\"\n        exit 1\n        ;;\nesac" },
     { kind: 'h3', id: 'sec-6', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 在 Linux 系统中创建 " }, { t: 'code', v: "app.sh" }, { t: 'text', v: " 脚本并赋予执行权限（" }, { t: 'code', v: "chmod +x app.sh" }, { t: 'text', v: "）；" }],
-      [{ t: 'text', v: "2. 使用 " }, { t: 'code', v: "./app.sh start" }, { t: 'text', v: " 启动一个测试 Java 程序并检查进程与日志；" }],
-      [{ t: 'text', v: "3. 执行 " }, { t: 'code', v: "./app.sh status" }, { t: 'text', v: " 与 " }, { t: 'code', v: "./app.sh stop" }, { t: 'text', v: " 验证控制流程。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "在 Linux 系统中创建 " }, { t: 'code', v: "app.sh" }, { t: 'text', v: " 脚本并赋予执行权限（" }, { t: 'code', v: "chmod +x app.sh" }, { t: 'text', v: "）；" }],
+      [{ t: 'text', v: "使用 " }, { t: 'code', v: "./app.sh start" }, { t: 'text', v: " 启动一个测试 Java 程序并检查进程与日志；" }],
+      [{ t: 'text', v: "执行 " }, { t: 'code', v: "./app.sh status" }, { t: 'text', v: " 与 " }, { t: 'code', v: "./app.sh stop" }, { t: 'text', v: " 验证控制流程。" }],
     ] },
     ],
   },
@@ -2034,10 +2067,10 @@ export const DOCS: readonly Doc[] = [
     { kind: 'h4', text: "4. 消费者：监听并消费消息" },
     { kind: 'code', lang: 'java', html: "<span class=\"tk-k\">package</span> <span class=\"tk-k\">tech</span>.<span class=\"tk-k\">yunfeiyang</span>.<span class=\"tk-k\">demo</span>.<span class=\"tk-k\">listener</span>;\n\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">amqp</span>.<span class=\"tk-k\">rabbit</span>.<span class=\"tk-k\">annotation</span>.<span class=\"tk-k\">RabbitHandler</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">amqp</span>.<span class=\"tk-k\">rabbit</span>.<span class=\"tk-k\">annotation</span>.<span class=\"tk-k\">RabbitListener</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">org</span>.<span class=\"tk-k\">springframework</span>.<span class=\"tk-k\">stereotype</span>.<span class=\"tk-k\">Component</span>;\n<span class=\"tk-k\">import</span> <span class=\"tk-k\">tech</span>.<span class=\"tk-k\">yunfeiyang</span>.<span class=\"tk-k\">demo</span>.<span class=\"tk-k\">config</span>.<span class=\"tk-k\">RabbitConfig</span>;\n\n@<span class=\"tk-k\">Component</span>\n@<span class=\"tk-k\">RabbitListener</span>(queues = RabbitConfig.QUEUE_NAME) <span class=\"tk-c\">// 监听指定队列</span>\n<span class=\"tk-k\">public</span> <span class=\"tk-k\">class</span> <span class=\"tk-k\">OrderMessageConsumer</span> {\n\n    @<span class=\"tk-k\">RabbitHandler</span>\n    <span class=\"tk-k\">public</span> <span class=\"tk-k\">void</span> <span class=\"tk-k\">handleOrderMessage</span>(<span class=\"tk-k\">String</span> orderId) {\n        System.out.<span class=\"tk-k\">println</span>(<span class=\"tk-s\">\"收到订单消息，正在执行后续积分发放与短信推送，订单号: \"</span> + orderId);\n    }\n}", raw: "package tech.yunfeiyang.demo.listener;\n\nimport org.springframework.amqp.rabbit.annotation.RabbitHandler;\nimport org.springframework.amqp.rabbit.annotation.RabbitListener;\nimport org.springframework.stereotype.Component;\nimport tech.yunfeiyang.demo.config.RabbitConfig;\n\n@Component\n@RabbitListener(queues = RabbitConfig.QUEUE_NAME) // 监听指定队列\npublic class OrderMessageConsumer {\n\n    @RabbitHandler\n    public void handleOrderMessage(String orderId) {\n        System.out.println(\"收到订单消息，正在执行后续积分发放与短信推送，订单号: \" + orderId);\n    }\n}" },
     { kind: 'h3', id: 'sec-4', text: "阶段实战大作业" },
-    { kind: 'para', lines: [
-      [{ t: 'text', v: "1. 启动本地 RabbitMQ 容器并打开 Management Web 管理后台（默认端口 15672）；" }],
-      [{ t: 'text', v: "2. 搭建 Spring Boot 工程，声明直连交换机与通知队列；" }],
-      [{ t: 'text', v: "3. 编写 Controller 接口触发消息投递，并观察消费者异步接收打印日志。" }],
+    { kind: 'ol', items: [
+      [{ t: 'text', v: "启动本地 RabbitMQ 容器并打开 Management Web 管理后台（默认端口 15672）；" }],
+      [{ t: 'text', v: "搭建 Spring Boot 工程，声明直连交换机与通知队列；" }],
+      [{ t: 'text', v: "编写 Controller 接口触发消息投递，并观察消费者异步接收打印日志。" }],
     ] },
     ],
   },

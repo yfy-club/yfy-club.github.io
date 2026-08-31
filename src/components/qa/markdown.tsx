@@ -19,9 +19,65 @@ interface MarkdownProps {
   content: string
 }
 
+function cleanMathAndArrows(text: string): string {
+  if (!text) return ''
+  return text
+    // LaTeX 箭头
+    .replace(/\$(?:\\rightarrow|\\to)\$/g, '→')
+    .replace(/\\rightarrow\b/g, '→')
+    .replace(/\\to\b/g, '→')
+    .replace(/\$(?:\\Rightarrow|\\implies)\$/g, '⇒')
+    .replace(/\\Rightarrow\b/g, '⇒')
+    .replace(/\\implies\b/g, '⇒')
+    .replace(/\$(?:\\leftarrow|\\gets)\$/g, '←')
+    .replace(/\\leftarrow\b/g, '←')
+    .replace(/\\gets\b/g, '←')
+    .replace(/\$\\Leftarrow\$/g, '⇐')
+    .replace(/\\Leftarrow\b/g, '⇐')
+    .replace(/\$(?:\\leftrightarrow|\\iff)\$/g, '↔')
+    .replace(/\\leftrightarrow\b/g, '↔')
+    .replace(/\$\\Leftrightarrow\$/g, '⇔')
+    .replace(/\\Leftrightarrow\b/g, '⇔')
+    .replace(/\$\\uparrow\$/g, '↑')
+    .replace(/\\uparrow\b/g, '↑')
+    .replace(/\$\\downarrow\$/g, '↓')
+    .replace(/\\downarrow\b/g, '↓')
+    // 纯文本箭头 (前导或后随空格)
+    .replace(/(?<=\s|^)-->\s*/g, '→ ')
+    .replace(/(?<=\s|^)->\s*/g, '→ ')
+    .replace(/(?<=\s|^)==>\s*/g, '⇒ ')
+    .replace(/(?<=\s|^)=>\s*/g, '⇒ ')
+    .replace(/(?<=\s|^)<--\s*/g, '← ')
+    .replace(/(?<=\s|^)<-\s*/g, '← ')
+    .replace(/(?<=\s|^)<==>\s*/g, '⇔ ')
+    .replace(/(?<=\s|^)<=>\s*/g, '⇔ ')
+    .replace(/(?<=\s|^)<-->\s*/g, '↔ ')
+    .replace(/(?<=\s|^)<->\s*/g, '↔ ')
+    // 数学符号
+    .replace(/\$(?:\\cdot|\\bullet)\$/g, '·')
+    .replace(/\\cdot\b|\\bullet\b/g, '·')
+    .replace(/\$\\times\$/g, '×')
+    .replace(/\\times\b/g, '×')
+    .replace(/\$\\div\$/g, '÷')
+    .replace(/\\div\b/g, '÷')
+    .replace(/\$(?:\\ne|\\neq)\$/g, '≠')
+    .replace(/\\ne\b|\\neq\b/g, '≠')
+    .replace(/\$(?:\\le|\\leq)\$/g, '≤')
+    .replace(/\\le\b|\\leq\b/g, '≤')
+    .replace(/\$(?:\\ge|\\geq)\$/g, '≥')
+    .replace(/\\ge\b|\\geq\b/g, '≥')
+    .replace(/\$\\approx\$/g, '≈')
+    .replace(/\\approx\b/g, '≈')
+    .replace(/\$\\pm\$/g, '±')
+    .replace(/\\pm\b/g, '±')
+    // 剥离剩余行内公式的 $ 符号，如 $O(N)$ -> O(N)
+    .replace(/\$([^$\n]+)\$/g, '$1')
+}
+
 function cleanMarkdownContent(raw: string): string {
   if (!raw) return ''
-  return raw
+  const sanitized = cleanMathAndArrows(raw)
+  return sanitized
     .replace(/<\|?tool_call[\s\S]*?(?:<\/tool_call>|<\|?tool_call\|?>|<tool_call\|>)/gi, '')
     .replace(/call:web_search\{[\s\S]*?\}/gi, '')
     .replace(/<\|(?:im_end|endoftext|im_start)[^>]*>/gi, '')
