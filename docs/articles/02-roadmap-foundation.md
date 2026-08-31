@@ -18,7 +18,7 @@ minutes: 8
 | 算法竞赛训练 | [灵神算法基础精讲](https://www.bilibili.com/video/BV1bP411c7oJ) | `BV1bP411c7oJ` | 二分查找、双指针、滑窗与动态规划经典题型 |
 | 刷题题单 | [灵神经典算法题单](https://github.com/EndlessCheng/EndlessCheng) | `开源题单` | 蓝桥杯与天梯赛高频考点分类训练 |
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/h6lqxDwUmJQ?si=1jMhjmdEtkoxfEmU" title="Harvard CS50x Introduction to Computer Science" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+<video-preview provider="bilibili" id="BV1Ls6BYkEGk" title="哈佛 CS50x 计算机科学通识导论" bvid="BV1Ls6BYkEGk"></video-preview>
 
 ### 计算机科学通识与 CS50x 导论
 

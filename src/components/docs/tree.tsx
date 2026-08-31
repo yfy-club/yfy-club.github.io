@@ -13,14 +13,34 @@ interface TreeProps {
   current: string | null
   /** 当前篇里滚到了哪一节，高亮用。索引页传 null。 */
   section?: string | null
+  /** 打开全局搜索框回调 */
+  onOpenSearch?: () => void
 }
 
-export function DocTree({ current, section = null }: TreeProps) {
+export function DocTree({ current, section = null, onOpenSearch }: TreeProps) {
   return (
     <nav className="doc-tree" aria-label="档案库目录">
       <div className="doc-tree-head">
-        <Reticle size={18} />
-        <span className="doc-tree-hud">ARCHIVE</span>
+        <div className="doc-tree-head-left">
+          <Reticle size={18} />
+          <span className="doc-tree-hud">ARCHIVE</span>
+        </div>
+        {onOpenSearch && (
+          <button
+            type="button"
+            className="doc-tree-search-btn"
+            onClick={onOpenSearch}
+            title="搜索文档 (Ctrl + K)"
+            aria-label="搜索文档"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+            <span>搜索</span>
+            <kbd className="doc-tree-search-kbd">Ctrl K</kbd>
+          </button>
+        )}
       </div>
 
       {DOC_CATEGORIES.map((cat) => (

@@ -19,7 +19,7 @@ export interface DocInline {
 export type DocBlock =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'para'; lines: readonly (readonly DocInline[])[] }
-  | { kind: 'code'; lang: string; html: string }
+  | { kind: 'code'; lang: string; html: string; raw?: string }
   | {
       kind: 'table'
       head: readonly (readonly DocInline[])[]
@@ -32,6 +32,11 @@ export type DocBlock =
       id: string
       title: string
       bvid?: string
+    }
+  | {
+      kind: 'details'
+      title: string
+      lines: readonly (readonly DocInline[])[]
     }
 
 export interface DocCategory {
@@ -137,7 +142,7 @@ export const DOCS: readonly Doc[] = [
         [[{ t: 'text', v: "算法竞赛训练" }], [{ t: 'link', v: "灵神算法基础精讲", href: "https://www.bilibili.com/video/BV1bP411c7oJ" }], [{ t: 'code', v: "BV1bP411c7oJ" }], [{ t: 'text', v: "二分查找、双指针、滑窗与动态规划经典题型" }]],
         [[{ t: 'text', v: "刷题题单" }], [{ t: 'link', v: "灵神经典算法题单", href: "https://github.com/EndlessCheng/EndlessCheng" }], [{ t: 'code', v: "开源题单" }], [{ t: 'text', v: "蓝桥杯与天梯赛高频考点分类训练" }]],
       ] },
-    { kind: 'video', provider: 'youtube', id: "h6lqxDwUmJQ", title: "Harvard CS50x Introduction to Computer Science", bvid: "BV1Ls6BYkEGk" },
+    { kind: 'video', provider: 'bilibili', id: "BV1Ls6BYkEGk", title: "哈佛 CS50x 计算机科学通识导论", bvid: "BV1Ls6BYkEGk" },
     { kind: 'h3', id: 'sec-2', text: "计算机科学通识与 CS50x 导论" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "在深入具体语言语法之前，推荐先观看哈佛大学经典公开课 CS50x，建立对计算机科学全貌的整体认知。" }],
@@ -156,7 +161,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "深入理解变量地址、指针变量以及直接寻址与间接寻址机制：" }],
     ] },
-    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 概念对照：指针运算与内存地址偏移</span>\n<span class=\"tk-c\">// int* p = array; *(p + i) 等价于 array[i]</span>" },
+    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 概念对照：指针运算与内存地址偏移</span>\n<span class=\"tk-c\">// int* p = array; *(p + i) 等价于 array[i]</span>", raw: "// 概念对照：指针运算与内存地址偏移\n// int* p = array; *(p + i) 等价于 array[i]" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "理解栈内存与堆内存的区别：栈由系统自动分配和回收，函数调用时压栈、返回时出栈，执行效率极高但容量有限；堆由开发者通过动态分配函数手动申请与释放，生命周期由代码逻辑掌控，灵活性高但需严防内存泄漏、野指针与越界访问。" }],
     ] },
@@ -224,7 +229,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "掌握 HTML5 规范，合理使用语义化标签组织页面内容：" }],
     ] },
-    { kind: 'code', lang: '', html: "&lt;!-- 推荐页面层级结构 --&gt;\n&lt;header&gt; 导航与品牌信息 &lt;/header&gt;\n&lt;main&gt; 页面核心内容区 &lt;/main&gt;\n&lt;aside&gt; 辅助侧边栏 &lt;/aside&gt;\n&lt;footer&gt; 版权与页脚链接 &lt;/footer&gt;" },
+    { kind: 'code', lang: '', html: "&lt;!-- 推荐页面层级结构 --&gt;\n&lt;header&gt; 导航与品牌信息 &lt;/header&gt;\n&lt;main&gt; 页面核心内容区 &lt;/main&gt;\n&lt;aside&gt; 辅助侧边栏 &lt;/aside&gt;\n&lt;footer&gt; 版权与页脚链接 &lt;/footer&gt;", raw: "<!-- 推荐页面层级结构 -->\n<header> 导航与品牌信息 </header>\n<main> 页面核心内容区 </main>\n<aside> 辅助侧边栏 </aside>\n<footer> 版权与页脚链接 </footer>" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "语义化结构有助于提高代码可读性，在搜索引擎抓取与无障碍辅助设备（读屏器）访问时提供清晰的语义大纲。" }],
     ] },
@@ -368,7 +373,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "熟练掌握 Linux 权限体系与常用运维命令：" }],
     ] },
-    { kind: 'code', lang: '', html: "权限三段位（rwx）：读(4)、写(2)、执行(1)\n八进制组合：755 (所有者 rwx / 群组 r-x / 其他 r-x)\n           644 (所有者 rw- / 群组 r-- / 其他 r--)" },
+    { kind: 'code', lang: '', html: "权限三段位（rwx）：读(4)、写(2)、执行(1)\n八进制组合：755 (所有者 rwx / 群组 r-x / 其他 r-x)\n           644 (所有者 rw- / 群组 r-- / 其他 r--)", raw: "权限三段位（rwx）：读(4)、写(2)、执行(1)\n八进制组合：755 (所有者 rwx / 群组 r-x / 其他 r-x)\n           644 (所有者 rw- / 群组 r-- / 其他 r--)" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "掌握基于 " }, { t: 'code', v: "systemd" }, { t: 'text', v: " 的后台服务管理机制，通过 " }, { t: 'code', v: "systemctl" }, { t: 'text', v: " 控制服务启动、停止、重载与开机自启；使用 " }, { t: 'code', v: "ps" }, { t: 'text', v: " 与 " }, { t: 'code', v: "top" }, { t: 'text', v: " 监控系统进程资源，结合 " }, { t: 'code', v: "curl" }, { t: 'text', v: " 与 " }, { t: 'code', v: "ss" }, { t: 'text', v: " 排查端口占用与网络连通性。" }],
     ] },
@@ -440,7 +445,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "企业级 Web 工程采用严格的职责分层体系：" }],
     ] },
-    { kind: 'code', lang: '', html: "controller   接收并校验请求入参（DTO），组装 HTTP 协议响应（VO）\nservice      封装核心业务规则，控制事务边界（@Transactional）\nmapper       执行数据库 CRUD 操作，映射数据持久化对象（Entity）" },
+    { kind: 'code', lang: '', html: "controller   接收并校验请求入参（DTO），组装 HTTP 协议响应（VO）\nservice      封装核心业务规则，控制事务边界（@Transactional）\nmapper       执行数据库 CRUD 操作，映射数据持久化对象（Entity）", raw: "controller   接收并校验请求入参（DTO），组装 HTTP 协议响应（VO）\nservice      封装核心业务规则，控制事务边界（@Transactional）\nmapper       执行数据库 CRUD 操作，映射数据持久化对象（Entity）" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "明确区分数据对象模型：入参传输对象（DTO）、持久化实体（Entity）以及视图呈现对象（VO）。控制层通过业务接口间接调用数据访问，避免跨层直接操作数据库。" }],
     ] },
@@ -458,7 +463,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "遵循 RESTful 规范组织接口 URI 资源路径与 HTTP 动词：" }],
     ] },
-    { kind: 'code', lang: '', html: "GET    /api/users       查询用户列表\nPOST   /api/users       创建新用户\nPUT    /api/users/{id}  更新指定用户\nDELETE /api/users/{id}  删除指定用户" },
+    { kind: 'code', lang: '', html: "GET    /api/users       查询用户列表\nPOST   /api/users       创建新用户\nPUT    /api/users/{id}  更新指定用户\nDELETE /api/users/{id}  删除指定用户", raw: "GET    /api/users       查询用户列表\nPOST   /api/users       创建新用户\nPUT    /api/users/{id}  更新指定用户\nDELETE /api/users/{id}  删除指定用户" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "接口返回统一包装结构（如 " }, { t: 'code', v: "ApiResponse<T>" }, { t: 'text', v: "），明确区分传输层 HTTP 状态码（200、400、401、403、500）与业务层错误码（" }, { t: 'code', v: "code" }, { t: 'text', v: " 与 " }, { t: 'code', v: "message" }, { t: 'text', v: "），为前端提供一致的联调体验。" }],
     ] },
@@ -557,7 +562,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "进入大三阶段后，依据个人长远目标进入专业化发展分支：" }],
     ] },
-    { kind: 'code', lang: '', html: "           ┌─── 就业方向：微服务架构、高并发中间件与分布式工程\n大三分流 ──┤\n           └─── 考研方向：计算机 408 核心专业课、科研与学科竞赛" },
+    { kind: 'code', lang: '', html: "           ┌─── 就业方向：微服务架构、高并发中间件与分布式工程\n大三分流 ──┤\n           └─── 考研方向：计算机 408 核心专业课、科研与学科竞赛", raw: "           ┌─── 就业方向：微服务架构、高并发中间件与分布式工程\n大三分流 ──┤\n           └─── 考研方向：计算机 408 核心专业课、科研与学科竞赛" },
     { kind: 'h3', id: 'sec-3', text: "就业工程分支：微服务与高并发中间件" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "持续深耕主流企业级高并发架构体系：" }],
@@ -617,7 +622,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "推荐采用主流长期支持（LTS）版本，保持开发环境与生产环境的一致性：" }],
     ] },
-    { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 推荐运行时版本</span>\n<span class=\"tk-k\">Node.js</span>   &gt;= 20.x LTS   <span class=\"tk-c\"># 前端构建与工具链</span>\n<span class=\"tk-k\">JDK</span>       &gt;= <span class=\"tk-s\">17</span> LTS     <span class=\"tk-c\"># Java 后端开发环境</span>\n<span class=\"tk-k\">Python</span>    &gt;= <span class=\"tk-s\">3.10</span>       <span class=\"tk-c\"># 智能脚本与数据处理</span>" },
+    { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 推荐运行时版本</span>\n<span class=\"tk-k\">Node.js</span>   &gt;= 20.x LTS   <span class=\"tk-c\"># 前端构建与工具链</span>\n<span class=\"tk-k\">JDK</span>       &gt;= <span class=\"tk-s\">17</span> LTS     <span class=\"tk-c\"># Java 后端开发环境</span>\n<span class=\"tk-k\">Python</span>    &gt;= <span class=\"tk-s\">3.10</span>       <span class=\"tk-c\"># 智能脚本与数据处理</span>", raw: "# 推荐运行时版本\nNode.js   >= 20.x LTS   # 前端构建与工具链\nJDK       >= 17 LTS     # Java 后端开发环境\nPython    >= 3.10       # 智能脚本与数据处理" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "推荐使用版本管理工具（如前端使用 " }, { t: 'code', v: "fnm" }, { t: 'text', v: " 或 " }, { t: 'code', v: "nvm" }, { t: 'text', v: "，Python 使用 " }, { t: 'code', v: "venv" }, { t: 'text', v: " 或 " }, { t: 'code', v: "conda" }, { t: 'text', v: "）进行多版本隔离，避免全局环境污染。" }],
     ] },
@@ -632,7 +637,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "为避免 Windows 系统（CRLF）与 Linux/macOS 系统（LF）之间的换行符冲突，建议在代码仓库根目录维护 " }, { t: 'code', v: ".gitattributes" }, { t: 'text', v: " 文件：" }],
     ] },
-    { kind: 'code', lang: '', html: "# 统一代码换行符为 LF\n* text=auto eol=lf" },
+    { kind: 'code', lang: '', html: "# 统一代码换行符为 LF\n* text=auto eol=lf", raw: "# 统一代码换行符为 LF\n* text=auto eol=lf" },
     { kind: 'h3', id: 'sec-5', text: "敏感配置与环境变量隔离" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "项目中的数据库密码、接口密钥与私有令牌严禁直接硬编码在代码文件中。" }],
@@ -686,7 +691,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "在遇到技术阻碍时，鼓励先通过阅读错误日志、查阅官方文档与断点调试尝试独立排查。如需向骨干求助，建议按照以下三要素清晰组织问题：" }],
     ] },
-    { kind: 'code', lang: '', html: "1. 目标与异常现象：明确预期效果与当前实际报错\n2. 最小复现路径：操作系统、运行时版本与触发步骤\n3. 已尝试排查方案：已阅读的日志、尝试过的修改与推测方向" },
+    { kind: 'code', lang: '', html: "1. 目标与异常现象：明确预期效果与当前实际报错\n2. 最小复现路径：操作系统、运行时版本与触发步骤\n3. 已尝试排查方案：已阅读的日志、尝试过的修改与推测方向", raw: "1. 目标与异常现象：明确预期效果与当前实际报错\n2. 最小复现路径：操作系统、运行时版本与触发步骤\n3. 已尝试排查方案：已阅读的日志、尝试过的修改与推测方向" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "提供清晰的错误堆栈信息与上下文代码，能够大幅提升团队协作与问题定位效率。" }],
     ] },
@@ -720,7 +725,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "深入理解 Git 的底层存储机制：" }],
     ] },
-    { kind: 'code', lang: '', html: "Blob 对象   存储文件具体内容与哈希值\nTree 对象   记录目录树结构与文件名映射\nCommit 对象 记录快照树指针、父提交引用、作者信息与提交说明" },
+    { kind: 'code', lang: '', html: "Blob 对象   存储文件具体内容与哈希值\nTree 对象   记录目录树结构与文件名映射\nCommit 对象 记录快照树指针、父提交引用、作者信息与提交说明", raw: "Blob 对象   存储文件具体内容与哈希值\nTree 对象   记录目录树结构与文件名映射\nCommit 对象 记录快照树指针、父提交引用、作者信息与提交说明" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "掌握代码在四大区域之间的流转：工作区（Working Directory）进行文件修改，通过 " }, { t: 'code', v: "git add" }, { t: 'text', v: " 收集至暂存区（Index），通过 " }, { t: 'code', v: "git commit" }, { t: 'text', v: " 生成本地提交历史，最终通过 " }, { t: 'code', v: "git push" }, { t: 'text', v: " 同步至远程共享仓库。" }],
     ] },
@@ -728,7 +733,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "推荐的分支命名约定：" }],
     ] },
-    { kind: 'code', lang: '', html: "feat/&lt;简短模块名&gt;     新功能或特性开发\nfix/&lt;简短问题名&gt;      缺陷与 Bug 修复\nchore/&lt;维护任务名&gt;    依赖升级、构建配置调整\ndocs/&lt;文档篇目名&gt;     文档编写与更新" },
+    { kind: 'code', lang: '', html: "feat/&lt;简短模块名&gt;     新功能或特性开发\nfix/&lt;简短问题名&gt;      缺陷与 Bug 修复\nchore/&lt;维护任务名&gt;    依赖升级、构建配置调整\ndocs/&lt;文档篇目名&gt;     文档编写与更新", raw: "feat/<简短模块名>     新功能或特性开发\nfix/<简短问题名>      缺陷与 Bug 修复\nchore/<维护任务名>    依赖升级、构建配置调整\ndocs/<文档篇目名>     文档编写与更新" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "所有日常开发均应基于最新的主分支（" }, { t: 'code', v: "main" }, { t: 'text', v: "）检出特性分支进行，开发测试完成后通过发起合并请求（PR）并入主干，避免直接向主分支推送提交。" }],
     ] },
@@ -739,7 +744,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "提交信息推荐采用 Conventional Commits 规范，结构清晰表述变更意图：" }],
     ] },
-    { kind: 'code', lang: '', html: "feat(auth): 增加用户登录参数格式校验\nfix(table): 修复移动端表格数据溢出遮挡\nrefactor(user): 抽取通用权限校验中间件" },
+    { kind: 'code', lang: '', html: "feat(auth): 增加用户登录参数格式校验\nfix(table): 修复移动端表格数据溢出遮挡\nrefactor(user): 抽取通用权限校验中间件", raw: "feat(auth): 增加用户登录参数格式校验\nfix(table): 修复移动端表格数据溢出遮挡\nrefactor(user): 抽取通用权限校验中间件" },
     { kind: 'h3', id: 'sec-5', text: "合并请求流程与敏感数据脱敏" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "发起合并请求时，说明文档建议包含三项核心内容：改动内容、改动原因、验证方式与测试结果。" }],
@@ -771,7 +776,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "前端项目推荐开启严格类型检查（" }, { t: 'code', v: "strict: true" }, { t: 'text', v: " 与 " }, { t: 'code', v: "strictNullChecks: true" }, { t: 'text', v: "），充分发挥编译期类型系统的保护作用：" }],
     ] },
-    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 推荐使用可辨识联合类型进行状态建模</span>\n<span class=\"tk-k\">type</span> <span class=\"tk-k\">RequestState</span>&lt;<span class=\"tk-k\">T</span>&gt; =\n  | { status: <span class=\"tk-s\">'idle'</span> }\n  | { status: <span class=\"tk-s\">'loading'</span> }\n  | { status: <span class=\"tk-s\">'success'</span>; data: <span class=\"tk-k\">T</span> }\n  | { status: <span class=\"tk-s\">'error'</span>; error: <span class=\"tk-k\">Error</span> }" },
+    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 推荐使用可辨识联合类型进行状态建模</span>\n<span class=\"tk-k\">type</span> <span class=\"tk-k\">RequestState</span>&lt;<span class=\"tk-k\">T</span>&gt; =\n  | { status: <span class=\"tk-s\">'idle'</span> }\n  | { status: <span class=\"tk-s\">'loading'</span> }\n  | { status: <span class=\"tk-s\">'success'</span>; data: <span class=\"tk-k\">T</span> }\n  | { status: <span class=\"tk-s\">'error'</span>; error: <span class=\"tk-k\">Error</span> }", raw: "// 推荐使用可辨识联合类型进行状态建模\ntype RequestState<T> =\n  | { status: 'idle' }\n  | { status: 'loading' }\n  | { status: 'success'; data: T }\n  | { status: 'error'; error: Error }" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "避免滥用 " }, { t: 'code', v: "any" }, { t: 'text', v: " 或连续类型断言进行类型逃逸；对于可选字段，推荐显式声明 " }, { t: 'code', v: "undefined" }, { t: 'text', v: " 联合类型，确保类型契约严密。" }],
     ] },
@@ -779,7 +784,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "项目文件组织遵循单一真源原则，按领域或功能职责明确划分：" }],
     ] },
-    { kind: 'code', lang: '', html: "src/\n├── components/   通用组件与业务组件（职责内聚）\n├── data/         静态数据源与数据转换逻辑（单一数据真源）\n├── hooks/        复用状态逻辑与生命周期钩子\n├── styles/       设计系统全局变量与字体定义" },
+    { kind: 'code', lang: '', html: "src/\n├── components/   通用组件与业务组件（职责内聚）\n├── data/         静态数据源与数据转换逻辑（单一数据真源）\n├── hooks/        复用状态逻辑与生命周期钩子\n├── styles/       设计系统全局变量与字体定义", raw: "src/\n├── components/   通用组件与业务组件（职责内聚）\n├── data/         静态数据源与数据转换逻辑（单一数据真源）\n├── hooks/        复用状态逻辑与生命周期钩子\n├── styles/       设计系统全局变量与字体定义" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "组件内部样式应依赖集中定义的设计系统变量，避免随处硬编码魔数颜色与尺寸。" }],
     ] },
@@ -827,7 +832,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "服务端代码架构遵循严格的单向依赖原则：" }],
     ] },
-    { kind: 'code', lang: '', html: "Controller (控制层)  ──&gt;  Service (业务层)  ──&gt;  Mapper / Repository (持久层)" },
+    { kind: 'code', lang: '', html: "Controller (控制层)  ──&gt;  Service (业务层)  ──&gt;  Mapper / Repository (持久层)", raw: "Controller (控制层)  ──>  Service (业务层)  ──>  Mapper / Repository (持久层)" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "控制层仅负责 HTTP 协议参数绑定、格式校验与响应组装，禁止直接注入 Mapper 访问数据库；业务层负责核心业务规则校验与事务边界控制；持久层专注于数据持久化与 SQL 映射。" }],
     ] },
@@ -889,7 +894,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "接口返回统一包装结构，明确区分传输层与业务层状态：" }],
     ] },
-    { kind: 'code', lang: '', html: "{\n  \"code\": 0,\n  \"message\": \"success\",\n  \"data\": { ... },\n  \"timestamp\": 1700000000000\n}" },
+    { kind: 'code', lang: '', html: "{\n  \"code\": 0,\n  \"message\": \"success\",\n  \"data\": { ... },\n  \"timestamp\": 1700000000000\n}", raw: "{\n  \"code\": 0,\n  \"message\": \"success\",\n  \"data\": { ... },\n  \"timestamp\": 1700000000000\n}" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "* " }, { t: 'strong', v: "HTTP 传输状态码" }, { t: 'text', v: "：200（成功）、400（参数校验失败）、401（未登录）、403（无权限）、404（资源不存在）、500（服务器内部异常）；" }],
       [{ t: 'text', v: "* " }, { t: 'strong', v: "业务错误码" }, { t: 'text', v: "：在 HTTP 状态码为 200 或业务失败时，通过 " }, { t: 'code', v: "code" }, { t: 'text', v: " 提供细分业务含义（如 " }, { t: 'code', v: "100101: 账号已被冻结" }, { t: 'text', v: "）。" }],
@@ -937,7 +942,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "团队推行轻量、高效的质量保证体系，将有限的测试精力聚焦于核心高价值区域：" }],
     ] },
-    { kind: 'code', lang: '', html: "       / \\\n      / E2E \\       端到端测试：覆盖核心冒烟路径与主流程闭环\n     / 集成测试 \\     集成测试：覆盖服务接口、数据库事务与第三方集成\n    / 单元测试   \\   单元测试：覆盖核心计算、边界校验与复杂业务算法" },
+    { kind: 'code', lang: '', html: "       / \\\n      / E2E \\       端到端测试：覆盖核心冒烟路径与主流程闭环\n     / 集成测试 \\     集成测试：覆盖服务接口、数据库事务与第三方集成\n    / 单元测试   \\   单元测试：覆盖核心计算、边界校验与复杂业务算法", raw: "       / \\\n      / E2E \\       端到端测试：覆盖核心冒烟路径与主流程闭环\n     / 集成测试 \\     集成测试：覆盖服务接口、数据库事务与第三方集成\n    / 单元测试   \\   单元测试：覆盖核心计算、边界校验与复杂业务算法" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "业务逻辑中的核心计算公式（如折现算法、矩阵运算、权限判定）与数据解析器属于高风险模块，必须具备完备的单元测试用例覆盖。" }],
     ] },
@@ -945,7 +950,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "测试用例编写遵循行为驱动与清晰表述原则，推荐采用 Given-When-Then 或 Should-When 命名模式：" }],
     ] },
-    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 推荐的单测命名格式：明确前置条件、触发动作与预期结果</span>\n<span class=\"tk-k\">test</span>(<span class=\"tk-s\">'应当在优惠券有效且满足门槛时正确计算折后总价'</span>, () =&gt; {\n  <span class=\"tk-c\">// Given: 准备订单金额与有效优惠券</span>\n  <span class=\"tk-c\">// When: 执行计价逻辑</span>\n  <span class=\"tk-c\">// Then: 断言返回金额精确符合折扣预期</span>\n})" },
+    { kind: 'code', lang: 'ts', html: "<span class=\"tk-c\">// 推荐的单测命名格式：明确前置条件、触发动作与预期结果</span>\n<span class=\"tk-k\">test</span>(<span class=\"tk-s\">'应当在优惠券有效且满足门槛时正确计算折后总价'</span>, () =&gt; {\n  <span class=\"tk-c\">// Given: 准备订单金额与有效优惠券</span>\n  <span class=\"tk-c\">// When: 执行计价逻辑</span>\n  <span class=\"tk-c\">// Then: 断言返回金额精确符合折扣预期</span>\n})", raw: "// 推荐的单测命名格式：明确前置条件、触发动作与预期结果\ntest('应当在优惠券有效且满足门槛时正确计算折后总价', () => {\n  // Given: 准备订单金额与有效优惠券\n  // When: 执行计价逻辑\n  // Then: 断言返回金额精确符合折扣预期\n})" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "测试用例应保持独立性与幂等性，避免依赖外部不可控的真实网络接口，推荐通过 Mock 模拟外部依赖。" }],
     ] },
@@ -953,7 +958,7 @@ export const DOCS: readonly Doc[] = [
     { kind: 'para', lines: [
       [{ t: 'text', v: "在发起合并请求之前，开发者应在本地执行完整的质量检验流水线：" }],
     ] },
-    { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 本地门禁检验三步法</span>\n<span class=\"tk-k\">npm</span> run typecheck    <span class=\"tk-c\"># 1. 静态类型严格检查</span>\n<span class=\"tk-k\">npm</span> test             <span class=\"tk-c\"># 2. 自动化单元测试套件</span>\n<span class=\"tk-k\">npm</span> run build        <span class=\"tk-c\"># 3. 生产打包与预渲染构建验证</span>" },
+    { kind: 'code', lang: 'bash', html: "<span class=\"tk-c\"># 本地门禁检验三步法</span>\n<span class=\"tk-k\">npm</span> run typecheck    <span class=\"tk-c\"># 1. 静态类型严格检查</span>\n<span class=\"tk-k\">npm</span> test             <span class=\"tk-c\"># 2. 自动化单元测试套件</span>\n<span class=\"tk-k\">npm</span> run build        <span class=\"tk-c\"># 3. 生产打包与预渲染构建验证</span>", raw: "# 本地门禁检验三步法\nnpm run typecheck    # 1. 静态类型严格检查\nnpm test             # 2. 自动化单元测试套件\nnpm run build        # 3. 生产打包与预渲染构建验证" },
     { kind: 'h3', id: 'sec-4', text: "代码评审四大核心维度" },
     { kind: 'para', lines: [
       [{ t: 'text', v: "代码评审（Code Review）是保障工程质量与促进经验交流的关键环节。评审过程中重点关注以下四大维度：" }],

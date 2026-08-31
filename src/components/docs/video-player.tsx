@@ -27,16 +27,22 @@ export function VideoPlayer({ provider, id, title = '视频教程', bvid }: Vide
   const [expanded, setExpanded] = useState(false)
   const [playing, setPlaying] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
+  // 如果提供了 bvid，默认优先使用国内更畅通的 B 站播放源
+  const [activeProvider, setActiveProvider] = useState<'youtube' | 'bilibili'>(
+    bvid ? 'bilibili' : provider,
+  )
 
-  const isYouTube = provider === 'youtube'
+  const activeId = activeProvider === 'bilibili' && bvid ? bvid : id
+  const isYouTube = activeProvider === 'youtube'
+  const hasAlternative = Boolean(bvid && bvid !== id) || provider !== activeProvider
 
   const embedUrl = isYouTube
     ? `https://www.youtube.com/embed/${id}?autoplay=1&rel=0&modestbranding=1`
-    : `https://player.bilibili.com/player.html?bvid=${id}&autoplay=1&high_quality=1`
+    : `https://player.bilibili.com/player.html?bvid=${activeId}&autoplay=1&high_quality=1`
 
   const directUrl = isYouTube
     ? `https://www.youtube.com/watch?v=${id}`
-    : `https://www.bilibili.com/video/${id}`
+    : `https://www.bilibili.com/video/${activeId}`
 
   const thumbnailUrl = isYouTube ? `https://i.ytimg.com/vi/${id}/hqdefault.jpg` : null
 
@@ -48,6 +54,11 @@ export function VideoPlayer({ provider, id, title = '视频教程', bvid }: Vide
   const toggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation()
     setExpanded(!expanded)
+  }
+
+  const toggleSource = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setActiveProvider((prev) => (prev === 'youtube' ? 'bilibili' : 'youtube'))
   }
 
   return (
@@ -62,8 +73,15 @@ export function VideoPlayer({ provider, id, title = '视频教程', bvid }: Vide
             <span className={`doc-video-badge ${isYouTube ? 'is-yt' : 'is-bili'}`}>
               {isYouTube ? 'YOUTUBE' : 'BILIBILI'}
             </span>
-            {bvid && bvid !== id && (
-              <span className="doc-video-badge is-bili">B站中字: {bvid}</span>
+            {hasAlternative && (
+              <button
+                type="button"
+                className="doc-video-switch-btn"
+                onClick={toggleSource}
+                title={isYouTube ? '切换到 B站国内镜像' : '切换到 YouTube原版'}
+              >
+                切换为 {isYouTube ? 'B站源' : 'YouTube源'}
+              </button>
             )}
           </div>
           <span className="doc-video-title">{title}</span>
@@ -131,7 +149,7 @@ export function VideoPlayer({ provider, id, title = '视频教程', bvid }: Vide
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
               </motion.button>
-              <span className="doc-video-play-tip">点击预览</span>
+              <span className="doc-video-play-tip">点击播放</span>
             </div>
           ) : (
             <iframe
@@ -146,7 +164,7 @@ export function VideoPlayer({ provider, id, title = '视频教程', bvid }: Vide
       </div>
 
       <VideoModal
-        video={expanded ? { provider, id, title, bvid } : null}
+        video={expanded ? { provider: activeProvider, id: activeId, title, bvid } : null}
         onClose={() => setExpanded(false)}
       />
     </>
@@ -163,19 +181,33 @@ export function VideoModal({
   video: VideoTarget | null
   onClose: () => void
 }) {
-  const isYouTube = video?.provider === 'youtube'
+  const [providerState, setProviderState] = useState<'youtube' | 'bilibili'>(
+    video?.provider ?? 'bilibili',
+  )
+
+  useEffect(() => {
+    if (video?.provider) {
+      setProviderState(video.provider)
+    }
+  }, [video])
+
+  const isYouTube = providerState === 'youtube'
+  const activeId =
+    providerState === 'bilibili' && video?.bvid ? video.bvid : video?.id ?? ''
 
   const embedUrl = video
     ? isYouTube
       ? `https://www.youtube.com/embed/${video.id}?autoplay=1&rel=0&modestbranding=1`
-      : `https://player.bilibili.com/player.html?bvid=${video.id}&autoplay=1&high_quality=1`
+      : `https://player.bilibili.com/player.html?bvid=${activeId}&autoplay=1&high_quality=1`
     : ''
 
   const directUrl = video
     ? isYouTube
       ? `https://www.youtube.com/watch?v=${video.id}`
-      : `https://www.bilibili.com/video/${video.id}`
+      : `https://www.bilibili.com/video/${activeId}`
     : ''
+
+  const hasAlternative = Boolean(video?.bvid && video.bvid !== video.id)
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -214,6 +246,17 @@ export function VideoModal({
                   <span className={`doc-video-badge ${isYouTube ? 'is-yt' : 'is-bili'}`}>
                     {isYouTube ? 'YOUTUBE' : 'BILIBILI'}
                   </span>
+                  {hasAlternative && (
+                    <button
+                      type="button"
+                      className="doc-video-switch-btn"
+                      onClick={() =>
+                        setProviderState((prev) => (prev === 'youtube' ? 'bilibili' : 'youtube'))
+                      }
+                    >
+                      切换为 {isYouTube ? 'B站源' : 'YouTube源'}
+                    </button>
+                  )}
                   <span className="doc-video-modal-title">{video.title || '视频预览'}</span>
                 </div>
                 <div className="doc-video-actions">

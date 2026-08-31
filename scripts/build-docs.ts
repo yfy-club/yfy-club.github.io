@@ -113,10 +113,11 @@ interface Inline {
 type Block =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'para'; lines: Inline[][] }
-  | { kind: 'code'; lang: string; html: string }
+  | { kind: 'code'; lang: string; html: string; raw?: string }
   | { kind: 'table'; head: Inline[][]; rows: Inline[][][] }
   | { kind: 'iframe'; src: string; title: string }
   | { kind: 'video'; provider: 'youtube' | 'bilibili'; id: string; title: string; bvid?: string }
+  | { kind: 'details'; title: string; lines: Inline[][] }
 
 interface Article {
   slug: string
@@ -300,6 +301,36 @@ async function main() {
         continue
       }
 
+      // 折叠详情块 <details><summary>标题</summary>内容</details>
+      const detailsMatch = trimmed.match(/^<details>\s*<summary>(.*?)<\/summary>([\s\S]*?)<\/details>$/i)
+      if (detailsMatch) {
+        flushParagraph()
+        const title = detailsMatch[1]!.trim()
+        const inner = detailsMatch[2]!.trim()
+        const innerLines = inner.split(/\r?\n/).map((l) => l.trim()).filter(Boolean)
+        current.blocks.push({ kind: 'details', title, lines: innerLines.map(inline) })
+        continue
+      }
+
+      if (/^<details>/i.test(trimmed)) {
+        flushParagraph()
+        let summaryTitle = '点击查看详情'
+        const innerLines: string[] = []
+        i += 1
+        while (i < lines.length && !/<\/details>/i.test(lines[i]!.trim())) {
+          const l = lines[i]!.trim()
+          const sumMatch = l.match(/<summary>(.*?)<\/summary>/i)
+          if (sumMatch) {
+            summaryTitle = sumMatch[1]!.trim()
+          } else if (l) {
+            innerLines.push(l)
+          }
+          i += 1
+        }
+        current.blocks.push({ kind: 'details', title: summaryTitle, lines: innerLines.map(inline) })
+        continue
+      }
+
       // 代码块
       const fence = trimmed.match(/^```(\w*)\s*$/)
       if (fence) {
@@ -316,6 +347,7 @@ async function main() {
         current.blocks.push({
           kind: 'code',
           lang: known ?? '',
+          raw: code,
           html: known ? highlight(highlighter, code, known) : escapeHtml(code),
         })
         continue
@@ -414,7 +446,7 @@ function fingerprint(articles: Article[]) {
   let h = 0x811c9dc5
   for (let i = 0; i < text.length; i += 1) {
     h ^= text.charCodeAt(i)
-    h = Math.imul(h, 0x01000193) >>> 0
+    h = Math.imul(0x01000193, h) >>> 0
   }
   return h.toString(16).padStart(8, '0')
 }
@@ -479,7 +511,7 @@ function renderBlock(b: Block): string {
     case 'para':
       return `    { kind: 'para', lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
     case 'code':
-      return `    { kind: 'code', lang: '${b.lang}', html: ${j(b.html)} },`
+      return `    { kind: 'code', lang: '${b.lang}', html: ${j(b.html)}, raw: ${j(b.raw || '')} },`
     case 'table':
       return (
         `    { kind: 'table',\n      head: [${b.head.map(renderInline).join(', ')}],\n` +
@@ -489,6 +521,8 @@ function renderBlock(b: Block): string {
       return `    { kind: 'iframe', src: ${j(b.src)}, title: ${j(b.title)} },`
     case 'video':
       return `    { kind: 'video', provider: '${b.provider}', id: ${j(b.id)}, title: ${j(b.title)}${b.bvid ? `, bvid: ${j(b.bvid)}` : ''} },`
+    case 'details':
+      return `    { kind: 'details', title: ${j(b.title)}, lines: [\n${b.lines.map((l) => `      ${renderInline(l)},`).join('\n')}\n    ] },`
   }
 }
 
@@ -537,7 +571,7 @@ export interface DocInline {
 export type DocBlock =
   | { kind: 'h3'; id: string; text: string }
   | { kind: 'para'; lines: readonly (readonly DocInline[])[] }
-  | { kind: 'code'; lang: string; html: string }
+  | { kind: 'code'; lang: string; html: string; raw?: string }
   | {
       kind: 'table'
       head: readonly (readonly DocInline[])[]
@@ -550,6 +584,11 @@ export type DocBlock =
       id: string
       title: string
       bvid?: string
+    }
+  | {
+      kind: 'details'
+      title: string
+      lines: readonly (readonly DocInline[])[]
     }
 
 export interface DocCategory {

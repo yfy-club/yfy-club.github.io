@@ -50,12 +50,25 @@ function Block({
 
     case 'code':
       return (
-        <div className="doc-code">
-          {block.lang && <span className="doc-code-lang">{block.lang.toUpperCase()}</span>}
-          <pre className="doc-pre">
-            <code dangerouslySetInnerHTML={{ __html: block.html }} />
-          </pre>
-        </div>
+        <DocCodeBlock
+          lang={block.lang}
+          html={block.html}
+          raw={block.raw}
+        />
+      )
+
+    case 'details':
+      return (
+        <details className="doc-details">
+          <summary className="doc-details-summary">{block.title}</summary>
+          <div className="doc-details-body">
+            {block.lines.map((line, i) => (
+              <p className="doc-details-line" key={i}>
+                <Runs runs={line} onOpenVideo={onOpenVideo} />
+              </p>
+            ))}
+          </div>
+        </details>
       )
 
     case 'table':
@@ -110,6 +123,55 @@ function Block({
         />
       )
   }
+}
+
+function DocCodeBlock({
+  lang,
+  html,
+  raw,
+}: {
+  lang?: string | undefined
+  html: string
+  raw?: string | undefined
+}) {
+  const [copied, setCopied] = useState(false)
+
+  const handleCopy = async () => {
+    try {
+      const textToCopy =
+        raw ||
+        html
+          .replace(/<[^>]+>/g, '')
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+      await navigator.clipboard.writeText(textToCopy)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      // 剪贴板不可用时静默降级
+    }
+  }
+
+  return (
+    <div className="doc-code">
+      <div className="doc-code-head">
+        <span className="doc-code-lang">{lang ? lang.toUpperCase() : 'TEXT'}</span>
+        <button
+          type="button"
+          className="doc-code-copy-btn"
+          onClick={handleCopy}
+          title={copied ? '已复制' : '复制代码'}
+          aria-label={copied ? '已复制' : '复制代码'}
+        >
+          {copied ? '已复制' : '复制'}
+        </button>
+      </div>
+      <pre className="doc-pre">
+        <code dangerouslySetInnerHTML={{ __html: html }} />
+      </pre>
+    </div>
+  )
 }
 
 /**

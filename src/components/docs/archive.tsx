@@ -15,6 +15,7 @@ import { useSmoothScroll } from '@/lib/smooth-scroll'
 import { DOC_CATEGORIES, DOCS, docBySlug, type Doc } from '@/data/docs'
 import { DocBlocks } from './article'
 import { DocTree } from './tree'
+import { DocSearchModal } from './search'
 import { useFocusScroll } from './use-focus-scroll'
 import './docs.css'
 
@@ -82,6 +83,7 @@ function Article({ doc }: { doc: Doc }) {
 
   useFocusScroll(body, !reduced, doc.slug)
   const section = useCurrentHeading(doc)
+  const progress = useReadingProgress()
 
   const at = DOCS.findIndex((d) => d.slug === doc.slug)
   const prev = at > 0 ? DOCS[at - 1] : undefined
@@ -90,11 +92,13 @@ function Article({ doc }: { doc: Doc }) {
 
   return (
     <ArchiveLayout current={doc.slug} section={section}>
+      <div className="doc-reading-progress" style={{ transform: `scaleX(${progress})` }} />
       <header className="doc-head">
         <div className="doc-head-badges">
           <Tag tone="solid">{doc.index}</Tag>
           {cat && <Tag tone="ink">{cat.code}</Tag>}
           <Tag>{doc.minutes} MIN</Tag>
+          <span className="doc-progress-tag">已读 {Math.round(progress * 100)}%</span>
         </div>
         <h1 className="doc-title">{doc.title}</h1>
         <p className="doc-summary">{doc.summary}</p>
@@ -106,21 +110,59 @@ function Article({ doc }: { doc: Doc }) {
       </div>
 
       <nav className="doc-turn" aria-label="翻页">
-        {prev && (
+        {prev ? (
           <Link className="doc-turn-item" to={`/docs/${prev.slug}`} data-dir="prev">
-            <span className="doc-turn-hud">← PREV</span>
+            <span className="doc-turn-hud">&larr; PREV</span>
             <span className="doc-turn-title">{prev.title}</span>
           </Link>
+        ) : (
+          <div className="doc-turn-empty" />
         )}
         {next && (
           <Link className="doc-turn-item" to={`/docs/${next.slug}`} data-dir="next">
-            <span className="doc-turn-hud">NEXT →</span>
+            <span className="doc-turn-hud">NEXT &rarr;</span>
             <span className="doc-turn-title">{next.title}</span>
           </Link>
         )}
       </nav>
     </ArchiveLayout>
   )
+}
+
+/**
+ * 监听阅读进度，返回 0 到 1 之间的浮点数。
+ */
+function useReadingProgress() {
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    let frame = 0
+    const calculate = () => {
+      frame = 0
+      const total = document.documentElement.scrollHeight - window.innerHeight
+      if (total <= 0) {
+        setProgress(1)
+        return
+      }
+      const current = Math.min(1, Math.max(0, window.scrollY / total))
+      setProgress(current)
+    }
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(calculate)
+    }
+
+    calculate()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule, { passive: true })
+    return () => {
+      if (frame) cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [])
+
+  return progress
 }
 
 /**
@@ -180,6 +222,19 @@ interface LayoutProps {
 function ArchiveLayout({ current, section, children }: LayoutProps) {
   // 惯性挂在壳上而不是单篇上：索引页也是档案库的一部分，两处的滚动手感要一样
   useSmoothScroll(!usePrefersReducedMotion())
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+  // 全局 Ctrl + K / Cmd + K 快捷键
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setIsSearchOpen((prev) => !prev)
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
 
   return (
     <div className="page grain">
@@ -191,7 +246,11 @@ function ArchiveLayout({ current, section, children }: LayoutProps) {
               <Reticle size={16} />
               <span>返回传送门</span>
             </Link>
-            <DocTree current={current} section={section} />
+            <DocTree
+              current={current}
+              section={section}
+              onOpenSearch={() => setIsSearchOpen(true)}
+            />
           </aside>
 
           <div className="docs-main">{children}</div>
@@ -201,6 +260,12 @@ function ArchiveLayout({ current, section, children }: LayoutProps) {
 
       {/* 规格 3.3：文档库 THINK。挂件是 3.4 的唯一观看位，全站常驻。 */}
       <MascotDock state="THINK" fx={null} visible />
+
+      {/* 全局文档搜索模态框 */}
+      <DocSearchModal
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </div>
   )
 }
