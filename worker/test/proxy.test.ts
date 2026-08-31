@@ -270,6 +270,10 @@ test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模�
   const original = globalThis.fetch
 
   globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const urlStr = String(_url)
+    if (urlStr.includes('duckduckgo') || urlStr.includes('brave') || !init?.body) {
+      return new Response('<html></html>', { status: 200 })
+    }
     const body = JSON.parse(String(init?.body))
     calls.push({ ip: '', model: body.model, historyLen: body.messages.length })
     const stream = new ReadableStream<Uint8Array>({

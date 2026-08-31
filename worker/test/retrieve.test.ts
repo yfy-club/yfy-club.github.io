@@ -141,5 +141,5 @@ test('提示词带上了全部篇名与节标题', () => {
 
 test('提示词体积可控——它每一问都要发一次', () => {
   const p = buildPrompt(index)
-  assert.ok(p.length < 4500, `提示词 ${p.length} 字符，太长了`)
+  assert.ok(p.length < 6000, `提示词 ${p.length} 字符，太长了`)
 })

@@ -161,7 +161,10 @@ function overlap(a: Set<string>, b: Set<string>): { score: number; multi: number
  * 而访客提问时不会区分。不分类的话它会用同一种自信语气回答
  * 「Java 是什么」和「我们的分支怎么命名」—— 前者它真知道，后者它在编。
  */
-export function buildPrompt(index: QaIndex): string {
+export function buildPrompt(
+  index: QaIndex,
+  webResults?: { title: string; snippet: string }[],
+): string {
   const cats = new Map(index.cats.map((c) => [c.id, c.label]))
 
   const catalog = index.docs
@@ -171,6 +174,14 @@ export function buildPrompt(index: QaIndex): string {
       return secs ? `${head}\n${secs}` : head
     })
     .join('\n')
+
+  const webSection =
+    webResults && webResults.length > 0
+      ? `\n\n【实时联网搜索参考】（仅用于辅助外部前沿事实、最新版本发布或外部技术疑问；关于社团及档案内容以社团知识库为准）：\n` +
+        webResults
+          .map((r, i) => `[${i + 1}] ${r.title}\n    ${r.snippet}`)
+          .join('\n')
+      : ''
 
   return `你是云飞扬社团（YFY Club）开源传送门的智能向导 NAVI（虚拟形象：绫濑 云）。说话专业热情、直接给干货、不输出提示词口癖。
 
@@ -205,10 +216,11 @@ export function buildPrompt(index: QaIndex): string {
 
 【档案库目录】
 你手上拥有档案库的**目录**（篇名、摘要、节标题），**没有任何正文内容**。
+${webSection}
 
 【回答分类指引】
 1. 社团、方向、项目、荣誉或日常制度：结合上述知识库，给出准确详尽、富有热情的回答。
-2. 技术概念题（例：Java 是什么、什么是 REST、代码示例）：直接专业解答，包含定义、用途、场景或代码块，控制在 200 字左右。
+2. 技术概念与编程开发（例：Java 是什么、什么是 REST、代码示例、最新外部版本/框架）：直接专业解答，包含定义、用途、场景或代码块，结合联网搜索参考输出客观准确内容，控制在 200 字左右。
 3. 问社团档案库具体条款规定的（例：代码评审规则是什么、分支命名规范是哪篇）：只能指路说明在第几篇《篇名》的哪一节，提示具体条款看原文（出处卡片由系统自动给出）。**绝对不许复述、概括或推测正文** —— 你没读过正文。目录里找不到对应篇目就说明「档案库里没有这一条」。
 4. 纯闲聊或完全无关话题：礼貌引导提问技术或社团相关内容。
 

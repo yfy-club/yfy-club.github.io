@@ -34,6 +34,7 @@
 import INDEX from './qa-index.json' with { type: 'json' }
 import { buildPrompt, pickCites, type QaIndex } from './retrieve.ts'
 import { RATE_RULES, checkRate } from './rate.ts'
+import { searchWeb, shouldSearchWeb } from './search.ts'
 
 export interface Env {
   /** new-api 的 token。Secret，不进 wrangler.toml。 */
@@ -46,6 +47,8 @@ export interface Env {
   QA_RATE: KVNamespace
   /** 允许的来源，逗号分隔。 */
   ALLOWED_ORIGINS: string
+  /** 可选的 Brave Search API Key。如不配置自动使用 DuckDuckGo 零配置搜索。 */
+  BRAVE_API_KEY?: string
 }
 
 const index = INDEX as unknown as QaIndex
@@ -132,8 +135,20 @@ export default {
     /* ------------------------------------------------------ 检索 + 转发 */
 
     const cites = pickCites(index, question)
+
+    // 智能联网搜索：社团内部问题优先走本地知识库；外部前沿技术与未知事实触发实时搜索
+    let webResults: { title: string; snippet: string }[] | undefined
+    if (shouldSearchWeb(question)) {
+      try {
+        const results = await searchWeb(question, env.BRAVE_API_KEY)
+        if (results.length > 0) webResults = results
+      } catch (e) {
+        console.warn('search failed, falling back:', e)
+      }
+    }
+
     const messages = [
-      { role: 'system', content: buildPrompt(index) },
+      { role: 'system', content: buildPrompt(index, webResults) },
       ...history,
       { role: 'user', content: question },
     ]
