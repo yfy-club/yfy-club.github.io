@@ -327,7 +327,6 @@ async function relay(
           model,
           messages,
           stream: true,
-          tools: [WEB_SEARCH_TOOL],
           temperature: 0.2,
           max_tokens: MAX_TOKENS,
         }),
