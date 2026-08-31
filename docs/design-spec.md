@@ -338,6 +338,89 @@ g#fx               交互粒子挂载点（Canvas 覆盖层锚定于此）
 
 位移上限统一 clamp 到 `±14px`，避免鼠标甩动时画面散架。
 
+### 3.6 向导问答（M9 新增）
+
+挂件从「整块一个 `role=button` 回顶」拆成**两枚平级的真实 `button`**，两个功能各有独立命中区与描边高亮：
+
+| 键 | 材质 | 动作 | 悬停 |
+|---|---|---|---|
+| `.dock-top`（立绘） | `--bg-sunk` 凹陷 | 回到顶部（M4 原有手势，不变） | 描边转 `--char-navi-accent`，下缘浮出 `↑ TOP` |
+| `.dock-ask`（底部键） | `--sky-700` 实心，常驻「问 NAVI」 | 打开问答面板 | 底转 `--ink-900`，上移 2px |
+
+一凹一凸是全站既有的读法（代码块凹陷 = 可看的内容，Hero 主按钮实心 = 要点的动作），**静态截图里就分得清，不依赖悬停**。
+
+> 为什么不做「点外框问答、点立绘回顶」：外框左右只剩 12px，低于 WCAG 2.5.8 的 24px 目标尺寸，而且不悬停完全看不出有两种点法。
+
+`<aside>` 因此退成纯容器（去掉 `role` 与 `tabIndex`），`.dock-code` / `.dock-romaji` 转 `aria-hidden`——它们是装饰标签，语义由两枚按钮各自的可访问名承担。**`<button>` 不许嵌套可交互元素**，原来那种结构读屏会把两个名字念成一坨。
+
+挂件高度因此 +36px，`height < 720px` 先砍 `.dock-romaji`（纯装饰）保按钮。宽度不变，1360 断点不用重算——这是选底部键而不是左侧竖拉手的主要原因。
+
+**入口双份**：挂件在 `width < 1360` 整块 `display: none`，所以导航条里另有一枚 `.nav-toggle-qa`，两者由 CSS 按同一个 1360 断点各隐一枚。不用 JS 量视口——那会引入一个预渲染期算不出的条件，注水必错位。
+
+#### 架构：三层，凭据永不进前端
+
+```
+浏览器（GitHub Pages 静态）
+   │  POST /v1/ask   { question, history }    ← 只发问题
+   ▼
+边缘代理 worker/（Cloudflare Worker）
+   │  · 持有 new-api token（Secret）
+   │  · 检索：qa-index.json 编进产物
+   │  · 锁死 model / temperature / max_tokens
+   │  · 按 IP 三道限流闸
+   ▼
+自建 new-api  → /v1/chat/completions (stream)
+```
+
+new-api 的 token 一旦写进前端包就是公开的，任何人都能刷额度；受限 token 只能限制损失范围，挡不住滥用。检索也必须在代理端做——让客户端自己拼上下文等于把 system prompt 交给任何人改写，既是注入面，也让代理退化成免费的通用聊天网关。
+
+端点走 `VITE_QA_ENDPOINT`，**没配置就整块功能不渲染**（规格 5.5 的「不留死按钮」，与「音频文件不在时不出声音开关」同一条）。
+
+#### 语料只有目录，没有正文（重要取舍）
+
+`worker/src/qa-index.json` 由 `npm run docs:build` 与 `src/data/docs.ts` **同一个脚本**产出，只含 15 篇篇名 + 摘要 + 77 个节标题，约 2.6k 字符 —— 整份塞进每次请求的 system prompt，**不分块、不打分向量、不要 embedding**。78 段 × 1024 维 float32 光存就 320 KB，为这点语料上向量库是纯粹的过度工程。
+
+由此而来的能力边界写死在提示词里，`worker/test/retrieve.test.ts` 在断言它还在：
+
+| 问题类型 | 行为 | 视觉 |
+|---|---|---|
+| 技术概念（Java 是什么） | 用模型自己的知识答，≤200 字 | 预设问题左侧 3px `--sky-500` |
+| 档案库怎么规定的 | **只指路到「第几篇的哪一节」，不许复述条款** | 预设问题左侧 3px `--pink-500` |
+| 无关问题 | 一句话婉拒 | — |
+
+第二类的措辞是整个方案的成败点：模型没读过正文，让它讲条款内容就是让它编。想让 AI 真能回答「分支怎么命名」，要做的是把正文切块喂进来（另一套设计），不是放宽提示词。
+
+**链接由代理算，不由模型给**。模型被明令禁止输出 URL——它会编出 `/docs/git-branch` 这种不存在的地址且无法自查。代理用字符 2-gram 重合对标题打分，先发 `event: cite` 再转发正文，所以上游超时、限流、报错三条失败路径都仍然有真实可点的篇目链接。打分要求至少一个**多字**命中，否则「帮我写一首诗」会靠「我」「一」「写」三个单字凑出三条出处。
+
+#### 契约
+
+```
+POST /v1/ask          Origin 命中白名单，否则 403
+  200 text/event-stream:  cite → delta* → done
+  400 入参不合法 · 403 来源不符 · 429 { code, retryAfter, cites }
+GET  /v1/health       { ok, version, docs }   version = 成稿指纹，核对代理与站点同源
+```
+
+限流三道闸：单 IP 10 问/时、40 问/天，全局 800 问/天。撞闸回 429 且 body 仍带 `cites`。来源白名单挡不住 curl（Origin 是浏览器加的），真正的兜底是这三道闸。KV 读失败时**放行而非拦住**——可用性优先，上面还有 new-api 自己的配额兜底。
+
+#### 状态机联动（复用 3.3 的枚举，不新增状态）
+
+`pending → THINK`、`streaming → FOCUS`、`done → SMILE`、`error → SURPRISE`；面板打开期间 `interactive={false}`，否则戳立绘的 `POUT`/`DIZZY` 会抢掉答题态。
+
+> 答完 1.2s 后必须把 status 放回 `idle`。不放回挂件会**永久停在 SMILE**：`QA_STATE` 盖住进区状态，而 `useMascotState` 的 `SMILE_HOLD` 只管它自己触发的那次微笑，管不了外部传进来的 base。M9 实测就是这个现象——答完之后她一直在笑，滚回方向区也不切 `FOCUS`。
+
+#### 两个容易踩的硬约束
+
+**不许 `backdrop-filter`。** 全站配额两处已被导航条与弹幕浮层占满（规格 2.5 第 1 条，`a11y-probe` 的 `forbidden` 组在数）。面板走 `--bg-paper` 实色 + 1px 描边 + 左下切角，别照抄 `.dm-composer`。
+
+**模型输出区用独立字体族 `--font-answer`。** 本站中文字体是按语料切的子集（`unicode-range` 精确到码点），模型吐什么字构建期不可能知道，挂上子集只会得到「半段 Noto 半段系统字」的混排。`--font-answer` 刻意不含 `Noto Sans SC`，整段交给系统字体。界面固定文案照旧走 `--font-sans`。
+
+面板自己的文案登记成**第四个字体作用域 `qa`**（`subset-fonts.ts` 的 `SCOPES.qa`），优先序 `docs > qa > lab`：qa 与 docs 重叠 22 字，让问答面板在首页多下一份 docs 分片是不能接受的，所以 qa 剥掉重叠后只剩 10 字、2.5 KB。挂件上那两句常驻文案（「问 NAVI」「点这里可以问我」）**不在 qa 作用域**，它们照常算进 ui——用到的字本来就都在 ui 语料里，零增量。
+
+> M9 踩坑记录一：**`.qa-tip` 不能放进 `.dock`。** `.dock` 有 `clip-path`（右上切角），而 **clip-path 会裁剪所有后代**——绝对定位到框外的提示框，`getBoundingClientRect()` 与 `isVisible()` 都正常，屏幕上一个像素都没有。改成自己 `position: fixed`，靠 token 对齐问答键。靠截图才发现，别再搬回去。
+
+> M9 踩坑记录二：**`a11y-probe.mjs` 里 `assert(r.dockHidden, '向导挂件整层 aria-hidden')` 从写下起就没通过过。** `dock.tsx` 里从来没有 `aria-hidden`，而它当时是 `<aside role="button">`，整层隐藏本来也会把回顶功能对读屏藏掉。拆成两枚真实按钮后按「装饰隐、按钮露」逐项验：立绘层 `aria-hidden`、code/romaji `aria-hidden`、两枚按钮各有可访问名。
+
 ---
 
 ## 4. 页面结构
@@ -954,9 +1037,19 @@ M7 落地的 head 与站点文件：
 | M6 | ✅ | 弹幕系统（四轨 + 输入浮层 + localStorage）+ BGM 开关（文件缺席自动隐藏）|
 | M7 | ✅ | 可访问性回归（71 条断言探针）+ 性能预算（Performance 95 / A11y 100 / BP 100 / SEO 100）+ SSG 补 head 与 sitemap + 部署工作流（不启用） |
 | M8 | ✅ | 立绘换成 NovelAI 原创栅格原画：测量驱动的摆位、栅格原生动效、响应式图片管线、矢量骨架清理 |
+| M9 | ✅ | 向导问答（挂件双按钮 + 面板 + 边缘代理 + 目录级检索），见 3.6 |
 
 M8 就是 M7 结尾那句「立绘造型由你自行重做」的兑现。矢量骨架
 （`hair.ts` / `geometry.ts` / `expressions.ts` 的路径数据）已随之删除，要找回去看 git 历史。
+
+M9 的代理在 `worker/`，独立 `package.json`，不进站点依赖。29 条测试不需要真的 new-api key
+（上游打桩、KV 用内存 Map，跑的是真实 handler）。**上线前必做两件事**：
+`npx wrangler secret put NEW_API_KEY`，以及给站点构建传 `VITE_QA_ENDPOINT`——
+后者没传时问答入口整个不渲染，站点照常工作。
+
+改了 `docs/articles/*.md` 要**重跑 `npm run docs:build` 并重新部署 Worker**：
+`qa-index.json` 与 `src/data/docs.ts` 同源产出，只更新站点不更新代理会让 AI 指向已改名的篇目。
+`GET /v1/health` 报出的 `version` 就是用来核对这件事的。
 
 M8 之后没有排期。**唯一明确的待办是表情**：现在六张脸是定妆的，
 眨眼与七态差分都取消了（原因见第 3 节 M8 记录）。要找回来最省的一条路是

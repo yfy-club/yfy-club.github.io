@@ -26,6 +26,17 @@ const ARTICLES_DIR = fileURLToPath(new URL('../docs/articles', import.meta.url))
 const CATS_FILE = fileURLToPath(new URL('../docs/categories.json', import.meta.url))
 const OUT = fileURLToPath(new URL('../src/data/docs.ts', import.meta.url))
 
+/**
+ * 问答索引。规格 3.6（M9）。
+ *
+ * 只有**篇名与节标题**，不含正文。整份 15 篇 × 77 节约 1.9k 字符，
+ * 一次请求就能全部塞进 prompt——不需要分块、不需要向量库。
+ *
+ * 为什么与 docs.ts 同一个脚本产：两份东西必须永远同源。
+ * 分两个脚本就会有一天改了成稿只跑了一个，然后 AI 指向一个已经不存在的锥点。
+ */
+const QA_INDEX_OUT = fileURLToPath(new URL('../worker/src/qa-index.json', import.meta.url))
+
 /** 高亮语言。成稿里只有这三种，多的不打进来。 */
 const LANGS = ['bash', 'ts', 'css'] as const
 
@@ -334,6 +345,7 @@ async function main() {
 
   verify(categories, articles)
   await writeFile(OUT, render(categories, articles), 'utf8')
+  await writeFile(QA_INDEX_OUT, renderQaIndex(categories, articles), 'utf8')
 
   const codeBlocks = articles.flatMap((a) => a.blocks.filter((b) => b.kind === 'code'))
   const byLang = new Map<string, number>()
@@ -354,6 +366,57 @@ async function main() {
     `代码块 ${codeBlocks.length}：${[...byLang].map(([k, v]) => `${v} ${k}`).join(' / ')}`,
   )
   console.log(`产物 src/data/docs.ts  ${(await readFile(OUT)).byteLength} 字节`)
+
+  const qaBytes = (await readFile(QA_INDEX_OUT)).byteLength
+  const secCount = articles.reduce((s, a) => s + a.headings.length, 0)
+  console.log(
+    `产物 worker/src/qa-index.json  ${qaBytes} 字节` +
+      `（${articles.length} 篇 / ${secCount} 节，只有标题，不含正文）`,
+  )
+}
+
+/**
+ * 问答索引的产物。
+ *
+ * 字段名全部压到最短：这份 JSON 每次请求都要拼进 prompt，
+ * 字段名写长一点就是每一问多烧几十个 token。
+ *   c 分类代号（SETUP / CONVENTION / QUALITY）
+ *   s slug、i 序号、t 篇名
+ *   h 节标题，[锚点, 文本] 两元组
+ */
+function renderQaIndex(categories: { id: string; label: string }[], articles: Article[]) {
+  const catOf = (id: string) => categories.find((c) => c.id === id)
+
+  const payload = {
+    /** 成稿指纹。代理端拿它做缓存 key 的一部分，改稿自动失效。 */
+    version: fingerprint(articles),
+    cats: categories.map((c) => ({ id: c.id, label: c.label })),
+    docs: articles.map((a) => ({
+      s: a.slug,
+      i: a.index,
+      c: catOf(a.category)?.id ?? a.category,
+      t: a.title,
+      // 摘要也给——它是成稿自带的一句话概括，对“这篇讲什么”这类问题比节标题有用
+      d: a.summary,
+      h: a.headings.map((h) => [h.id, h.text] as const),
+    })),
+  }
+
+  return `${JSON.stringify(payload)}\n`
+}
+
+/** 标题与摘要的指纹。不算正文：索引里没有正文，正文改了也不影响检索结果。 */
+function fingerprint(articles: Article[]) {
+  const text = articles
+    .map((a) => `${a.slug}|${a.title}|${a.summary}|${a.headings.map((h) => h.text).join('~')}`)
+    .join('\n')
+  // FNV-1a。不需要密码学强度，只要改稿就变
+  let h = 0x811c9dc5
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i)
+    h = Math.imul(h, 0x01000193) >>> 0
+  }
+  return h.toString(16).padStart(8, '0')
 }
 
 /** Shiki 出 token，按哨兵色落到 class，产物里不带任何颜色值。 */

@@ -1,0 +1,489 @@
+/* =========================================================================
+   向导问答面板
+   规格 3.6（M9 新增）。
+
+   两条硬约束：
+     1. **不许 backdrop-filter。** 全站只准两处（导航条 + 弹幕输入浮层，规格 2.5
+        第 1 条），配额已满，a11y-probe 的 forbidden 组在数。这里走 --bg-paper 实色。
+     2. 切角 + 1px 描边，与挂件同一套几何语言。不许圆角气泡、不许阴影当层次。
+   ========================================================================= */
+
+.qa {
+  position: fixed;
+  /* 贴挂件左侧：挂件宽 148 + 它自己的右边距 + 一个间隙 */
+  right: calc(148px + var(--space-5) + var(--space-3));
+  bottom: var(--space-6);
+  z-index: var(--z-overlay);
+  width: 360px;
+  max-height: min(560px, calc(100dvh - 2 * var(--space-6)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid), var(--shadow-lift);
+  /* 左下切角。开口朝挂件那一侧，读作「从这枚键里拉出来的」 */
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    var(--bevel) 100%,
+    0 calc(100% - var(--bevel))
+  );
+  animation: qa-in var(--dur-micro) var(--ease-out-expo) backwards;
+}
+
+@keyframes qa-in {
+  from {
+    opacity: 0;
+    translate: 8px 0;
+  }
+}
+
+/* -------------------------------------------------------------------- 头 */
+
+.qa-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.qa-head-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+}
+
+.qa-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* WCAG 2.5.8 的 24px 下限，正好 */
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  font-size: var(--text-caption);
+  line-height: 1;
+  color: var(--ink-600);
+  background: none;
+  cursor: pointer;
+  transition: color var(--dur-micro) var(--ease-out-expo);
+}
+
+.qa-close:hover,
+.qa-close:focus-visible {
+  color: var(--ink-900);
+}
+
+/* ------------------------------------------------------------ 记录区 */
+
+.qa-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* ---- 空态 = 提示框本体 ---- */
+
+.qa-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.qa-empty-note {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--ink-600);
+}
+
+.qa-prompts {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.qa-prompt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  text-align: left;
+  color: var(--ink-900);
+  background: var(--bg-sunk);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+  cursor: pointer;
+  transition: box-shadow var(--dur-micro) var(--ease-out-expo);
+}
+
+/*
+ * 左侧 3px 竖条区分两类问题，与档案库目录树当前项的标记语言一致。
+ * concept 走 sky（模型自己答），archive 走 pink（只指路，答案在原文里）。
+ */
+.qa-prompt[data-kind='concept'] {
+  border-left: 3px solid var(--sky-500);
+}
+
+.qa-prompt[data-kind='archive'] {
+  border-left: 3px solid var(--pink-500);
+}
+
+.qa-prompt:hover,
+.qa-prompt:focus-visible {
+  box-shadow: inset 0 0 0 var(--hairline) var(--sky-500);
+}
+
+/* ---- 有记录 ---- */
+
+.qa-turns {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.qa-turn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.qa-q {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--ink-900);
+}
+
+.qa-q-hud {
+  flex: none;
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 700;
+  letter-spacing: var(--tracking-hud);
+  color: var(--sky-700);
+}
+
+/*
+ * 模型输出区单独一个字体族。
+ *
+ * 本站的中文字体是按语料切的子集（unicode-range 精确到码点），
+ * 模型吐出来的字大概率不在子集里 —— 落到 fallback 会出现
+ * 「一句话里半段 Noto 半段系统字」的混排。这里直接绕开子集，
+ * 整段交给系统字体，骨相至少是统一的。
+ * 界面固定文案照旧走 --font-sans，它们都在语料里。
+ */
+.qa-answer {
+  font-family: var(--font-answer);
+  font-size: var(--text-caption);
+  line-height: 1.75;
+  color: var(--ink-900);
+  white-space: pre-wrap;
+}
+
+.qa-wait {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-600);
+  animation: qa-blink 1.4s steps(2, end) infinite;
+}
+
+@keyframes qa-blink {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/* ---- 出处 ---- */
+
+.qa-cites {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.qa-cites-hud {
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 700;
+  letter-spacing: var(--tracking-hud);
+  color: var(--ink-500);
+}
+
+.qa-cites ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.qa-cite {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-height: 24px;
+  padding: var(--space-1) 0;
+  font-size: var(--text-caption);
+  line-height: 1.5;
+  text-decoration: none;
+  color: var(--sky-700);
+}
+
+.qa-cite:hover .qa-cite-title,
+.qa-cite:focus-visible .qa-cite-title {
+  text-decoration: underline;
+}
+
+.qa-cite-title {
+  font-weight: 700;
+}
+
+.qa-cite-sec {
+  font-size: var(--text-hud);
+  color: var(--ink-600);
+}
+
+.qa-error {
+  padding: var(--space-2) var(--space-3);
+  border-left: 3px solid var(--pink-500);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--ink-900);
+  background: var(--bg-sunk);
+}
+
+/* ------------------------------------------------------------ 输入 */
+
+.qa-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: var(--hairline) solid var(--line-hair);
+}
+
+.qa-field {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.qa-input {
+  flex: 1;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: 1.6;
+  color: var(--ink-900);
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-badge);
+}
+
+.qa-input::placeholder {
+  color: var(--ink-600);
+}
+
+.qa-input:disabled {
+  background: var(--bg-sunk);
+  color: var(--ink-600);
+}
+
+.qa-send {
+  --btn-bevel: 8px;
+  flex: none;
+  min-width: 48px;
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  color: var(--bg-paper);
+  background: var(--sky-700);
+  cursor: pointer;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--btn-bevel)) 0,
+    100% var(--btn-bevel),
+    100% 100%,
+    var(--btn-bevel) 100%,
+    0 calc(100% - var(--btn-bevel))
+  );
+  transition: background var(--dur-micro) var(--ease-out-expo);
+}
+
+.qa-send:hover:not(:disabled),
+.qa-send:focus-visible:not(:disabled) {
+  background: var(--ink-900);
+}
+
+.qa-send:disabled {
+  color: var(--ink-600);
+  background: var(--bg-sunk);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+  cursor: not-allowed;
+}
+
+.qa-note {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: var(--text-hud);
+  line-height: 1.6;
+  color: var(--ink-600);
+}
+
+/* -------------------------------------------------------------------------
+   首访一次性提示。贴在问答键左侧。
+
+   跟面板一样是 fixed，**不能**放进 .dock：那个容器有 clip-path，
+   而 clip-path 会裁剪所有后代，定位到框外的子元素会被直接剪没——
+   rect 与 isVisible() 依旧正常，只是屏幕上看不见。
+   ------------------------------------------------------------------------- */
+
+.qa-tip {
+  position: fixed;
+  /* 对齐问答键：挂件右边距 24 + 框宽 148 + 一个间隙 */
+  right: calc(148px + var(--space-5) + var(--space-2));
+  /* 挂件底边距 40 + 底 padding 12，正好跟 32px 高的问答键平齐 */
+  bottom: calc(var(--space-6) + var(--space-3));
+  z-index: var(--z-mascot);
+  display: flex;
+  align-items: stretch;
+  white-space: nowrap;
+  background: var(--bg-paper);
+  box-shadow: inset 0 0 0 var(--hairline) var(--line-solid), var(--shadow-lift);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% 100%,
+    var(--space-2) 100%,
+    0 calc(100% - var(--space-2))
+  );
+  animation: qa-in var(--dur-enter) var(--ease-out-expo) backwards;
+}
+
+/* 挂件隐了提示也要跟着隐，否则窄屏会冒出一条指向空气的提示 */
+@media (width < 1360px) {
+  .qa-tip {
+    display: none;
+  }
+}
+
+@media (height < 720px) {
+  .qa-tip {
+    bottom: calc(var(--space-4) + var(--space-3));
+  }
+}
+
+.qa-tip-body {
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  line-height: 1.4;
+  color: var(--ink-900);
+  background: none;
+  cursor: pointer;
+}
+
+.qa-tip-body:hover,
+.qa-tip-body:focus-visible {
+  color: var(--sky-700);
+}
+
+.qa-tip-x {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  padding: 0;
+  border: 0;
+  border-left: var(--hairline) solid var(--line-hair);
+  font-size: var(--text-hud);
+  line-height: 1;
+  color: var(--ink-600);
+  background: none;
+  cursor: pointer;
+}
+
+.qa-tip-x:hover,
+.qa-tip-x:focus-visible {
+  color: var(--ink-900);
+}
+
+/* -------------------------------------------------------------------------
+   窄屏。挂件在 width < 1360 整块隐藏，入口挪到导航条，面板改底部抽屉。
+
+   两枚入口都渲染在 DOM 里，靠这一组断点各隐一枚——不用 JS 量视口：
+   量视口会引入一个预渲染期算不出的条件，注水必错位。
+   断点值 1360 必须与 dock.css 里那一条一致，改一处就会出现「两枚都没」或「两枚都有」。
+   ------------------------------------------------------------------------- */
+
+/* 宽屏：主入口在挂件上，导航条那枚不出 */
+@media (width >= 1360px) {
+  .nav-toggle-qa {
+    display: none;
+  }
+}
+
+@media (width < 1360px) {
+  .qa {
+    right: var(--space-4);
+    left: var(--space-4);
+    bottom: var(--space-4);
+    width: auto;
+    max-width: 480px;
+    margin-inline: auto;
+    max-height: min(60dvh, 520px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qa,
+  .qa-tip {
+    /* --dur-* 在 reduce 下已经收到 150ms 线性，位移仍要去掉 */
+    animation-name: qa-fade;
+  }
+
+  .qa-wait {
+    animation: none;
+  }
+
+  .qa-close,
+  .qa-prompt,
+  .qa-send,
+  .qa-input {
+    transition: none;
+  }
+}
+
+@keyframes qa-fade {
+  from {
+    opacity: 0;
+  }
+}

@@ -15,6 +15,7 @@ import { useLocation } from 'react-router'
 import { Diamond } from '@/components/hud'
 import { DanmakuComposer, DanmakuToast } from '@/components/danmaku/composer'
 import { danmakuStore, initDanmaku, setDanmakuOn } from '@/components/danmaku/store'
+import { QA_ENABLED, initQa, qaStore, toggleQa } from '@/components/qa/store'
 import { useMounted } from '@/lib/use-mounted'
 import { useReducedMotion } from '@/lib/use-reduced-motion'
 import { useStore } from '@/lib/store'
@@ -29,6 +30,7 @@ export function NavTools() {
   const reduced = useReducedMotion()
   const danmaku = useStore(danmakuStore)
   const bgm = useStore(bgmStore)
+  const qa = useStore(qaStore)
   const onHome = useLocation().pathname === '/'
   const [soundOn, setSoundOn] = useState(() => isSoundEnabled())
 
@@ -39,6 +41,7 @@ export function NavTools() {
   useEffect(() => {
     initDanmaku()
     initBgm()
+    initQa()
   }, [])
 
   // 关掉弹幕、或离开首页，就把浮层一起收掉，别让它孤零零挂在导航条下面
@@ -141,6 +144,33 @@ export function NavTools() {
         <Diamond tone={soundOn ? 'pink' : 'ink'} />
         音效
       </button>
+
+      {/*
+       * 问 NAVI。规格 3.6（M9）。
+       *
+       * 主入口在向导挂件上，但挂件在 width < 1360 整块 display: none
+       * （窄屏没那么宽的空槽，见 dock.css）。只靠挂件的话笔记本与手机
+       * 根本找不到这个功能，所以宽屏下隐掉这枚、窄屏下由它顶上。
+       *
+       * 不用 JS 量视口宽度切换：那会引入一个预渲染量不到的条件，注水必错位。
+       * 两枚都渲染，CSS 按同一个 1360 断点各隐一枚，断点写在 qa.css 里。
+       */}
+      {QA_ENABLED && (
+        <button
+          className="nav-toggle nav-toggle-qa"
+          type="button"
+          aria-expanded={qa.open}
+          {...(qa.open ? { 'aria-controls': 'qa-panel' } : {})}
+          title="向向导 NAVI 提问"
+          onClick={() => {
+            playClick()
+            toggleQa()
+          }}
+        >
+          <Diamond tone={qa.open ? 'pink' : 'ink'} />
+          问 NAVI
+        </button>
+      )}
 
       {composing && <DanmakuComposer boundary={tools} onClose={closeComposer} />}
       {!composing && toast && <DanmakuToast text={toast} />}

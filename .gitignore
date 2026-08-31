@@ -18,3 +18,7 @@ Thumbs.db
 .idea/
 .vscode/*
 !.vscode/extensions.json
+
+# Worker 的依赖与本地状态
+worker/node_modules/
+worker/.wrangler/

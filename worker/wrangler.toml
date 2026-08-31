@@ -1,0 +1,28 @@
+name = "yfy-qa"
+main = "src/index.ts"
+compatibility_date = "2025-01-09"
+
+# 观测。撞闸与上游报错都在 console.error 里，wrangler tail 能看
+[observability]
+enabled = true
+
+[vars]
+# new-api 的基址，不带 /v1。部署前改成你自己的。
+NEW_API_BASE = "https://api.example.com"
+
+# 模型名。服务端定死，请求体改不动。
+# 档案问答不需要长思考，小模型 + temperature 0.2 就够。
+QA_MODEL = "gpt-4o-mini"
+
+# 来源白名单，逗号分隔。挡的是「拿我们的额度做自己的机器人」。
+# 挡不住 curl（Origin 是浏览器加的），真正的兜底是按 IP 的限流。
+ALLOWED_ORIGINS = "https://yfy-club.github.io,http://localhost:5173,http://localhost:5241"
+
+# 限流计数。先建再填 id：
+#   npx wrangler kv namespace create QA_RATE
+[[kv_namespaces]]
+binding = "QA_RATE"
+id = "PUT_YOUR_KV_ID_HERE"
+
+# NEW_API_KEY 不写在这里——它是 Secret：
+#   npx wrangler secret put NEW_API_KEY

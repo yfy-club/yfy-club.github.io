@@ -1,7 +1,13 @@
 /* =========================================================================
    向导驻留挂件
-   规格 3.4 的 M4 修正记录。切角面板 + 1px 描边 + --bg-paper 实色。
+   规格 3.4 的 M4 修正记录 + 3.6 的 M9 修正记录。
+   切角面板 + 1px 描边 + --bg-paper 实色。
    不许圆头像、不许阴影、不许毛玻璃——那是客服气泡的语言，不是 HUD 的。
+
+   M9：整块 role=button 拆成两枚平级的真实 button。
+   立绘键凹陷（.dock-top，回顶），问答键实心（.dock-ask，开面板）。
+   一凹一凸是全站既有的读法：代码块凹陷 = 可看的内容，Hero 主按钮实心 = 要点的动作。
+   静态截图里就分得清，不依赖悬停。
    ========================================================================= */
 
 .dock {
@@ -37,19 +43,6 @@
   opacity: 1;
   translate: 0 0;
   pointer-events: auto;
-  cursor: pointer;
-}
-
-.dock:hover,
-.dock:focus-visible {
-  box-shadow:
-    inset 0 0 0 var(--hairline) var(--char-navi-accent),
-    var(--shadow-lift);
-  outline: none;
-}
-
-.dock:active {
-  translate: 0 2px;
 }
 
 /*
@@ -63,14 +56,36 @@
   }
 }
 
+/*
+ * 矮视口先牺牲 romaji 那行。
+ * M9 加了 32px 的问答键，900 高的视口还有余量，720 以下会顶到内容。
+ * romaji 是纯装饰（aria-hidden），砍它比砍按钮好。
+ */
+@media (height < 720px) {
+  .dock {
+    bottom: var(--space-4);
+  }
+
+  .dock-romaji {
+    display: none;
+  }
+}
+
 .dock-code,
 .dock-romaji {
   font-family: var(--font-hud);
   line-height: 1.2;
   text-align: center;
+  /* 点在文字上不该什么都不发生——穿过去交给下面的按钮 */
+  pointer-events: none;
 }
 
 .dock-code {
+  /* WCAG 2.5.8：这一行是立绘键上方的呼吸区，抬到 24px 让上边缘也有实际命中面积 */
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: var(--text-caption);
   font-weight: 700;
   letter-spacing: var(--tracking-hud);
@@ -84,16 +99,35 @@
   color: var(--ink-500);
 }
 
-/* 立绘槽。bust 裁切下缘顶住画框，这里再压一道凹陷底把它衬出来 */
-.dock-portrait {
+/* -------------------------------------------------------------------------
+   立绘键 · 回到顶部
+   bust 裁切下缘顶住画框，凹陷底把它衬出来。M4 的 .dock-portrait 就是这一块。
+   ------------------------------------------------------------------------- */
+
+.dock-top {
+  position: relative;
   display: block;
+  width: 100%;
+  padding: 0;
   overflow: hidden;
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--bg-sunk);
   box-shadow: inset 0 0 0 var(--hairline) var(--line-hair);
+  cursor: pointer;
+  transition: box-shadow var(--dur-micro) var(--ease-out-expo);
 }
 
-.dock-portrait .mascot {
+.dock-top:hover,
+.dock-top:focus-visible {
+  box-shadow: inset 0 0 0 var(--hairline) var(--char-navi-accent);
+}
+
+.dock-top:active {
+  translate: 0 2px;
+}
+
+.dock-top .mascot {
   width: 100%;
   height: auto;
   /*
@@ -103,8 +137,100 @@
   --prop-stroke: 1.6;
 }
 
+/*
+ * ↑ TOP 角标。压在立绘下缘，absolute 所以不占布局高度——
+ * 加进流里会把立绘挤矮，而 bust 裁切的构图是按满高算的。
+ */
+.dock-top-hud {
+  position: absolute;
+  inset: auto 0 0;
+  padding: var(--space-1) 0;
+  font-family: var(--font-hud);
+  font-size: var(--text-hud);
+  font-weight: 600;
+  letter-spacing: var(--tracking-hud);
+  text-align: center;
+  color: var(--bg-paper);
+  background: color-mix(in oklab, var(--ink-900) 82%, transparent);
+  opacity: 0;
+  transition: opacity var(--dur-micro) var(--ease-out-expo);
+}
+
+.dock-top:hover .dock-top-hud,
+.dock-top:focus-visible .dock-top-hud {
+  opacity: 1;
+}
+
+/* -------------------------------------------------------------------------
+   问答键 · 打开面板
+   沿用 .hero-btn[data-kind=primary] 的实心语言：--sky-700 底 + --bg-paper 字，
+   那一组的对比度在 2.1 表里已经过 AA，不另算。
+   ------------------------------------------------------------------------- */
+
+.dock-ask {
+  /* 148px 宽的键上 14px 切角太重，收到 10 */
+  --btn-bevel: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 32px;
+  padding: 0 var(--space-2);
+  border: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-caption);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--bg-paper);
+  background: var(--sky-700);
+  cursor: pointer;
+  clip-path: polygon(
+    0 0,
+    calc(100% - var(--btn-bevel)) 0,
+    100% var(--btn-bevel),
+    100% 100%,
+    var(--btn-bevel) 100%,
+    0 calc(100% - var(--btn-bevel))
+  );
+  transition:
+    background var(--dur-micro) var(--ease-out-expo),
+    translate var(--dur-micro) var(--ease-out-expo);
+}
+
+/* Diamond 默认取 --sky-500，在 --sky-700 底上几乎看不见。跟着字走。 */
+.dock-ask .hud-diamond {
+  color: currentColor;
+}
+
+.dock-ask:hover,
+.dock-ask:focus-visible {
+  background: var(--ink-900);
+}
+
+.dock-ask:hover {
+  translate: 0 -2px;
+}
+
+/* 开着的时候保持深底。面板就在旁边，不用再加一层"激活"装饰 */
+.dock-ask[aria-expanded='true'] {
+  background: var(--ink-900);
+}
+
+.dock-ask:active {
+  translate: 0 1px;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .dock {
+  .dock,
+  .dock-top,
+  .dock-top-hud,
+  .dock-ask {
     transition: none;
+  }
+
+  .dock-ask:hover,
+  .dock-top:active,
+  .dock-ask:active {
+    translate: none;
   }
 }

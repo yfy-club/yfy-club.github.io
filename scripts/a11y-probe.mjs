@@ -254,10 +254,32 @@ async function probeContrast(browser, route, viewport, label) {
   }
 
   // /docs 的长文要把展开的都摊开，代码块的 Shiki 色也要量
+  /*
+   * 问答面板要先打开才量得到。
+   *
+   * 它里面有一批新配对：--ink-600 on --bg-paper 的说明行、
+   * --ink-900 on --bg-sunk 的预设问题、--sky-700 的出处链接、
+   * --bg-paper on --sky-700 的发送键。check:contrast 只扫令牌两两组合，
+   * 扫不到「这两个令牌真的撞在一起了」——不开面板就等于这一批没验。
+   */
+  const qaEntry = page.locator('.dock-ask, .nav-toggle-qa')
+  let qaOpened = false
+  if (await qaEntry.count()) {
+    const entry = qaEntry.filter({ visible: true }).first()
+    if (await entry.count()) {
+      // 挂件要滚出 Hero 才现身
+      await page.evaluate(() => window.scrollTo(0, 900))
+      await settle(page, 600)
+      await entry.click()
+      await settle(page, 500)
+      qaOpened = (await page.locator('#qa-panel').count()) === 1
+    }
+  }
+
   const hits = await page.evaluate(CONTRAST_FN)
   const group = 'contrast'
   if (hits.length === 0) {
-    ok(group, `${label} ${route} 全部文本 ≥ AA`)
+    ok(group, `${label} ${route} 全部文本 ≥ AA${qaOpened ? '（含问答面板）' : ''}`)
   } else {
     for (const h of hits) {
       bad(
@@ -282,7 +304,9 @@ async function probeContrast(browser, route, viewport, label) {
     'forbidden',
     forb.glass.length <= 2 && forb.glass.length >= 1,
     `${label} ${route} backdrop-filter ${forb.glass.length} 处（上限 2）` +
-      (forb.glass.length ? `：${forb.glass.map((g) => g.cls).join(' / ')}` : ''),
+      (forb.glass.length ? `：${forb.glass.map((g) => g.cls).join(' / ')}` : '') +
+      // 面板开着时量才有意义：它是最容易被随手抄上 backdrop-filter 的一层
+      (qaOpened ? '（问答面板展开中）' : ''),
   )
   assert('forbidden', forb.shadow.length === 0, `${label} ${route} box-shadow 全部负 spread 且 blur ≤ 40px`)
   assert('forbidden', forb.blur.length === 0, `${label} ${route} 装饰 blur ≤ 8px`)
@@ -390,6 +414,39 @@ async function probeKeyboard(browser) {
     assert(g, (await page.locator('.dm-composer').count()) === 0, '弹幕浮层 Esc 收起')
   }
 
+  /*
+   * 向导问答面板：Esc 收起，且焦点还回 .dock-ask。
+   *
+   * 只在配了 VITE_QA_ENDPOINT 时才存在（规格 5.5 不留死按钮），
+   * 没配就跳过，不当失败——这跟弹幕开关的处理同一条。
+   */
+  await page.evaluate(() => window.scrollTo(0, 900))
+  await settle(page, 500)
+  const askBtn = page.locator('.dock-ask')
+  if (await askBtn.count()) {
+    await askBtn.click()
+    await settle(page, 400)
+    assert(g, (await page.locator('#qa-panel').count()) === 1, '问答面板打开')
+    assert(g, (await askBtn.getAttribute('aria-expanded')) === 'true', '问答键 aria-expanded=true')
+
+    // 面板一开就该把焦点放进输入框，不然键盘用户得先 Tab 找它
+    const focused = await page.evaluate(() => document.activeElement?.id ?? '')
+    assert(g, focused === 'qa-input', `问答面板打开后焦点落在输入框（实测 ${focused || '(空)'}）`)
+
+    await page.keyboard.press('Escape')
+    await settle(page, 400)
+    assert(g, (await page.locator('#qa-panel').count()) === 0, '问答面板 Esc 收起')
+    const back = await page.evaluate(() => document.activeElement?.className ?? '')
+    assert(g, back.includes('dock-ask'), `Esc 后焦点还回问答键（实测 ${back || '(空)'}）`)
+
+    // 两枚键是各自独立的动作：点立绘不该开面板
+    await page.locator('.dock-top').click()
+    await settle(page, 400)
+    assert(g, (await page.locator('#qa-panel').count()) === 0, '点立绘只回顶，不开问答面板')
+  } else {
+    note('未配置 VITE_QA_ENDPOINT，跳过问答面板的键盘断言')
+  }
+
   // 档案库
   await page.goto(`${BASE}/docs`, { waitUntil: 'load' })
   await settle(page)
@@ -449,7 +506,29 @@ async function probeAria(browser) {
       unhidden: unhidden.map((s) => s.getAttribute('class') || s.tagName),
       hudCount: hud.length,
       hudLeaks: hudLeaks.map((el) => el.getAttribute('class')),
-      dockHidden: !!document.querySelector('.dock[aria-hidden="true"]'),
+      /*
+       * M9：挂件从整块 role=button 拆成两枚平级的真实 button
+       * （.dock-top 回顶 / .dock-ask 开问答），所以整层不能再 aria-hidden——
+       * 隐掉了读屏就拿不到这两个功能。改成逐项查：
+       * 装饰层（立绘 / code / romaji）必须隐，两枚按钮必须各有可访问名。
+       */
+      dockPresent: !!document.querySelector('.dock'),
+      dockRole: document.querySelector('.dock')?.getAttribute('role') ?? null,
+      dockMascotHidden: [...document.querySelectorAll('.dock .mascot')].every((el) =>
+        el.closest('[aria-hidden="true"]'),
+      ),
+      dockLabelsHidden: [...document.querySelectorAll('.dock-code, .dock-romaji')].every((el) =>
+        el.closest('[aria-hidden="true"]'),
+      ),
+      dockBtns: [...document.querySelectorAll('.dock button')].map((el) => ({
+        cls: el.className,
+        // 可访问名：要么 aria-label，要么子树里有非 aria-hidden 的文本
+        named:
+          !!el.getAttribute('aria-label')?.trim() ||
+          [...el.querySelectorAll('*')].some(
+            (n) => !n.closest('[aria-hidden="true"]') && (n.textContent ?? '').trim().length > 0,
+          ),
+      })),
       danmakuHidden: !!document.querySelector('.danmaku[aria-hidden="true"]'),
       // 卡片必须是真实 button + aria-expanded，不是 div role=button
       cardTags: [...document.querySelectorAll('.track-face')].map((el) => el.tagName.toLowerCase()),
@@ -476,7 +555,24 @@ async function probeAria(browser) {
   assert(g, r.mascotCount > 0 && r.mascotHidden, `立绘 ${r.mascotCount} 层全部 aria-hidden`)
   assert(g, r.unhidden.length === 0, `装饰 SVG 无遗漏${r.unhidden.length ? `：${r.unhidden.join(' / ')}` : ''}`)
   assert(g, r.hudLeaks.length === 0, `HUD 原子 ${r.hudCount} 个全部 aria-hidden${r.hudLeaks.length ? `：漏 ${r.hudLeaks.join(' / ')}` : ''}`)
-  assert(g, r.dockHidden, '向导挂件整层 aria-hidden')
+  /*
+   * M9 修正：原来这里是 assert(r.dockHidden, '向导挂件整层 aria-hidden')。
+   * 那条断言从写下起就没通过过——dock.tsx 里从来没有 aria-hidden，
+   * 而它当时是 <aside role="button">，整层隐藏本来也会把回顶功能对读屏藏掉。
+   * 拆成两枚真实 button 后按「装饰隐、按钮露」逐项验。
+   */
+  assert(g, r.dockPresent, '向导挂件在 DOM 里')
+  assert(g, r.dockRole === null, `挂件外层不再是 role=button（实测 ${r.dockRole ?? 'null'}）`)
+  assert(g, r.dockMascotHidden, '挂件立绘层 aria-hidden')
+  assert(g, r.dockLabelsHidden, '挂件 code / romaji 装饰标签 aria-hidden')
+  assert(
+    g,
+    r.dockBtns.length >= 1 && r.dockBtns.every((b) => b.named),
+    `挂件按钮 ${r.dockBtns.length} 枚全部有可访问名` +
+      (r.dockBtns.some((b) => !b.named)
+        ? `：漏 ${r.dockBtns.filter((b) => !b.named).map((b) => b.cls).join(' / ')}`
+        : ''),
+  )
   assert(g, r.cardTags.length > 0 && r.cardTags.every((t) => t === 'button'), `方向卡是真实 button（${r.cardTags.length} 个）`)
   assert(g, r.cardExpanded, '方向卡全部带 aria-expanded')
   assert(g, r.stageTags.every((t) => t === 'button'), `展台按钮是真实 button（${r.stageTags.length} 个）`)

@@ -143,6 +143,15 @@
    */
   --font-mono:
     'JetBrains Mono Variable', ui-monospace, 'SFMono-Regular', 'Noto Sans SC', monospace;
+  /*
+   * 模型输出区专用。规格 3.6（M9）。
+   *
+   * 刻意**不含** 'Noto Sans SC'：本站那份是按语料切的子集，unicode-range 精确到码点，
+   * 而模型吐什么字构建期不可能知道。挂上子集只会得到「一句话里半段 Noto、
+   * 半段系统字」的混排——两种骨相在 13px 上看得很清楚。
+   * 整段交给系统中文字体，至少骨相统一。界面固定文案照旧走 --font-sans。
+   */
+  --font-answer: ui-sans-serif, system-ui, 'PingFang SC', 'Microsoft YaHei', sans-serif;
 
   /* 字阶 · 流体 */
   --text-display: clamp(56px, 9vw, 132px);

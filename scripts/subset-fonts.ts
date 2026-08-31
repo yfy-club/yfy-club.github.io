@@ -9,11 +9,12 @@
  * 产物写入 src/assets/fonts/，配套生成 src/styles/fonts.css（含 unicode-range）。
  * 两者都要提交进仓库，否则拉下来的人跑 build 会缺字。
  *
- * 语料按作用域切成三份：
+ * 语料按作用域切成四份：
  *   ui   —— 首屏与常驻界面文本，随页面一起加载
+ *   qa   —— 只有向导问答面板展开时才渲染的字
  *   lab  —— 只有 ?lab=1 的验收页会渲染的字
  *   docs —— 只有 /docs 长文会渲染的字
- * 后两份的 range 是「本作用域减去 ui」的差集，首屏不会碰它们。
+ * 后三份的 range 是「本作用域减去 ui」的差集，首屏不会碰它们。
  *
  * 另外切一份 JetBrains Mono（拉丁 ASCII）给 /docs 的代码块。它挂在 code/pre 上，
  * 首页没有代码块，浏览器按 CSS 字体的惰性加载规则不会去下它，同样不压首屏。
@@ -62,14 +63,16 @@ const LATIN_BASE = (() => {
 /**
  * 上线文本的来源。内部规格文档（docs/design-spec.md 等）不在其中，它们不上线。
  *
- * 三个作用域，产出三组分片，unicode-range 互不重叠：
+ * 四个作用域，产出四组分片，unicode-range 互不重叠：
  *   ui   首屏与常驻界面，随页面一起加载
+ *   qa   只有向导问答面板展开后才渲染的字，按需
  *   lab  只有 ?lab=1 的 M2 验收页会渲染的字，按需
  *   docs 只有 /docs 长文会渲染的字，按需
- * 后两组靠 unicode-range 让浏览器在首屏根本不去下载。
+ * 后三组靠 unicode-range 让浏览器在首屏根本不去下载。
  */
 const SCOPES = {
   ui: ['src', 'index.html'],
+  qa: ['src/components/qa/panel.tsx', 'src/components/qa/stream.ts', 'src/data/qa-prompts.ts'],
   lab: ['src/mascot-lab.tsx', 'src/components/mascot/states.ts'],
   docs: ['docs/articles', 'src/data/docs.ts'],
 } as const
@@ -84,6 +87,18 @@ const SCOPES = {
  *   两个文件随矢量骨架一起删了。）
  */
 const LAB_OWNED = SCOPES.lab
+
+/**
+ * 问答面板的文案。规格 3.6（M9）。
+ *
+ * 面板本身要点一下才展开，里面的说明、预设问题、错误文案在首屏一个字都不渲染。
+ * M9 实测这一份进 ui 会让首屏从 153.8 KB 涨到 166.2 KB——直接撞破 160 预算。
+ *
+ * **挂件上常驻的那两处不在这里**：问答键的「问 NAVI」与首访提示的「点这里可以问我」
+ * 写在 dock.tsx 与 store.ts 里，它们照常算进 ui。两处用到的字（问点这里可以我）
+ * 本来就都在 ui 语料里，所以这两句是零字体增量。
+ */
+const QA_OWNED = SCOPES.qa
 
 /**
  * 这些文件属于 docs 作用域，扫 ui 时要跳过，否则长文语料会漏进首屏分片。
@@ -267,21 +282,29 @@ const LATIN_RANGE =
   'U+2000-206F, U+2074, U+20AC, U+2122, U+2190-2193, U+2212, U+2215, U+FEFF, U+FFFD'
 
 async function main() {
-  const ui = await collect(SCOPES.ui, [...DOCS_OWNED, ...LAB_OWNED, ...HEAD_OWNED])
+  const ui = await collect(SCOPES.ui, [...DOCS_OWNED, ...LAB_OWNED, ...QA_OWNED, ...HEAD_OWNED])
+  const qa = await collect(SCOPES.qa, HEAD_OWNED)
   const lab = await collect(SCOPES.lab, HEAD_OWNED)
   const docs = await collect(SCOPES.docs, HEAD_OWNED)
 
   /*
-   * 后两组只保留 ui 没有的字，且互不重叠——unicode-range 交叠会让浏览器拉两份。
+   * 后三组只保留 ui 没有的字，且互不重叠——unicode-range 交叠会让浏览器拉两份。
    *
-   * docs 优先于 lab：两组有 30 个字重叠，谁在前谁独占那份 face。
+   * 优先序 docs > qa > lab，谁在前谁独占重叠的那份 face，
    * 排在后面的那一组要用这些字就得连带下前一组的分片。
-   * /docs 是给所有人看的正式路由，?lab=1 是内部验收页——让验收页多下 30 KB
-   * 换 /docs 少下一份，是唯一说得通的方向。
+   *
+   * docs 排第一：它是给所有人看的正式路由，且体量最大。
+   * qa 排第二：它与 docs 重叠 22 字（“概念”“篇”“接口”这类）。让问答面板在首页
+   * 多下一份 docs 分片是不能接受的，所以 qa 自己那份把重叠字剥掉后只剩 11 字；
+   * 代价是 /docs 上开问答会拉 qa 分片，而那时 docs 分片早就在手上了。
+   * lab 排最后：内部验收页，多下几十 KB 无关紧要。
    */
   const docsOnly = new Set([...docs.chars].filter((c) => !ui.chars.has(c)))
+  const qaOnly = new Set(
+    [...qa.chars].filter((c) => !ui.chars.has(c) && !docsOnly.has(c)),
+  )
   const labOnly = new Set(
-    [...lab.chars].filter((c) => !ui.chars.has(c) && !docsOnly.has(c)),
+    [...lab.chars].filter((c) => !ui.chars.has(c) && !docsOnly.has(c) && !qaOnly.has(c)),
   )
 
   /**
@@ -297,6 +320,7 @@ async function main() {
   await mkdir(OUT_DIR, { recursive: true })
 
   console.log(`ui   语料：${ui.fileCount} 个文件，${ui.chars.size} 字，700 只装 ${uiBold.size} 字（剔掉 ${ui.bodyOnly.size} 个正文独有字）`)
+  console.log(`qa   语料：${qa.fileCount} 个文件，${qa.chars.size} 字，其中 ${qaOnly.size} 字为 qa 独有`)
   console.log(`lab  语料：${lab.fileCount} 个文件，${lab.chars.size} 字，其中 ${labOnly.size} 字为 lab 独有`)
   console.log(`docs 语料：${docs.fileCount} 个文件，${docs.chars.size} 字，其中 ${docsOnly.size} 字为 docs 独有\n`)
 
@@ -324,6 +348,7 @@ async function main() {
 
     for (const [name, set] of [
       ['docs', docsOnly],
+      ['qa', qaOnly],
       ['lab', labOnly],
     ] as const) {
       if (set.size === 0) continue
@@ -378,7 +403,7 @@ async function main() {
   console.log(`  ${'合计'.padEnd(width)}  ${total.toFixed(1).padStart(7)} KB  / 预算 ${BUDGET_KB} KB\n`)
 
   if (deferred.length) {
-    console.log('/docs 追加（按需下载，不计入首屏）')
+    console.log('按需追加（/docs 长文、问答面板、验收页，不计入首屏）')
     deferred.forEach(line)
     console.log(`  ${'合计'.padEnd(width)}  ${deferred.reduce((s, r) => s + r.kb, 0).toFixed(1).padStart(7)} KB\n`)
   }
