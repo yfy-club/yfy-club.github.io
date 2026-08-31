@@ -84,6 +84,8 @@ export interface QaState {
   sessionId: number
   /** 当前会话累计消耗的 Token 数。超过 MAX_SESSION_TOKENS (50,000) 提示超限。 */
   totalTokens: number
+  /** 外部（如划词提问）预填到输入框中的问题。 */
+  pendingInput?: string | undefined
 }
 
 const INITIAL: QaState = {
@@ -161,8 +163,17 @@ export function toggleQa(): void {
   patch({ open })
 }
 
+export function openQa(prefill?: string): void {
+  dismissTip()
+  patch({ open: true, pendingInput: prefill })
+}
+
+export function clearPendingInput(): void {
+  patch({ pendingInput: undefined })
+}
+
 export function closeQa(): void {
-  patch({ open: false })
+  patch({ open: false, pendingInput: undefined })
 }
 
 /** 开启全新对话：清空历史、重置 Token 计数并递增会话序号以轮询下一款模型。 */

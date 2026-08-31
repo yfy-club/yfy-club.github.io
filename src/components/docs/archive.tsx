@@ -16,6 +16,7 @@ import { DOC_CATEGORIES, DOCS, docBySlug, type Doc } from '@/data/docs'
 import { DocBlocks } from './article'
 import { DocTree } from './tree'
 import { DocSearchModal } from './search'
+import { SelectionAsk } from './selection-ask'
 import { useFocusScroll } from './use-focus-scroll'
 import './docs.css'
 
@@ -257,6 +258,9 @@ function ArchiveLayout({ current, section, children }: LayoutProps) {
         </div>
       </main>
       <Footer />
+
+      {/* 划词向向导提问浮动按钮 */}
+      <SelectionAsk />
 
       {/* 规格 3.3：文档库 THINK。挂件是 3.4 的唯一观看位，全站常驻。 */}
       <MascotDock state="THINK" fx={null} visible />

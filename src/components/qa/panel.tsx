@@ -14,11 +14,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { Diamond, Rail } from '@/components/hud'
-import { QA_KIND_NOTE, QA_PROMPTS } from '@/data/qa-prompts'
+import { QA_KIND_NOTE, getPromptsForSlug } from '@/data/qa-prompts'
 import { playClick } from '@/lib/sound'
 import { useStore } from '@/lib/store'
 import { MarkdownRenderer } from './markdown'
-import { MAX_QUESTION, MAX_SESSION_TOKENS, dismissTip, qaStore, resetQa } from './store'
+import { MAX_QUESTION, MAX_SESSION_TOKENS, clearPendingInput, dismissTip, qaStore, resetQa } from './store'
 import { abortAsk, ask } from './stream'
 import './qa.css'
 
@@ -42,9 +42,22 @@ export function QaPanel({ onClose }: PanelProps) {
   const busy = qa.status === 'pending' || qa.status === 'streaming'
   const isTokenExceeded = qa.totalTokens >= MAX_SESSION_TOKENS
 
+  const currentSlug = typeof window !== 'undefined' && window.location.pathname.startsWith('/docs')
+    ? window.location.pathname.replace(/^\/docs\/?/, '').replace(/\/.*$/, '')
+    : null
+  const prompts = getPromptsForSlug(currentSlug)
+
   useEffect(() => {
     input.current?.focus()
   }, [])
+
+  useEffect(() => {
+    if (qa.pendingInput) {
+      setText(qa.pendingInput)
+      clearPendingInput()
+      input.current?.focus()
+    }
+  }, [qa.pendingInput])
 
   /*
    * Esc 关面板，并把焦点还给开它的那枚按钮。
@@ -184,7 +197,7 @@ export function QaPanel({ onClose }: PanelProps) {
             </p>
 
             <ul className="qa-prompts">
-              {QA_PROMPTS.map((p) => (
+              {prompts.map((p) => (
                 <li key={p.text}>
                   <button
                     type="button"

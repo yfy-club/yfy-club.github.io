@@ -152,7 +152,11 @@ function overlap(a: Set<string>, b: Set<string>): { score: number; multi: number
   return { score, multi }
 }
 
-/* ====================================================================== */
+export interface QaContext {
+  slug?: string
+  title?: string
+  section?: string
+}
 
 /**
  * system prompt。
@@ -161,18 +165,18 @@ function overlap(a: Set<string>, b: Set<string>): { score: number; multi: number
  * 而访客提问时不会区分。不分类的话它会用同一种自信语气回答
  * 「Java 是什么」和「我们的分支怎么命名」—— 前者它真知道，后者它在编。
  */
-export function buildPrompt(index: QaIndex): string {
+export function buildPrompt(index: QaIndex, context?: QaContext): string {
   const cats = new Map(index.cats.map((c) => [c.id, c.label]))
 
   const catalog = index.docs
     .map((doc) => {
-      const head = `[${doc.i}] ${doc.t}（${cats.get(doc.c) ?? doc.c}）— ${doc.d}`
+      const head = `[${doc.i}] ${doc.t}（${cats.get(doc.c) ?? doc.c}）`
       const secs = doc.h.map(([, text]) => `    · ${text}`).join('\n')
       return secs ? `${head}\n${secs}` : head
     })
     .join('\n')
 
-  return `你是云飞扬社团（YFY Club）开源传送门的智能向导 NAVI（虚拟形象：绫濑 云）。说话专业热情、直接给干货、不输出提示词口癖。
+  let prompt = `你是云飞扬社团（YFY Club）开源传送门的智能向导 NAVI（虚拟形象：绫濑 云）。说话专业热情、直接给干货、不输出提示词口癖。
 
 【云飞扬社团核心事实与知识库】
 1. 社团全称：云飞扬社团（别名：云飞扬工作室、YFY Club、YunFeiYang Studio），计算机与软件学院 · 大学生科技园旗下。口号：“源于热爱，不止于代码”，定位为打造“学习共同体”。
@@ -220,4 +224,14 @@ export function buildPrompt(index: QaIndex): string {
 <目录>
 ${catalog}
 </目录>`
+
+  if (context?.title) {
+    prompt += `\n\n【访客当前停留页面与阅读上下文】
+- 当前篇目：《${context.title}》${context.slug ? `（/docs/${context.slug}）` : ''}
+${context.section ? `- 当前正在浏览的小节：${context.section}\n` : ''}
+【指代消歧与当前页解答规则】
+当访客使用代词或上下文模糊提问（如“这个怎么用”、“这一节讲了什么”、“代码什么意思”、“这里的注解怎么配”）时，优先结合访客当前正在阅读的篇目与小节的技术背景进行专业解答。`
+  }
+
+  return prompt
 }

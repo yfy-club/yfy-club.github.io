@@ -32,7 +32,7 @@
  * import attribute 写 with { type: 'json' }：Node 跑测试时强制要求它。
  */
 import INDEX from './qa-index.json' with { type: 'json' }
-import { buildPrompt, pickCites, type QaIndex } from './retrieve.ts'
+import { buildPrompt, pickCites, type QaIndex, type QaContext } from './retrieve.ts'
 import { RATE_RULES, checkRate } from './rate.ts'
 import { searchWeb, shouldSearchWeb } from './search.ts'
 
@@ -132,11 +132,18 @@ export default {
       )
     }
 
+    const rawContext = (body as Record<string, unknown>)?.context as Record<string, unknown> | undefined
+    const context: QaContext | undefined = rawContext ? {
+      slug: typeof rawContext.slug === 'string' ? rawContext.slug.slice(0, 100) : undefined,
+      title: typeof rawContext.title === 'string' ? rawContext.title.slice(0, 100) : undefined,
+      section: typeof rawContext.section === 'string' ? rawContext.section.slice(0, 100) : undefined,
+    } : undefined
+
     /* ------------------------------------------------------ 检索 + 转发 */
 
     const cites = pickCites(index, question)
     const messages = [
-      { role: 'system', content: buildPrompt(index) },
+      { role: 'system', content: buildPrompt(index, context) },
       ...history,
       { role: 'user', content: question },
     ]

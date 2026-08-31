@@ -48,7 +48,37 @@ export function abortAsk(): void {
   inflight = null
 }
 
-export async function ask(raw: string): Promise<void> {
+export interface QaContext {
+  slug?: string | undefined
+  title?: string | undefined
+  section?: string | undefined
+}
+
+/** 自动提取访客当前正停留的页面与阅读小节 */
+export function getAutoContext(): QaContext | undefined {
+  if (typeof window === 'undefined') return undefined
+  const path = window.location.pathname
+  if (!path.startsWith('/docs')) return undefined
+
+  const slug = path.replace(/^\/docs\/?/, '').replace(/\/.*$/, '')
+  if (!slug) return undefined
+
+  const titleEl = document.querySelector('.doc-title')
+  const title = titleEl?.textContent?.trim()
+
+  let section: string | undefined
+  const headings = Array.from(document.querySelectorAll<HTMLElement>('.doc-h3, .doc-h4'))
+  const mid = window.innerHeight / 2
+  for (const h of headings) {
+    if (h.getBoundingClientRect().top <= mid) {
+      section = h.textContent?.trim()
+    }
+  }
+
+  return { slug, title: title || slug, section }
+}
+
+export async function ask(raw: string, customContext?: QaContext): Promise<void> {
   const q = sanitizeQuestion(raw)
   if (!q) return
 
@@ -72,13 +102,19 @@ export async function ask(raw: string): Promise<void> {
     ])
     .filter((m) => m.content.length > 0)
 
+  const context = customContext ?? getAutoContext()
   beginTurn(q)
 
   try {
     const res = await fetch(`${QA_ENDPOINT}/v1/ask`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ question: q, history, session: qaStore.get().sessionId }),
+      body: JSON.stringify({
+        question: q,
+        history,
+        session: qaStore.get().sessionId,
+        context,
+      }),
       signal: ctl.signal,
     })
 

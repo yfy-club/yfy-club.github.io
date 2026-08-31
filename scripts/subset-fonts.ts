@@ -74,7 +74,7 @@ const SCOPES = {
   ui: ['src', 'index.html'],
   qa: ['src/components/qa/panel.tsx', 'src/components/qa/stream.ts', 'src/data/qa-prompts.ts'],
   lab: ['src/mascot-lab.tsx', 'src/components/mascot/states.ts'],
-  docs: ['docs/articles', 'src/data/docs.ts'],
+  docs: ['docs/articles', 'src/data/docs.ts', 'src/components/docs'],
 } as const
 
 /**
@@ -105,7 +105,7 @@ const QA_OWNED = SCOPES.qa
  * 同一份路径也列在 SCOPES.docs 里——跳过只是不算进 ui，字还是要有 face 兜着，
  * 不然生成产物里那些只出现在 docs.ts 的字会渲染成豆腐块。
  */
-const DOCS_OWNED = ['src/data/docs.ts']
+const DOCS_OWNED = ['src/data/docs.ts', 'src/components/docs']
 
 /**
  * 这些文件的中文一个字都不上屏，三个作用域一起跳过。
@@ -196,7 +196,10 @@ interface Corpus {
 }
 
 async function collect(roots: readonly string[], skip: readonly string[] = []): Promise<Corpus> {
-  const skipAbs = new Set(skip.map((p) => join(ROOT, p)))
+  const skipPaths = skip.map((p) => join(ROOT, p))
+  const isSkipped = (file: string) =>
+    skipPaths.some((s) => file === s || file.startsWith(s + '/') || file.startsWith(s + '\\'))
+
   const chars = new Set<string>()
   /** 正文字段里的字。 */
   const body = new Set<string>()
@@ -220,7 +223,7 @@ async function collect(roots: readonly string[], skip: readonly string[] = []): 
   }
 
   for (const file of files) {
-    if (skipAbs.has(file)) continue
+    if (isSkipped(file)) continue
     fileCount += 1
     const text = stripComments(await readFile(file, 'utf8'), extname(file))
     for (const ch of cjkOf(text)) chars.add(ch)

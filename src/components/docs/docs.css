@@ -1360,3 +1360,45 @@ html.lenis {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* 划词提问悬浮气泡 */
+.doc-selection-ask {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  z-index: 90;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 4px 10px;
+  background-color: var(--bg-paper);
+  border: 1px solid var(--sky-500);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 6px) 0,
+    100% 6px,
+    100% 100%,
+    6px 100%,
+    0 calc(100% - 6px)
+  );
+  font-family: var(--font-hud);
+  font-size: var(--text-badge);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--sky-700);
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transition: transform 0.12s ease, background-color 0.12s ease, color 0.12s ease;
+  user-select: none;
+}
+
+.doc-selection-ask:hover {
+  background-color: var(--sky-700);
+  color: var(--bg-paper);
+  border-color: var(--sky-700);
+  transform: translate(-50%, -104%) scale(1.04);
+}
+
+.doc-selection-ask:active {
+  transform: translate(-50%, -98%) scale(0.98);
+}
+
