@@ -198,47 +198,62 @@ export function QaPanel({ onClose }: PanelProps) {
           <div className="qa-turns" role="log" aria-live="polite" aria-busy={busy}>
             {qa.turns.map((turn, i) => (
               <article className="qa-turn" key={i}>
-                <p className="qa-q">
-                  <span className="qa-q-hud" aria-hidden="true">
-                    Q
-                  </span>
-                  {turn.q}
-                </p>
-
-                {turn.a && (
-                  <div className="qa-answer">
-                    <MarkdownRenderer content={turn.a} />
-                  </div>
-                )}
-
-                {i === qa.turns.length - 1 && qa.status === 'pending' && (
-                  <p className="qa-wait">
-                    <span aria-hidden="true">NAVI 正在想</span>
-                    <span className="sr-only">正在等待回答</span>
-                  </p>
-                )}
-
-                {turn.cites.length > 0 && (
-                  <nav className="qa-cites" aria-label="相关篇目">
-                    <span className="qa-cites-hud" aria-hidden="true">
-                      ARCHIVE
+                <div className="qa-user-row">
+                  <div className="qa-user-msg">
+                    <span className="qa-user-tag" aria-hidden="true">
+                      YOU
                     </span>
-                    <ul>
-                      {turn.cites.map((c) => (
-                        <li key={`${c.slug}#${c.anchor}`}>
-                          <Link
-                            className="qa-cite"
-                            to={`/docs/${c.slug}#${c.anchor}`}
-                            onClick={onClose}
-                          >
-                            <span className="qa-cite-title">{c.title}</span>
-                            <span className="qa-cite-sec">{c.heading}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
-                  </nav>
-                )}
+                    <p className="qa-user-text">{turn.q}</p>
+                  </div>
+                </div>
+
+                <div className="qa-navi-row">
+                  <div className="qa-navi-header">
+                    <span className="qa-navi-tag" aria-hidden="true">
+                      NAVI
+                    </span>
+                    {turn.cites.length > 0 && (
+                      <span className="qa-cites-count" aria-hidden="true">
+                        {turn.cites.length} 篇档案关联
+                      </span>
+                    )}
+                  </div>
+
+                  {turn.a && (
+                    <div className="qa-answer">
+                      <MarkdownRenderer content={turn.a} />
+                    </div>
+                  )}
+
+                  {i === qa.turns.length - 1 && qa.status === 'pending' && (
+                    <p className="qa-wait">
+                      <span aria-hidden="true">NAVI 正在想</span>
+                      <span className="sr-only">正在等待回答</span>
+                    </p>
+                  )}
+
+                  {turn.cites.length > 0 && (
+                    <nav className="qa-cites" aria-label="相关篇目">
+                      <span className="qa-cites-hud" aria-hidden="true">
+                        ARCHIVE
+                      </span>
+                      <ul>
+                        {turn.cites.map((c) => (
+                          <li key={`${c.slug}#${c.anchor}`}>
+                            <Link
+                              className="qa-cite"
+                              to={`/docs/${c.slug}#${c.anchor}`}
+                              onClick={onClose}
+                            >
+                              <span className="qa-cite-title">{c.title}</span>
+                              <span className="qa-cite-sec">{c.heading}</span>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </nav>
+                  )}
+                </div>
               </article>
             ))}
 
