@@ -30,7 +30,7 @@ export const QA_ENDPOINT = (import.meta.env.VITE_QA_ENDPOINT ?? '').replace(/\/+
 export const QA_ENABLED = QA_ENDPOINT.length > 0
 
 /** 单问上限。超出的部分在提交前截掉，代理端还会再截一次。 */
-export const MAX_QUESTION = 200
+export const MAX_QUESTION = 500
 
 /** 首访提示读过没有。 */
 const KEY_TIP = 'yfy.qa.seen'

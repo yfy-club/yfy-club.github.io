@@ -51,17 +51,17 @@ export interface Env {
 const index = INDEX as unknown as QaIndex
 
 /** 单问上限，字符。与前端 MAX_QUESTION 同一个数。 */
-const MAX_QUESTION = 200
+const MAX_QUESTION = 500
 
-/** 历史最多几条消息（2 轮 = 4 条），每条截多长。 */
-const MAX_HISTORY = 4
-const MAX_HISTORY_CHARS = 300
+/** 历史最多几条消息（5 轮 = 10 条），每条截多长。 */
+const MAX_HISTORY = 10
+const MAX_HISTORY_CHARS = 1000
 
-/** 回复上限。档案问答不需要长篇，600 够两百字中文还有余量。 */
-const MAX_TOKENS = 600
+/** 回复上限。调至 2000 tokens，支持输出完整代码块与长篇技术解析。 */
+const MAX_TOKENS = 2000
 
-/** 上游超时。超了回 upstream，别让浏览器干等。 */
-const UPSTREAM_TIMEOUT_MS = 30_000
+/** 上游超时。设为 60s，确保长文本与深度思考模型有充足的生成时间。 */
+const UPSTREAM_TIMEOUT_MS = 60_000
 
 export default {
   async fetch(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {

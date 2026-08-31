@@ -35,9 +35,9 @@ const MESSAGES: Record<string, string> = {
 
 const messageOf = (code: string) => MESSAGES[code] ?? MESSAGES.upstream!
 
-/** 只带最近两轮上下文，各截 300 字。再多就是替访客买 token。 */
-const HISTORY_TURNS = 2
-const HISTORY_CHARS = 300
+/** 携带最近 5 轮上下文（最多 10 条消息），每条保留最多 1000 字，保留丰富代码与技术细节。 */
+const HISTORY_TURNS = 5
+const HISTORY_CHARS = 1000
 
 let inflight: AbortController | null = null
 
