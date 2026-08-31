@@ -150,7 +150,7 @@ export default {
       (async () => {
         try {
           await send('cite', cites)
-          await relay(env, messages, send, getStickyKey(ip, history))
+          await relay(env, messages, send, getStickyKey(ip, question, history))
         } catch (err) {
           await send('error', { code: 'upstream', detail: String(err).slice(0, 120) }).catch(
             () => {},
@@ -190,15 +190,21 @@ export function hashKey(str: string): number {
 
 /**
  * 确定会话路由键：
- * - 优先按 IP 散列：同一访客的所有提问与多轮追问均锁定在同一个模型上（粘性会话），同时不同访客天然均匀散列（负载均衡）。
- * - 若 IP 缺失，回退到首轮历史问题特征散列。
+ * - 提取会话根问题（Root Question）：
+ *   - 若有多轮追问（history.length > 0），根问题锁定在 history[0].content。
+ *   - 若为新对话首问，根问题为当前 question。
+ * - 结合 IP 与根问题哈希：
+ *   1. 同一会话内部：多轮追问的根问题一致，100% 锁定在同一个模型（粘性会话）。
+ *   2. 同一 IP 开启新对话：新首问带来新的会话指纹，自动轮转至不同模型。
+ *   3. 不同访客：按 IP 盐值均匀散列，全网负载均衡。
  */
-export function getStickyKey(ip: string, history: { role: string; content: string }[]): string {
-  if (ip && ip !== 'unknown') {
-    return `ip:${ip}`
-  }
-  const root = history.length > 0 ? (history[0]?.content ?? '') : ''
-  return root ? `sess:${root}` : 'default'
+export function getStickyKey(
+  ip: string,
+  question: string,
+  history: { role: string; content: string }[],
+): string {
+  const root = history.length > 0 ? (history[0]?.content ?? '') : question
+  return `sess:${root.trim()}|ip:${ip}`
 }
 
 /**

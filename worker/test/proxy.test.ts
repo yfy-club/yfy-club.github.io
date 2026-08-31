@@ -265,7 +265,7 @@ test('多模型配置：首选模型失败自动重试后续模型', async () =>
   }
 })
 
-test('粘性会话与负载均衡：同用户多轮锁定同一模型，不同用户分散打散', async () => {
+test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模型，不同用户分散打散', async () => {
   const calls: { ip: string; model: string; historyLen: number }[] = []
   const original = globalThis.fetch
 
@@ -289,38 +289,64 @@ test('粘性会话与负载均衡：同用户多轮锁定同一模型，不同�
       QA_MODEL: 'model-A,model-B,model-C',
     }
 
-    // 1. 同一用户连问两轮（第二轮带 history），必须锁定在完全相同的模型上
-    const res1 = await worker.fetch(ask({ question: '第一问' }, ORIGIN, '192.168.1.100'), env, ctx)
-    await readSse(res1)
-    const m1 = calls.at(-1)!.model
+    const testIp = '192.168.1.100'
 
-    const res2 = await worker.fetch(
+    // 1. 对话 A：用户提问“什么是 Git”，并追问“怎么建分支”
+    const resA1 = await worker.fetch(ask({ question: '什么是 Git' }, ORIGIN, testIp), env, ctx)
+    await readSse(resA1)
+    const modelA1 = calls.at(-1)!.model
+
+    const resA2 = await worker.fetch(
       ask(
         {
-          question: '第二问',
+          question: '怎么建分支',
           history: [
-            { role: 'user', content: '第一问' },
-            { role: 'assistant', content: '回答1' },
+            { role: 'user', content: '什么是 Git' },
+            { role: 'assistant', content: 'Git 是版本控制系统' },
           ],
         },
         ORIGIN,
-        '192.168.1.100',
+        testIp,
       ),
       env,
       ctx,
     )
-    await readSse(res2)
-    const m2 = calls.at(-1)!.model
-    assert.equal(m1, m2, '同一对话的多轮追问必须粘性锁定在同一个模型上')
+    await readSse(resA2)
+    const modelA2 = calls.at(-1)!.model
+    assert.equal(modelA1, modelA2, '同一对话 A 内部的多轮追问必须粘性锁定在同一个模型上')
 
-    // 2. 多个不同 IP 的用户，流量应当被散列到不同模型
+    // 2. 同一 IP 开启全新的对话 B（首问“前端怎么入门”，清空 history）
+    const resB1 = await worker.fetch(ask({ question: '前端怎么入门' }, ORIGIN, testIp), env, ctx)
+    await readSse(resB1)
+    const modelB1 = calls.at(-1)!.model
+
+    const resB2 = await worker.fetch(
+      ask(
+        {
+          question: '学习路径是怎样的',
+          history: [
+            { role: 'user', content: '前端怎么入门' },
+            { role: 'assistant', content: '先学 HTML/CSS/JS' },
+          ],
+        },
+        ORIGIN,
+        testIp,
+      ),
+      env,
+      ctx,
+    )
+    await readSse(resB2)
+    const modelB2 = calls.at(-1)!.model
+    assert.equal(modelB1, modelB2, '同一对话 B 内部的多轮追问必须粘性锁定在自身对话的模型上')
+
+    // 3. 多个不同 IP 的用户，流量应当被散列到不同模型
     const hitModels = new Set<string>()
     for (let i = 0; i < 20; i++) {
-      const res = await worker.fetch(ask({ question: '测试' }, ORIGIN, `10.0.0.${i}`), env, ctx)
+      const res = await worker.fetch(ask({ question: `测试问题${i}` }, ORIGIN, `10.0.0.${i}`), env, ctx)
       await readSse(res)
       hitModels.add(calls.at(-1)!.model)
     }
-    assert.equal(hitModels.size, 3, '不同 IP 的访客应当被均匀哈希分散到所有候选模型')
+    assert.equal(hitModels.size, 3, '不同 IP 与不同对话的访客应当被均匀哈希分散到所有候选模型')
   } finally {
     globalThis.fetch = original
   }
