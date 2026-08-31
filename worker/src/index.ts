@@ -135,20 +135,8 @@ export default {
     /* ------------------------------------------------------ 检索 + 转发 */
 
     const cites = pickCites(index, question)
-
-    // 智能联网搜索：社团内部问题优先走本地知识库；外部前沿技术与未知事实触发实时搜索
-    let webResults: { title: string; snippet: string }[] | undefined
-    if (shouldSearchWeb(question)) {
-      try {
-        const results = await searchWeb(question, env.BRAVE_API_KEY)
-        if (results.length > 0) webResults = results
-      } catch (e) {
-        console.warn('search failed, falling back:', e)
-      }
-    }
-
     const messages = [
-      { role: 'system', content: buildPrompt(index, webResults) },
+      { role: 'system', content: buildPrompt(index) },
       ...history,
       { role: 'user', content: question },
     ]
@@ -227,9 +215,34 @@ export function getModelStartIndex(ip: string, session: number, modelsCount: num
  * 3. 负载均衡（Load Balancing）：不同访客通过 IP 散列均匀打散。
  * 4. 故障转移（Failover Retry）：首选模型遇到限流/故障时，自动无缝重试后续备选模型。
  */
+const WEB_SEARCH_TOOL = {
+  type: 'function',
+  function: {
+    name: 'web_search',
+    description:
+      '实时互联网搜索引擎（默认 DuckDuckGo 搜索）。当用户询问社团外部前沿技术动态、最新版本发布、外部开源项目资讯或超出知识库范围的外部技术事实时调用此工具。严禁用于查询云飞扬社团内部知识（社团定位、招新方向、重点项目、陈可老师、打卡考勤、Git规范等，这些请直接依据系统知识库回答）。',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: '提炼出的最精准、最适合在搜索引擎检索的关键词（例如："React 19 release features"）',
+        },
+      },
+      required: ['query'],
+    },
+  },
+}
+
 async function relay(
   env: Env,
-  messages: { role: string; content: string }[],
+  messages: {
+    role: string
+    content: string | null
+    tool_calls?: unknown[]
+    tool_call_id?: string
+    name?: string
+  }[],
   send: (event: string, data: unknown) => Promise<void>,
   ip = 'unknown',
   session = 0,
@@ -271,7 +284,7 @@ async function relay(
           model,
           messages,
           stream: true,
-          // 三个参数全部服务端定死。请求体里带同名字段也没用，这里不读它。
+          tools: [WEB_SEARCH_TOOL],
           temperature: 0.2,
           max_tokens: MAX_TOKENS,
         }),
@@ -288,11 +301,25 @@ async function relay(
       let usage: unknown = null
       let chars = 0
       let streamedAny = false
+      const toolCallsMap = new Map<number, { id: string; name: string; arguments: string }>()
 
       for await (const frame of sseFrames(res.body)) {
         if (frame === '[DONE]') break
         let parsed: {
-          choices?: { delta?: { content?: string } }[]
+          choices?: {
+            delta?: {
+              content?: string | null
+              tool_calls?: {
+                index: number
+                id?: string
+                type?: string
+                function?: {
+                  name?: string
+                  arguments?: string
+                }
+              }[]
+            }
+          }[]
           usage?: unknown
         }
         try {
@@ -301,11 +328,111 @@ async function relay(
           continue
         }
         if (parsed.usage) usage = parsed.usage
-        const t = parsed.choices?.[0]?.delta?.content
-        if (t) {
+        const delta = parsed.choices?.[0]?.delta
+        if (!delta) continue
+
+        // 1. 模型直接输出正文
+        if (delta.content) {
           streamedAny = true
-          chars += t.length
-          await send('delta', { t })
+          chars += delta.content.length
+          await send('delta', { t: delta.content })
+        }
+
+        // 2. 模型自主发起 Tool Call
+        if (delta.tool_calls) {
+          for (const tc of delta.tool_calls) {
+            const idx = tc.index ?? 0
+            if (!toolCallsMap.has(idx)) {
+              toolCallsMap.set(idx, {
+                id: tc.id || `call_${idx}`,
+                name: tc.function?.name || 'web_search',
+                arguments: '',
+              })
+            }
+            const existing = toolCallsMap.get(idx)!
+            if (tc.id) existing.id = tc.id
+            if (tc.function?.name) existing.name = tc.function.name
+            if (tc.function?.arguments) existing.arguments += tc.function.arguments
+          }
+        }
+      }
+
+      // 3. 模型自主决定触发了联网搜索
+      if (!streamedAny && toolCallsMap.size > 0) {
+        const toolCallsList = Array.from(toolCallsMap.values())
+        const toolMessages: { role: string; tool_call_id: string; name: string; content: string }[] = []
+
+        for (const tc of toolCallsList) {
+          let query = ''
+          try {
+            const parsedArgs = JSON.parse(tc.arguments)
+            query = parsedArgs.query || ''
+          } catch {
+            const match = tc.arguments.match(/"query"\s*:\s*"([^"]+)"/)
+            query = match ? match[1]! : tc.arguments
+          }
+
+          const searchResults = query ? await searchWeb(query, env.BRAVE_API_KEY) : []
+          toolMessages.push({
+            role: 'tool',
+            tool_call_id: tc.id,
+            name: tc.name,
+            content: JSON.stringify(searchResults),
+          })
+        }
+
+        const secondMessages = [
+          ...messages,
+          {
+            role: 'assistant',
+            content: null,
+            tool_calls: toolCallsList.map((tc) => ({
+              id: tc.id,
+              type: 'function',
+              function: {
+                name: tc.name,
+                arguments: tc.arguments,
+              },
+            })),
+          },
+          ...toolMessages,
+        ]
+
+        const res2 = await fetch(`${apiBase}/v1/chat/completions`, {
+          method: 'POST',
+          headers: {
+            authorization: `Bearer ${apiKey}`,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            model,
+            messages: secondMessages,
+            stream: true,
+            temperature: 0.2,
+            max_tokens: MAX_TOKENS,
+          }),
+          signal: ctl.signal,
+        })
+
+        if (res2.ok && res2.body) {
+          for await (const frame of sseFrames(res2.body)) {
+            if (frame === '[DONE]') break
+            let parsed2: {
+              choices?: { delta?: { content?: string } }[]
+              usage?: unknown
+            }
+            try {
+              parsed2 = JSON.parse(frame)
+            } catch {
+              continue
+            }
+            if (parsed2.usage) usage = parsed2.usage
+            const t2 = parsed2.choices?.[0]?.delta?.content
+            if (t2) {
+              chars += t2.length
+              await send('delta', { t: t2 })
+            }
+          }
         }
       }
 
