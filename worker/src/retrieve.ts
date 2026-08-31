@@ -153,9 +153,9 @@ function overlap(a: Set<string>, b: Set<string>): { score: number; multi: number
 }
 
 export interface QaContext {
-  slug?: string
-  title?: string
-  section?: string
+  slug?: string | undefined
+  title?: string | undefined
+  section?: string | undefined
 }
 
 /**
