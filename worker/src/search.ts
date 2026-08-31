@@ -59,9 +59,17 @@ export async function searchWeb(
   const timer = setTimeout(() => ctl.abort(), SEARCH_TIMEOUT_MS)
 
   try {
+    // 1. 如果配置了 Brave API Key，优先尝试 Brave
     if (braveApiKey && braveApiKey.trim().length > 0) {
-      return await searchBrave(query, braveApiKey.trim(), ctl.signal)
+      try {
+        const braveResults = await searchBrave(query, braveApiKey.trim(), ctl.signal)
+        if (braveResults.length > 0) return braveResults
+      } catch (err) {
+        console.warn(`[search] Brave failed, falling back to DuckDuckGo:`, err)
+      }
     }
+
+    // 2. 默认或无 API Key 时直接调用 DuckDuckGo（完全免费、无额度限制）
     return await searchDuckDuckGo(query, ctl.signal)
   } catch (err) {
     console.warn(`[search] error searching for "${query}":`, err)
