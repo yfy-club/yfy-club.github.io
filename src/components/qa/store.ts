@@ -74,6 +74,8 @@ export interface QaState {
   error: string | null
   /** 首访提示还该不该出。 */
   tip: boolean
+  /** 当前会话序号（0, 1, 2...），每次开启全新对话时递增，用于多模型确定性顺序轮询。 */
+  sessionId: number
 }
 
 const INITIAL: QaState = {
@@ -81,12 +83,8 @@ const INITIAL: QaState = {
   status: 'idle',
   turns: [],
   error: null,
-  /*
-   * 首帧一律 false。
-   * localStorage 只有浏览器有，预渲染产物里出现这条提示必然注水错位——
-   * 真值由 initQa() 在 effect 里补。
-   */
   tip: false,
+  sessionId: 0,
 }
 
 export const qaStore = createStore<QaState>(INITIAL)
@@ -115,14 +113,25 @@ export function dismissTip(): void {
 }
 
 export function toggleQa(): void {
-  const open = !qaStore.get().open
+  const s = qaStore.get()
+  const open = !s.open
   // 开面板即算读过提示：人已经找到入口了，再提示是噪音
   if (open) dismissTip()
-  patch({ open })
+  // 若上一轮对话已结束并重新打开面板开启新对话，递增 sessionId 触发确定性模型轮换
+  const nextSessionId = open && s.turns.length > 0 && s.status !== 'pending' && s.status !== 'streaming'
+    ? s.sessionId + 1
+    : s.sessionId
+  patch({ open, sessionId: nextSessionId })
 }
 
 export function closeQa(): void {
   patch({ open: false })
+}
+
+/** 开启全新对话：清空历史并递增会话序号以轮询下一款模型。 */
+export function resetQa(): void {
+  const s = qaStore.get()
+  patch({ turns: [], status: 'idle', error: null, sessionId: s.sessionId + 1 })
 }
 
 /** 归一化。截长、压空白、砍掉分隔符伪造——代理端还会再校一遍。 */

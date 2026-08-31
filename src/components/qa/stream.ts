@@ -71,7 +71,7 @@ export async function ask(raw: string): Promise<void> {
     const res = await fetch(`${QA_ENDPOINT}/v1/ask`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ question: q, history }),
+      body: JSON.stringify({ question: q, history, session: qaStore.get().sessionId }),
       signal: ctl.signal,
     })
 

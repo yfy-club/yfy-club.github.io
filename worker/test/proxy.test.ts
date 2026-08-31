@@ -291,8 +291,8 @@ test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模�
 
     const testIp = '192.168.1.100'
 
-    // 1. 对话 A：用户提问“什么是 Git”，并追问“怎么建分支”
-    const resA1 = await worker.fetch(ask({ question: '什么是 Git' }, ORIGIN, testIp), env, ctx)
+    // 1. 对话 0（session=0）：用户提问“什么是 Git”，并追问“怎么建分支”
+    const resA1 = await worker.fetch(ask({ question: '什么是 Git', session: 0 }, ORIGIN, testIp), env, ctx)
     await readSse(resA1)
     const modelA1 = calls.at(-1)!.model
 
@@ -300,6 +300,7 @@ test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模�
       ask(
         {
           question: '怎么建分支',
+          session: 0,
           history: [
             { role: 'user', content: '什么是 Git' },
             { role: 'assistant', content: 'Git 是版本控制系统' },
@@ -313,21 +314,28 @@ test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模�
     )
     await readSse(resA2)
     const modelA2 = calls.at(-1)!.model
-    assert.equal(modelA1, modelA2, '同一对话 A 内部的多轮追问必须粘性锁定在同一个模型上')
+    assert.equal(modelA1, modelA2, '同一会话内部(session=0)的多轮追问必须100%粘性锁定在同一个模型上')
 
-    // 2. 同一 IP 开启全新的对话 B（首问“前端怎么入门”，清空 history）
-    const resB1 = await worker.fetch(ask({ question: '前端怎么入门' }, ORIGIN, testIp), env, ctx)
+    // 2. 同一 IP 开启全新对话 1（session=1）
+    const resB1 = await worker.fetch(ask({ question: '前端怎么入门', session: 1 }, ORIGIN, testIp), env, ctx)
     await readSse(resB1)
     const modelB1 = calls.at(-1)!.model
+    assert.notEqual(modelA1, modelB1, '开启新会话(session=1)必须确定性轮换至下一个模型')
 
-    const resB2 = await worker.fetch(
+    // 3. 同一 IP 开启全新对话 2（session=2）
+    const resC1 = await worker.fetch(ask({ question: '数据库怎么选', session: 2 }, ORIGIN, testIp), env, ctx)
+    await readSse(resC1)
+    const modelC1 = calls.at(-1)!.model
+    assert.notEqual(modelB1, modelC1, '开启新会话(session=2)必须确定性轮换至第三个模型')
+    assert.notEqual(modelA1, modelC1)
+
+    // 4. 对话 2 (session=2) 内部追问，继续保持粘性
+    const resC2 = await worker.fetch(
       ask(
         {
-          question: '学习路径是怎样的',
-          history: [
-            { role: 'user', content: '前端怎么入门' },
-            { role: 'assistant', content: '先学 HTML/CSS/JS' },
-          ],
+          question: 'SQLite 可以吗',
+          session: 2,
+          history: [{ role: 'user', content: '数据库怎么选' }],
         },
         ORIGIN,
         testIp,
@@ -335,18 +343,18 @@ test('粘性会话与负载均衡：同对话多轮锁定，新对话轮换模�
       env,
       ctx,
     )
-    await readSse(resB2)
-    const modelB2 = calls.at(-1)!.model
-    assert.equal(modelB1, modelB2, '同一对话 B 内部的多轮追问必须粘性锁定在自身对话的模型上')
+    await readSse(resC2)
+    const modelC2 = calls.at(-1)!.model
+    assert.equal(modelC1, modelC2, '会话2内部多轮追问继续保持粘性')
 
-    // 3. 多个不同 IP 的用户，流量应当被散列到不同模型
+    // 5. 多个不同 IP 的用户，全网负载均衡散列
     const hitModels = new Set<string>()
     for (let i = 0; i < 20; i++) {
-      const res = await worker.fetch(ask({ question: `测试问题${i}` }, ORIGIN, `10.0.0.${i}`), env, ctx)
+      const res = await worker.fetch(ask({ question: `测试问题${i}`, session: 0 }, ORIGIN, `10.0.0.${i}`), env, ctx)
       await readSse(res)
       hitModels.add(calls.at(-1)!.model)
     }
-    assert.equal(hitModels.size, 3, '不同 IP 与不同对话的访客应当被均匀哈希分散到所有候选模型')
+    assert.equal(hitModels.size, 3, '不同 IP 的访客应当被均匀哈希分散到所有候选模型')
   } finally {
     globalThis.fetch = original
   }

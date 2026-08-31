@@ -103,6 +103,10 @@ export default {
     const question = normalize(pick(body, 'question'))
     if (!question) return json({ code: 'bad_request' }, 400, origin, allowed)
 
+    const session = typeof (body as Record<string, unknown>)?.session === 'number'
+      ? ((body as Record<string, unknown>).session as number)
+      : 0
+
     const history = parseHistory(body)
 
     /* ---------------------------------------------------------- 限流 */
@@ -150,7 +154,7 @@ export default {
       (async () => {
         try {
           await send('cite', cites)
-          await relay(env, messages, send, getStickyKey(ip, question, history))
+          await relay(env, messages, send, ip, session)
         } catch (err) {
           await send('error', { code: 'upstream', detail: String(err).slice(0, 120) }).catch(
             () => {},
@@ -189,35 +193,31 @@ export function hashKey(str: string): number {
 }
 
 /**
- * 确定会话路由键：
- * - 提取会话根问题（Root Question）：
- *   - 若有多轮追问（history.length > 0），根问题锁定在 history[0].content。
- *   - 若为新对话首问，根问题为当前 question。
- * - 结合 IP 与根问题哈希：
- *   1. 同一会话内部：多轮追问的根问题一致，100% 锁定在同一个模型（粘性会话）。
- *   2. 同一 IP 开启新对话：新首问带来新的会话指纹，自动轮转至不同模型。
- *   3. 不同访客：按 IP 盐值均匀散列，全网负载均衡。
+ * 计算模型起始索引：
+ * - IP 哈希作为全网访客基础偏移（实现各模型流量 1:1:1 均衡负载）。
+ * - 结合 session 会话序号（0, 1, 2...）：
+ *   1. 同一段对话内：session 保持不变，多轮追问 100% 锁定在同一个模型（粘性会话）。
+ *   2. 同一 IP 开启新对话：session +1，100% 确定性顺序轮换到下一个未调用模型（真轮询）。
  */
-export function getStickyKey(
-  ip: string,
-  question: string,
-  history: { role: string; content: string }[],
-): string {
-  const root = history.length > 0 ? (history[0]?.content ?? '') : question
-  return `sess:${root.trim()}|ip:${ip}`
+export function getModelStartIndex(ip: string, session: number, modelsCount: number): number {
+  if (modelsCount <= 0) return 0
+  const baseOffset = hashKey(`ip:${ip}`)
+  return ((baseOffset + session) % modelsCount + modelsCount) % modelsCount
 }
 
 /**
  * 转发到 new-api / octopus，支持：
  * 1. 粘性会话（Sticky Session）：同会话 / 同访客多轮对话锁定同一模型，保证语义风格连贯。
- * 2. 负载均衡（Load Balancing）：不同访客通过一致性哈希均匀打散至多模型。
- * 3. 故障转移（Failover Retry）：首选模型遇到限流/故障时，自动无缝重试后续备选模型。
+ * 2. 确定性跨会话轮询（Session-based Round-Robin）：同一用户每次开启新对话时顺序轮换模型。
+ * 3. 负载均衡（Load Balancing）：不同访客通过 IP 散列均匀打散。
+ * 4. 故障转移（Failover Retry）：首选模型遇到限流/故障时，自动无缝重试后续备选模型。
  */
 async function relay(
   env: Env,
   messages: { role: string; content: string }[],
   send: (event: string, data: unknown) => Promise<void>,
-  stickyKey = 'default',
+  ip = 'unknown',
+  session = 0,
 ): Promise<void> {
   const models = (env.QA_MODEL || '')
     .split(',')
@@ -229,8 +229,8 @@ async function relay(
     return
   }
 
-  // 根据粘性键计算起始模型索引：不同访客均匀散列，同会话严格锁定
-  const startIndex = hashKey(stickyKey) % models.length
+  // 严格根据 (IP哈希 + 会话序号) 决定模型顺序
+  const startIndex = getModelStartIndex(ip, session, models.length)
   const orderedModels = [
     ...models.slice(startIndex),
     ...models.slice(0, startIndex),
