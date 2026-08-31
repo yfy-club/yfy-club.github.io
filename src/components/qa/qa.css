@@ -426,6 +426,14 @@
   font-size: 13px;
 }
 
+/* 分割线 */
+.qa-hr {
+  margin: var(--space-2) 0;
+  border: 0;
+  border-top: var(--hairline) solid var(--line-hair);
+  height: 0;
+}
+
 /* 代码块 */
 .qa-code-block {
   margin: var(--space-2) 0;

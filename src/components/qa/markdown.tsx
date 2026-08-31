@@ -51,6 +51,7 @@ type MarkdownBlock =
   | { type: 'ul'; items: string[] }
   | { type: 'ol'; items: string[] }
   | { type: 'table'; headers: string[]; rows: string[][] }
+  | { type: 'hr' }
   | { type: 'p'; text: string }
 
 /* ----------------------------------------------------------- 块级解析器 */
@@ -63,7 +64,17 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
   while (i < lines.length) {
     const line = lines[i]!
 
-    // 1. 代码块 ```lang
+    // 1. 分割线 --- / *** / ___
+    if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
+      // 连续多条分割线只渲染一条
+      if (blocks.length === 0 || blocks[blocks.length - 1]?.type !== 'hr') {
+        blocks.push({ type: 'hr' })
+      }
+      i += 1
+      continue
+    }
+
+    // 2. 代码块 ```lang
     if (line.trim().startsWith('```')) {
       const lang = line.trim().slice(3).trim()
       const codeLines: string[] = []
@@ -80,7 +91,7 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       continue
     }
 
-    // 2. 表格 | a | b |
+    // 3. 表格 | a | b |
     if (line.trim().startsWith('|') && line.trim().endsWith('|')) {
       const tableLines: string[] = []
       while (i < lines.length && lines[i]!.trim().startsWith('|') && lines[i]!.trim().endsWith('|')) {
@@ -95,7 +106,7 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       // 若不是合规表格，按常规段落回退
     }
 
-    // 3. 标题 # ~ ####
+    // 4. 标题 # ~ ####
     const headingMatch = line.match(/^(#{1,4})\s+(.+)$/)
     if (headingMatch) {
       blocks.push({
@@ -107,7 +118,7 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       continue
     }
 
-    // 4. 引用块 > quote
+    // 5. 引用块 > quote
     if (line.trim().startsWith('>')) {
       const quoteLines: string[] = []
       while (i < lines.length && lines[i]!.trim().startsWith('>')) {
@@ -118,7 +129,7 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       continue
     }
 
-    // 5. 无序列表 - item 或 * item
+    // 6. 无序列表 - item 或 * item
     if (/^\s*[-*+]\s+/.test(line)) {
       const items: string[] = []
       while (i < lines.length && /^\s*[-*+]\s+/.test(lines[i]!)) {
@@ -129,7 +140,7 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       continue
     }
 
-    // 6. 有序列表 1. item
+    // 7. 有序列表 1. item
     if (/^\s*\d+\.\s+/.test(line)) {
       const items: string[] = []
       while (i < lines.length && /^\s*\d+\.\s+/.test(lines[i]!)) {
@@ -140,17 +151,18 @@ function parseMarkdownBlocks(raw: string): MarkdownBlock[] {
       continue
     }
 
-    // 7. 空行
+    // 8. 空行
     if (!line.trim()) {
       i += 1
       continue
     }
 
-    // 8. 普通段落（收集连续文本行）
+    // 9. 普通段落（收集连续文本行）
     const pLines: string[] = []
     while (
       i < lines.length &&
       lines[i]!.trim() &&
+      !/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(lines[i]!) &&
       !lines[i]!.trim().startsWith('```') &&
       !lines[i]!.match(/^#{1,4}\s+/) &&
       !lines[i]!.trim().startsWith('>') &&
@@ -328,6 +340,9 @@ function BlockView({ block }: { block: MarkdownBlock }) {
           </table>
         </div>
       )
+
+    case 'hr':
+      return <hr className="qa-hr" />
 
     case 'p':
     default:
