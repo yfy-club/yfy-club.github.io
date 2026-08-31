@@ -7,12 +7,11 @@ compatibility_date = "2025-01-09"
 enabled = true
 
 [vars]
-# new-api 的基址，不带 /v1。部署前改成你自己的。
-NEW_API_BASE = "https://api.example.com"
+# Octopus / new-api 的基址，不带 /v1。
+NEW_API_BASE = "https://octopus.akatsuki.codes"
 
-# 模型名。服务端定死，请求体改不动。
-# 档案问答不需要长思考，小模型 + temperature 0.2 就够。
-QA_MODEL = "gpt-4o-mini"
+# 模型名。支持单个模型或逗号分隔的多个模型（服务端随机轮询 + 自动故障重试转移）。
+QA_MODEL = "Mistral-medium-latest,Minimax-2-7,Gemma-4-31B-it"
 
 # 来源白名单，逗号分隔。挡的是「拿我们的额度做自己的机器人」。
 # 挡不住 curl（Origin 是浏览器加的），真正的兜底是按 IP 的限流。

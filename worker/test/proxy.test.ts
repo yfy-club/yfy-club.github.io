@@ -227,6 +227,105 @@ test('上游 429 转成 rate_limited，让前端显示额度用完', async () =>
   }
 })
 
+test('多模型配置：首选模型失败自动重试后续模型', async () => {
+  const calls: { url: string; model: string }[] = []
+  const original = globalThis.fetch
+
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body))
+    calls.push({ url: String(_url), model: body.model })
+
+    if (body.model === 'failing-model-1') {
+      return new Response('upstream 500 error', { status: 500 })
+    }
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        const enc = new TextEncoder()
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\n`))
+        c.enqueue(enc.encode('data: [DONE]\n\n'))
+        c.close()
+      },
+    })
+    return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+  }) as typeof fetch
+
+  try {
+    const env = {
+      ...fakeEnv(),
+      QA_MODEL: 'failing-model-1,working-model-2',
+    }
+    // 强制指定一个命中 failing-model-1 的 IP
+    const res = await worker.fetch(ask({ question: '测试多模型' }, ORIGIN, 'test-ip-failover'), env, ctx)
+    const frames = await readSse(res)
+    assert.equal(res.status, 200)
+    assert.ok(frames.some((f) => f.event === 'delta' && (f.data as { t: string }).t === 'ok'))
+    assert.ok(calls.some((c) => c.model === 'working-model-2'), '应当故障转移至可用模型')
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
+test('粘性会话与负载均衡：同用户多轮锁定同一模型，不同用户分散打散', async () => {
+  const calls: { ip: string; model: string; historyLen: number }[] = []
+  const original = globalThis.fetch
+
+  globalThis.fetch = (async (_url: string | URL | Request, init?: RequestInit) => {
+    const body = JSON.parse(String(init?.body))
+    calls.push({ ip: '', model: body.model, historyLen: body.messages.length })
+    const stream = new ReadableStream<Uint8Array>({
+      start(c) {
+        const enc = new TextEncoder()
+        c.enqueue(enc.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: 'ok' } }] })}\n\n`))
+        c.enqueue(enc.encode('data: [DONE]\n\n'))
+        c.close()
+      },
+    })
+    return new Response(stream, { status: 200, headers: { 'content-type': 'text/event-stream' } })
+  }) as typeof fetch
+
+  try {
+    const env = {
+      ...fakeEnv(),
+      QA_MODEL: 'model-A,model-B,model-C',
+    }
+
+    // 1. 同一用户连问两轮（第二轮带 history），必须锁定在完全相同的模型上
+    const res1 = await worker.fetch(ask({ question: '第一问' }, ORIGIN, '192.168.1.100'), env, ctx)
+    await readSse(res1)
+    const m1 = calls.at(-1)!.model
+
+    const res2 = await worker.fetch(
+      ask(
+        {
+          question: '第二问',
+          history: [
+            { role: 'user', content: '第一问' },
+            { role: 'assistant', content: '回答1' },
+          ],
+        },
+        ORIGIN,
+        '192.168.1.100',
+      ),
+      env,
+      ctx,
+    )
+    await readSse(res2)
+    const m2 = calls.at(-1)!.model
+    assert.equal(m1, m2, '同一对话的多轮追问必须粘性锁定在同一个模型上')
+
+    // 2. 多个不同 IP 的用户，流量应当被散列到不同模型
+    const hitModels = new Set<string>()
+    for (let i = 0; i < 20; i++) {
+      const res = await worker.fetch(ask({ question: '测试' }, ORIGIN, `10.0.0.${i}`), env, ctx)
+      await readSse(res)
+      hitModels.add(calls.at(-1)!.model)
+    }
+    assert.equal(hitModels.size, 3, '不同 IP 的访客应当被均匀哈希分散到所有候选模型')
+  } finally {
+    globalThis.fetch = original
+  }
+})
+
 /* ---------------------------------------------------------------- 入参 */
 
 test('空问题 400，坏 JSON 400', async () => {

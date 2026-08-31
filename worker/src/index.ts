@@ -150,7 +150,7 @@ export default {
       (async () => {
         try {
           await send('cite', cites)
-          await relay(env, messages, send)
+          await relay(env, messages, send, getStickyKey(ip, history))
         } catch (err) {
           await send('error', { code: 'upstream', detail: String(err).slice(0, 120) }).catch(
             () => {},
@@ -177,70 +177,126 @@ export default {
 /* ====================================================================== */
 
 /**
- * 转发到 new-api 并把 OpenAI 格式的流转成我们自己的三种事件。
- *
- * 不直接把上游的 SSE 原样透传：那样会把 new-api 的响应结构、模型名、
- * usage 细节全暴露给前端，还会让「换模型」变成一次前端改动。
+ * 快速 32 位 FNV-1a 哈希，用于粘性会话与负载均衡。
+ */
+export function hashKey(str: string): number {
+  let h = 2166136261
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return Math.abs(h)
+}
+
+/**
+ * 确定会话路由键：
+ * - 优先按 IP 散列：同一访客的所有提问与多轮追问均锁定在同一个模型上（粘性会话），同时不同访客天然均匀散列（负载均衡）。
+ * - 若 IP 缺失，回退到首轮历史问题特征散列。
+ */
+export function getStickyKey(ip: string, history: { role: string; content: string }[]): string {
+  if (ip && ip !== 'unknown') {
+    return `ip:${ip}`
+  }
+  const root = history.length > 0 ? (history[0]?.content ?? '') : ''
+  return root ? `sess:${root}` : 'default'
+}
+
+/**
+ * 转发到 new-api / octopus，支持：
+ * 1. 粘性会话（Sticky Session）：同会话 / 同访客多轮对话锁定同一模型，保证语义风格连贯。
+ * 2. 负载均衡（Load Balancing）：不同访客通过一致性哈希均匀打散至多模型。
+ * 3. 故障转移（Failover Retry）：首选模型遇到限流/故障时，自动无缝重试后续备选模型。
  */
 async function relay(
   env: Env,
   messages: { role: string; content: string }[],
   send: (event: string, data: unknown) => Promise<void>,
+  stickyKey = 'default',
 ): Promise<void> {
-  const ctl = new AbortController()
-  const timer = setTimeout(() => ctl.abort(), UPSTREAM_TIMEOUT_MS)
+  const models = (env.QA_MODEL || '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
 
-  try {
-    const res = await fetch(`${env.NEW_API_BASE.replace(/\/+$/, '')}/v1/chat/completions`, {
-      method: 'POST',
-      headers: {
-        authorization: `Bearer ${env.NEW_API_KEY}`,
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: env.QA_MODEL,
-        messages,
-        stream: true,
-        // 三个参数全部服务端定死。请求体里带同名字段也没用，这里不读它。
-        temperature: 0.2,
-        max_tokens: MAX_TOKENS,
-      }),
-      signal: ctl.signal,
-    })
+  if (models.length === 0) {
+    await send('error', { code: 'upstream', detail: 'no model configured' })
+    return
+  }
 
-    if (!res.ok || !res.body) {
-      // 上游的错误正文不回传给浏览器：里面可能有渠道名、余额、内部地址
-      console.error('upstream', res.status, (await res.text().catch(() => '')).slice(0, 300))
-      await send('error', { code: res.status === 429 ? 'rate_limited' : 'upstream' })
-      return
-    }
+  // 根据粘性键计算起始模型索引：不同访客均匀散列，同会话严格锁定
+  const startIndex = hashKey(stickyKey) % models.length
+  const orderedModels = [
+    ...models.slice(startIndex),
+    ...models.slice(0, startIndex),
+  ]
 
-    let usage: unknown = null
-    let chars = 0
+  let lastStatus = 500
 
-    for await (const frame of sseFrames(res.body)) {
-      if (frame === '[DONE]') break
-      let parsed: {
-        choices?: { delta?: { content?: string } }[]
-        usage?: unknown
-      }
-      try {
-        parsed = JSON.parse(frame)
-      } catch {
+  for (const model of orderedModels) {
+    const ctl = new AbortController()
+    const timer = setTimeout(() => ctl.abort(), UPSTREAM_TIMEOUT_MS)
+
+    try {
+      const res = await fetch(`${env.NEW_API_BASE.replace(/\/+$/, '')}/v1/chat/completions`, {
+        method: 'POST',
+        headers: {
+          authorization: `Bearer ${env.NEW_API_KEY}`,
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          model,
+          messages,
+          stream: true,
+          // 三个参数全部服务端定死。请求体里带同名字段也没用，这里不读它。
+          temperature: 0.2,
+          max_tokens: MAX_TOKENS,
+        }),
+        signal: ctl.signal,
+      })
+
+      if (!res.ok || !res.body) {
+        lastStatus = res.status
+        const errText = (await res.text().catch(() => '')).slice(0, 300)
+        console.error(`upstream [${model}] ${res.status}: ${errText}`)
         continue
       }
-      if (parsed.usage) usage = parsed.usage
-      const t = parsed.choices?.[0]?.delta?.content
-      if (t) {
-        chars += t.length
-        await send('delta', { t })
-      }
-    }
 
-    await send('done', { chars, usage: usage ?? null })
-  } finally {
-    clearTimeout(timer)
+      let usage: unknown = null
+      let chars = 0
+      let streamedAny = false
+
+      for await (const frame of sseFrames(res.body)) {
+        if (frame === '[DONE]') break
+        let parsed: {
+          choices?: { delta?: { content?: string } }[]
+          usage?: unknown
+        }
+        try {
+          parsed = JSON.parse(frame)
+        } catch {
+          continue
+        }
+        if (parsed.usage) usage = parsed.usage
+        const t = parsed.choices?.[0]?.delta?.content
+        if (t) {
+          streamedAny = true
+          chars += t.length
+          await send('delta', { t })
+        }
+      }
+
+      await send('done', { chars, usage: usage ?? null })
+      return
+    } catch (err) {
+      console.error(`upstream [${model}] error:`, err)
+      continue
+    } finally {
+      clearTimeout(timer)
+    }
   }
+
+  // 全部模型尝试均失败
+  await send('error', { code: lastStatus === 429 ? 'rate_limited' : 'upstream' })
 }
 
 /** 从上游的 SSE 里逐帧取出 data: 后面那段。 */
