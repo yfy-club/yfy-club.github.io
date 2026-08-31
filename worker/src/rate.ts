@@ -18,9 +18,9 @@
  */
 
 export const RATE_RULES = {
-  ipHour: { limit: 10, ttl: 3600 },
-  ipDay: { limit: 40, ttl: 86400 },
-  globalDay: { limit: 800, ttl: 86400 },
+  ipHour: { limit: 60, ttl: 3600 },
+  ipDay: { limit: 200, ttl: 86400 },
+  globalDay: { limit: 2000, ttl: 86400 },
 } as const
 
 export interface RateResult {

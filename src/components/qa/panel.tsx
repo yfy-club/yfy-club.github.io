@@ -70,11 +70,12 @@ export function QaPanel({ onClose }: PanelProps) {
    */
   useEffect(() => () => abortAsk(), [])
 
-  // 流式追加时把记录区钉在底部。用 scrollTop 而不是 scrollIntoView——
-  // 后者会把整个页面一起滚，面板是 fixed 的，页面不该动。
+  // 流式追加或新消息到达时平滑贴底，平时允许用户自由上下滚动浏览历史
   useEffect(() => {
     const el = log.current
-    if (el) el.scrollTop = el.scrollHeight
+    if (el && (qa.status === 'streaming' || qa.status === 'pending')) {
+      el.scrollTop = el.scrollHeight
+    }
   }, [qa.turns, qa.status])
 
   const submit = useCallback((q: string) => {
@@ -100,6 +101,7 @@ export function QaPanel({ onClose }: PanelProps) {
       className={`qa ${expanded ? 'is-expanded' : ''}`}
       id="qa-panel"
       aria-label="向 NAVI 提问"
+      data-lenis-prevent="true"
     >
       <header className="qa-head">
         <div className="qa-head-title">
@@ -160,7 +162,7 @@ export function QaPanel({ onClose }: PanelProps) {
 
       <Rail />
 
-      <div className="qa-log" ref={log}>
+      <div className="qa-log" ref={log} data-lenis-prevent="true">
         {empty ? (
           <div className="qa-empty">
             <p className="qa-empty-note">

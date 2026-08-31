@@ -165,6 +165,26 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sky-300) transparent;
+  padding-right: var(--space-1);
+}
+
+.qa-log::-webkit-scrollbar {
+  width: 5px;
+}
+
+.qa-log::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.qa-log::-webkit-scrollbar-thumb {
+  background: var(--sky-300);
+  border-radius: 3px;
+}
+
+.qa-log::-webkit-scrollbar-thumb:hover {
+  background: var(--sky-500);
 }
 
 /* ---- 空态 = 提示框本体 ---- */
@@ -373,6 +393,21 @@
   line-height: 1.6;
   color: var(--ink-900);
   background: transparent;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sky-300) transparent;
+}
+
+.qa-code-pre::-webkit-scrollbar {
+  height: 4px;
+}
+
+.qa-code-pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.qa-code-pre::-webkit-scrollbar-thumb {
+  background: var(--sky-300);
+  border-radius: 2px;
 }
 
 .qa-code-content {
