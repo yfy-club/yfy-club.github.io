@@ -45,6 +45,8 @@ jobs:
       # 四道门禁跟本地同一条命令：typecheck → 对比度 → 字体子集与预算 → 生产构建（含预渲染）。
       # 字体产物已提交进仓库，这一步会重切一遍并核对预算，改了文案没跑 fonts:subset 会在这里红。
       - run: npm run check
+        env:
+          VITE_QA_ENDPOINT: https://yfy-qa.491453898.workers.dev
 
       # 字体子集是确定性输出。重切后有 diff 说明提交的产物过期了，
       # 让它红在这里，别让线上跟仓库里的字体不一致。

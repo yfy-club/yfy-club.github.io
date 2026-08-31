@@ -8,6 +8,7 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+!.env.production
 *.tsbuildinfo
 
 # 临时探针与截图目录，别提交
@@ -22,3 +23,5 @@ Thumbs.db
 # Worker 的依赖与本地状态
 worker/node_modules/
 worker/.wrangler/
+worker/.dev.vars
+.dev.vars

@@ -21,7 +21,7 @@ ALLOWED_ORIGINS = "https://yfy-club.github.io,http://localhost:5173,http://local
 #   npx wrangler kv namespace create QA_RATE
 [[kv_namespaces]]
 binding = "QA_RATE"
-id = "PUT_YOUR_KV_ID_HERE"
+id = "7655c8f5b0f545e9af4b8a7f1f186f88"
 
 # NEW_API_KEY 不写在这里——它是 Secret：
 #   npx wrangler secret put NEW_API_KEY

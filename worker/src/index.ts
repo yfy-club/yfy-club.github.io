@@ -243,10 +243,13 @@ async function relay(
     const timer = setTimeout(() => ctl.abort(), UPSTREAM_TIMEOUT_MS)
 
     try {
-      const res = await fetch(`${env.NEW_API_BASE.replace(/\/+$/, '')}/v1/chat/completions`, {
+      const apiKey = (env.NEW_API_KEY || '').replace(/^\uFEFF+/, '').trim()
+      const apiBase = (env.NEW_API_BASE || '').replace(/^\uFEFF+/, '').trim().replace(/\/+$/, '')
+
+      const res = await fetch(`${apiBase}/v1/chat/completions`, {
         method: 'POST',
         headers: {
-          authorization: `Bearer ${env.NEW_API_KEY}`,
+          authorization: `Bearer ${apiKey}`,
           'content-type': 'application/json',
         },
         body: JSON.stringify({
