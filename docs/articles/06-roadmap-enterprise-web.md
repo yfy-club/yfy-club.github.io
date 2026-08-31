@@ -1,164 +1,293 @@
 ---
 category: roadmap
 slug: roadmap-enterprise-web
-title: 阶段五：Maven 构建、MyBatis 与企业级三层架构
-summary: 企业级筑基：Maven 依赖治理、三层分层纪律、MyBatis 持久层与声明式事务。
-minutes: 12
+title: 阶段五：企业级 Web 工程与 Spring Boot 入门
+summary: Maven 依赖管理、Spring Boot 核心注解、统一 API 响应封装与 Controller-Service-Mapper 三层架构实战教程。
+minutes: 15
 ---
 
-### 核心背景与技术定位
+### 推荐学习视频教程
 
-阶段五是从「写程序」跨到「做工程」的分水岭。单体脚本能跑不叫工程：依赖要可仲裁、模块要可分工、事务要可追责、接口要可契约。本阶段以 Maven、Spring Boot、MyBatis 三件套为载体，建立企业级后端的骨架认知。
+阶段五推荐配合以下框架实战教程进行系统性学习：
 
-#### 三件套各管一层
+| 模块 | 推荐视频教程 | BV 号 | 核心学习重点 |
+|---|---|---|---|
+| 框架开发 | [Gin 框架与后端微服务](https://www.bilibili.com/video/BV1gJ411p7xC) | `BV1gJ411p7xC` | RESTful 路由、中间件设计与数据库连接池 |
+| 项目演练 | [企业级后端项目开发演练](https://www.bilibili.com/video/BV1BY4UefEkM) | `BV1BY4UefEkM` | 业务建模、分层架构落地与接口联合调试 |
 
-Maven 管「构建与依赖」：谁的包、什么版本、冲突听谁的。Spring Boot 管「组装与运行时」：对象生命周期、事务代理、Web 容器。MyBatis 管「数据进出」：SQL 与对象之间的映射。三者边界清晰，学的时候也按这个边界分开学，不要搅成一锅。
+<video-preview provider="bilibili" id="BV1gJ411p7xC" title="Gin 框架与后端微服务" bvid="BV1gJ411p7xC"></video-preview>
 
-### Maven 依赖仲裁与构建模型
+### Maven 项目构建与依赖管理
 
-#### 依赖冲突的最短路径原则
+Maven 是 Java 生态最主流的项目构建与第三方依赖管理工具。
 
-Maven 解析依赖树时，同一个构件出现多个版本，按两条规则仲裁：**路径最短优先**——离根节点传递层数少的版本胜出；层数相同时**先声明者胜**。仲裁结果不可靠猜，必须显式查验：
+#### pom.xml 核心配置示例
 
-```bash
-# 打印完整依赖树，定位冲突构件的两条来源路径
-mvn dependency:tree -Dverbose
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-# 只过滤关心的构件，确认最终仲裁到的版本
-mvn dependency:tree -Dincludes=com.fasterxml.jackson.core:jackson-databind
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>3.2.0</version>
+    </parent>
+
+    <groupId>tech.yunfeiyang</groupId>
+    <artifactId>demo-service</artifactId>
+    <version>1.0.0</version>
+
+    <dependencies>
+        <!-- Spring Boot Web 起步依赖 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <!-- MySQL 数据库驱动 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+    </dependencies>
+</project>
 ```
 
-#### 依赖排除与版本锁定
+#### 常用 Maven 指令速查表
 
-确认冲突后，在引入方的 `<dependency>` 里用 `<exclusions>` 排除旧版本路径；多模块项目中，统一在父 POM 的 `<dependencyManagement>` 锁版本——子模块只写 `groupId` 与 `artifactId`，版本全局唯一来源，杜绝各模块版本漂移。
-
-### 三层架构的单向分层纪律
-
-#### Controller-Service-Mapper 的职责分界
-
-| 层 | 职责 | 禁止事项 |
+| 命令 | 说明 | 适用场景 |
 |---|---|---|
-| Controller | 参数校验、协议转换、调用 Service | 不写业务逻辑，不碰 Mapper |
-| Service | 业务编排、事务边界、对象转换 | 不处理 HTTP 细节，不拼 SQL |
-| Mapper | 单表或简单关联的 SQL 访问 | 不含任何业务判断 |
+| `mvn clean` | 清理编译生成的目标目录 `target` | 重新构建前清理缓存 |
+| `mvn compile` | 编译项目源代码 | 检查是否有语法或类型错误 |
+| `mvn test` | 执行项目单元测试用例 | 门禁自测 |
+| `mvn package` | 将项目打包为可执行 JAR 文件 | 生产部署打包 |
 
-依赖方向必须单向：Controller → Service → Mapper。反向依赖或跨层调用（Controller 直连 Mapper）会让事务边界、日志切面与参数校验全部绕过，是评审一票否决项。
+### Spring Boot 核心注解与第一个接口
 
-#### 反例与正例：跨层调用 vs 对象流转
+Spring Boot 简化了 Spring 应用的初始搭建与开发过程，约定大于配置。
+
+#### 1. 主启动类
 
 ```java
-// 反例：控制器直连 Mapper，事务、校验、日志全被绕过
-@RestController
-public class BadUserController {
-    @Autowired
-    private UserMapper userMapper;
+package tech.yunfeiyang.demo;
 
-    @PostMapping("/users")
-    public Object save(@RequestBody Map<String, Object> raw) {
-        User u = new User();
-        u.setName((String) raw.get("name")); // 裸 Map 取值，无校验无类型
-        userMapper.insert(u);                // 无事务边界，出错无兜底
-        return u;                            // 实体直出，密码字段也漏给前端
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DemoApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
     }
 }
 ```
 
-```java
-// 正例：DTO 进、校验、Service 事务、VO 出，对象各司其职
-@RestController
-public class UserController {
-    private final UserService userService;
+#### 2. 第一个控制器与常用请求参数接收注解
 
-    public UserController(UserService userService) { // 构造器注入，依赖显式可见
-        this.userService = userService;
+```java
+package tech.yunfeiyang.demo.controller;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/hello")
+public class HelloController {
+
+    // 1. GET 请求：接收 URL 路径参数，如 /api/hello/user/101
+    @GetMapping("/user/{id}")
+    public String getUserById(@PathVariable("id") Long id) {
+        return "查询到用户 ID: " + id;
     }
 
-    @PostMapping("/users")
-    public Result<UserVO> save(@Valid @RequestBody UserDTO dto) {
-        return Result.ok(userService.register(dto)); // 返回 VO，绝不外泄实体
+    // 2. GET 请求：接收查询参数，如 /api/hello/search?keyword=java
+    @GetMapping("/search")
+    public String search(@RequestParam("keyword") String keyword) {
+        return "搜索关键字: " + keyword;
     }
 }
+```
+
+### 统一 API 响应对象封装
+
+为了让前端能够以一致的方式解析数据，服务端返回给客户端的 JSON 数据应具备统一包装结构。
+
+#### 统一响应类定义
+
+```java
+package tech.yunfeiyang.demo.common;
+
+public class ApiResponse<T> {
+    private int code;       // 业务状态码：0 或 200 表示成功，非 0 表示错误
+    private String message; // 提示信息
+    private T data;         // 实际数据载荷
+    private long timestamp; // 时间戳
+
+    public ApiResponse() {
+        this.timestamp = System.currentTimeMillis();
+    }
+
+    public static <T> ApiResponse<T> success(T data) {
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setCode(0);
+        response.setMessage("success");
+        response.setData(data);
+        return response;
+    }
+
+    public static <T> ApiResponse<T> error(int code, String message) {
+        ApiResponse<T> response = new ApiResponse<>();
+        response.setCode(code);
+        response.setMessage(message);
+        return response;
+    }
+
+    // Getter 与 Setter 方法
+    public int getCode() { return code; }
+    public void setCode(int code) { this.code = code; }
+    public String getMessage() { return message; }
+    public void setMessage(String message) { this.message = message; }
+    public T getData() { return data; }
+    public void setData(T data) { this.data = data; }
+    public long getTimestamp() { return timestamp; }
+    public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
+}
+```
+
+### Controller-Service-Mapper 三层架构实战
+
+企业级 Web 工程采用严格的职责单向分层：
+
+```
+客户端请求 ➔ Controller 控制层 ➔ Service 业务层 ➔ Mapper 数据持久层 ➔ 数据库
+```
+
+#### 1. 实体类（Entity）
+
+```java
+package tech.yunfeiyang.demo.entity;
+
+public class User {
+    private Long id;
+    private String username;
+    private String email;
+
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+}
+```
+
+#### 2. 持久层（Mapper 接口）
+
+```java
+package tech.yunfeiyang.demo.mapper;
+
+import org.apache.ibatis.annotations.*;
+import tech.yunfeiyang.demo.entity.User;
+
+@Mapper
+public interface UserMapper {
+    @Select("SELECT id, username, email FROM users WHERE id = #{id}")
+    User findById(@Param("id") Long id);
+
+    @Insert("INSERT INTO users(username, email) VALUES(#{username}, #{email})")
+    @Options(useGeneratedKeys = true, keyProperty = "id")
+    int insert(User user);
+}
+```
+
+#### 3. 业务层（Service 接口与实现）
+
+```java
+package tech.yunfeiyang.demo.service;
+
+import tech.yunfeiyang.demo.entity.User;
+
+public interface UserService {
+    User getUserById(Long id);
+    User createUser(String username, String email);
+}
+```
+
+```java
+package tech.yunfeiyang.demo.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import tech.yunfeiyang.demo.entity.User;
+import tech.yunfeiyang.demo.mapper.UserMapper;
+import tech.yunfeiyang.demo.service.UserService;
 
 @Service
 public class UserServiceImpl implements UserService {
-    private final UserMapper userMapper;
 
-    public UserServiceImpl(UserMapper userMapper) {
-        this.userMapper = userMapper;
+    @Autowired
+    private UserMapper userMapper;
+
+    @Override
+    public User getUserById(Long id) {
+        return userMapper.findById(id);
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class) // 事务只落在 Service 层
-    public UserVO register(UserDTO dto) {
-        if (userMapper.existsByName(dto.name())) {
-            throw new BizException(ErrorCode.NAME_TAKEN); // 业务异常枚举
-        }
-        User entity = UserConvert.toEntity(dto);
-        userMapper.insert(entity);
-        return UserConvert.toVO(entity);
+    public User createUser(String username, String email) {
+        User user = new User();
+        user.setUsername(username);
+        user.setEmail(email);
+        userMapper.insert(user);
+        return user;
     }
 }
 ```
 
-三类对象的铁律：**DTO 只装请求参数、Entity 只映射表结构、VO 只装响应字段**。密码、内部状态等字段永远不出现在 VO 里。
+#### 4. 控制层（Controller）
 
-### MyBatis 持久层实战
+```java
+package tech.yunfeiyang.demo.controller;
 
-#### 动态 SQL 三件套
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+import tech.yunfeiyang.demo.common.ApiResponse;
+import tech.yunfeiyang.demo.entity.User;
+import tech.yunfeiyang.demo.service.UserService;
 
-`<if>` 做条件拼接，`<where>` 自动处理首个条件的 `AND` 前缀，`<foreach>` 展开集合。参数一律走 `#{}` 预编译占位符，`${}` 是字符串直接拼接，只允许用于无法参数化的表名排序字段且必须白名单校验。
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
 
-<details>
-<summary>动态条件查询映射文件示例</summary>
+    @Autowired
+    private UserService userService;
 
-```json
-{
-  "说明": "此处以 MyBatis XML 片段的等价逻辑描述，实际工程放在 mapper.xml",
-  "select": "SELECT id, name, grade FROM student",
-  "where": [
-    { "if": "name 非空", "条件": "AND name LIKE CONCAT('%', #{name}, '%')" },
-    { "if": "grade 非空", "条件": "AND grade = #{grade}" },
-    { "if": "ids 非空", "条件": "AND id IN (foreach 展开 #{ids})" }
-  ],
-  "安全约束": "全部使用 #{} 预编译占位符，禁止 ${} 拼接用户输入"
+    // 根据 ID 查询用户
+    @GetMapping("/{id}")
+    public ApiResponse<User> getUser(@PathVariable Long id) {
+        User user = userService.getUserById(id);
+        if (user == null) {
+            return ApiResponse.error(404, "用户不存在");
+        }
+        return ApiResponse.success(user);
+    }
+
+    // 创建新用户
+    @PostMapping
+    public ApiResponse<User> createUser(@RequestBody User requestUser) {
+        User created = userService.createUser(requestUser.getUsername(), requestUser.getEmail());
+        return ApiResponse.success(created);
+    }
 }
 ```
 
-```sql
--- 对应的最终生成语句形态（条件齐备时）
-SELECT id, name, grade FROM student
-WHERE name LIKE CONCAT('%', ?, '%')
-  AND grade = ?
-  AND id IN (?, ?, ?)
-```
+### 阶段实战大作业
 
-</details>
-
-#### 缓存失效机理
-
-MyBatis 一级缓存绑定在 SqlSession 上：同一会话内相同查询直接命中，但任何增删改或手动 `clearCache` 都会清空；Spring 集成下每个请求通常自持一个会话，一级缓存的收益有限，却曾引发「查到自己刚改前的旧值」的事故。二级缓存绑定在 Mapper 命名空间，跨会话共享，但多表关联更新无法联动失效，生产环境默认关闭，缓存职责交给 Redis 这类外部设施。
-
-### 声明式事务与失效场景
-
-`@Transactional` 的本质是 AOP 代理：Spring 给 Bean 生成代理对象，在方法前后织入开启、提交、回滚事务的逻辑。理解了「事务由代理控制」，三种经典失效场景就不再需要死记：
-
-| 失效场景 | 根因 | 修复 |
-|---|---|---|
-| 同类内部自调用 | `this.method()` 绕过代理，事务注解形同虚设 | 拆到另一个 Bean，或注入自身代理 |
-| 异常被 `catch` 吞掉 | 代理感知不到异常，按成功提交 | 捕获后显式 `setRollbackOnly()` 或重抛 |
-| 抛出受检异常 | 默认只回滚运行时异常 | `rollbackFor = Exception.class` 全量声明 |
-
-另有一条纪律：事务方法必须 `public`，私有方法上的注解同样不会被代理织入。
-
-### 阶段实战大作业与验收清单
-
-搭建基于 Spring Boot 与 MyBatis-Plus 的企业级脚手架，实现双 Token（访问令牌 + 刷新令牌）无感刷新认证接口。
-
-| 项目 | 验收标准 |
-|---|---|
-| 分层纪律 | 依赖单向，评审工具检查无跨层调用，DTO/Entity/VO 三类对象齐备 |
-| 依赖治理 | `mvn dependency:tree` 无冲突告警，版本统一由父 POM 管理 |
-| 双 Token 认证 | 访问令牌过期后自动用刷新令牌换新，前端调用方无感知 |
-| 事务正确性 | 注册接口注入异常验证回滚，无脏数据残留 |
-| 持久层规范 | 全部参数走预编译占位符，二级缓存关闭并有注释说明 |
-| 异常体系 | 业务异常走枚举错误码，全局拦截器统一响应格式 |
+搭建一个基于 Spring Boot 的商品信息管理微服务：
+1. 建立数据库商品表，配置 `application.yml` 数据源连接；
+2. 按照三层架构规范编写商品信息的增加、删除、修改与按 ID 查询接口；
+3. 使用 Postman 或 Apifox 测试所有接口，验证统一响应格式。

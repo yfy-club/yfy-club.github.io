@@ -1,169 +1,330 @@
 ---
 category: roadmap
 slug: roadmap-backend-java
-title: 阶段三：JavaSE 企业级面向对象与集合底层原理
-summary: JavaSE 筑基：面向对象与异常体系、HashMap 底层推演与并发容器对比实战。
-minutes: 12
+title: 阶段三：JavaSE 企业级面向对象与集合基础
+summary: JavaSE 核心入门教程：类与对象、面向对象三大特性、常用类、集合框架 ArrayList 与 HashMap、异常处理与文件读写。
+minutes: 15
 ---
 
-### 核心背景与技术定位
+### 推荐学习视频教程
 
-阶段三选择 Java 作为企业级方向的基石语言：它的面向对象体系、集合框架与异常模型，是后面 Spring 全家桶、MyBatis 乃至整个后端工程的地基。本阶段的目标不是背 API，而是把「集合在内存里怎么摆、并发时怎么坏」这两件事推演到能白板讲清的程度。
+阶段三推荐配合以下视频教程进行系统性学习与编码实战：
 
-#### 为什么集合底层是必答题
+| 模块 | 推荐视频教程 | BV 号 | 核心学习重点 |
+|---|---|---|---|
+| JavaSE 基础 | [JavaSE 零基础到进阶教程](https://www.bilibili.com/video/BV163GGz2E8c) | `BV163GGz2E8c` | 类与对象、继承多态、接口、集合与异常处理 |
+| Git 协作 | [Git 版本控制与协同实战](https://www.bilibili.com/video/BV1ce4y1W7YB) | `BV1ce4y1W7YB` | 本地提交、分支合并与远程推送 |
 
-`HashMap` 是后端代码里出现频率最高的数据结构，没有之一：参数映射、缓存、会话、去重全靠它。面试官问它的底层不是刁难，而是因为线上事故的大量根因就藏在「哈希冲突怎么处理」「并发写入会怎样」这两个问题里。会用和懂底层，对应的是两种完全不同的排障能力。
+<video-preview provider="bilibili" id="BV163GGz2E8c" title="JavaSE 零基础到进阶教程" bvid="BV163GGz2E8c"></video-preview>
 
-#### 本阶段的能力边界
+### Java 基础语法与控制台输入输出
 
-完成本阶段后应能：用面向对象拆解一个业务域、推导 HashMap 从数组到红黑树的完整演化、解释 `ConcurrentHashMap` 的并发控制手段、用设计模式替代长分支。
+Java 是一门强类型的面向对象编程语言，所有代码都必须组织在类（`class`）内部。
 
-### HashMap 底层结构推演
-
-#### 数组加链表加红黑树
-
-`HashMap` 的主体是一个 `Node` 数组（哈希桶）。放入键值对时，先算键的哈希值，再与数组长度减一做与运算定位桶下标——这要求容量始终是 2 的幂，让 `hash & (n - 1)` 等价于取模但快得多。同一桶内发生哈希冲突的条目以链表串起；JDK 8 起，链表长度达到阈值会升级为红黑树，把最坏查找从 O(n) 压到 O(log n)。
-
-#### 负载因子 0.75 的权衡
-
-容量达到「当前容量 × 负载因子」时触发扩容。0.75 是空间与时间的折中值：取 1，桶太挤、冲突链变长、查找变慢；取 0.5，空间浪费近半。0.75 恰好在泊松分布下让单个桶的元素数量大概率不超过 8 个。
-
-#### 树化阈值 8 的泊松分布推演
-
-源码注释给出依据：在负载因子 0.75 的理想散列条件下，桶内元素数量服从参数约 0.5 的泊松分布，达到 8 个的概率约为千万分之六——正常代码里根本不会发生。因此阈值 8 不是性能调参，而是「非理想散列的告警线」：真走到树化，说明哈希函数写得有问题；而当树退化到 6 个元素以下，又转回链表，避免小树浪费指针空间。
-
-### 并发安全与容器选型
-
-#### 并发写入的灾难现场
-
-多线程同时写入 `HashMap`：JDK 7 的头插法扩容会形成环形链表，取数时陷入死循环，CPU 打满；JDK 8 改为尾插法消除了成环，但并发写入仍会丢数据、扩容结果被互相覆盖。**任何场景都不许在多线程环境裸用 `HashMap`**，这不是保守，是事故清单换来的结论。
-
-#### ConcurrentHashMap 的控制手段
-
-JDK 8 的 `ConcurrentHashMap` 抛弃了分段锁，改用更细的粒度：桶为空时用 CAS 直接写入，无需加锁；桶非空时只对桶头节点加 `synchronized`，锁的粒度从「段」细化到「单桶」，冲突锁竞争的概率大幅下降。计数用 `LongAdder` 风格的分段累加，避免全局锁。
+#### 实例代码
 
 ```java
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Scanner;
 
-public class SessionRegistry {
-    // 多线程环境必须用并发容器，禁止裸 HashMap
-    private final Map<String, String> sessions = new ConcurrentHashMap<>();
+public class HelloWorld {
+    public static void main(String[] args) {
+        // 1. 控制台输出
+        System.out.println("欢迎来到 Java 的世界！");
 
-    public void bind(String userId, String token) {
-        if (userId == null || userId.isBlank() || token == null) {
-            throw new IllegalArgumentException("用户与令牌均不允许为空");
-        }
-        sessions.put(userId, token);
-    }
+        // 2. 控制台用户输入
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("请输入你的姓名: ");
+        String name = scanner.nextLine();
 
-    public String tokenOf(String userId) {
-        if (userId == null) {
-            return null; // 空值防御：查询入参为空直接返回，不抛异常
-        }
-        return sessions.get(userId); // 键不存在返回 null，由调用方兜底
+        System.out.print("请输入你的年龄: ");
+        int age = scanner.nextInt();
+
+        System.out.println("你好，" + name + "！明年你将 " + (age + 1) + " 岁。");
+        scanner.close();
     }
 }
 ```
 
-### 正反例设计范式
+#### 实例解析
 
-#### 反例：多层嵌套 if-else 业务分流
+* `public class HelloWorld`：定义公开类，类名必须与文件名 `HelloWorld.java` 严格一致。
+* `public static void main(String[] args)`：Java 程序的执行入口主方法。
+* `Scanner scanner = new Scanner(System.in)`：创建扫描器对象，用于读取键盘控制台输入。
+
+### 面向对象核心特性
+
+面向对象编程包含三大核心特性：**封装**、**继承**与**多态**。
+
+#### 1. 封装与标准实体类
+
+封装是将类的状态数据设为私有（`private`），通过公开的方法（Getter / Setter）进行安全访问。
 
 ```java
-// 反例：每加一种会员等级就要改这个方法，分支越嵌越深
-public double price_bad(double base, String level, boolean festival) {
-    if (level.equals("gold")) {            // 常量在后，level 为 null 时直接 NPE
-        if (festival) {
-            return base * 0.7;
-        } else {
-            return base * 0.8;
-        }
-    } else if (level.equals("silver")) {
-        if (festival) {
-            return base * 0.85;
-        } else {
-            return base * 0.9;
-        }
-    } else if (level.equals("normal")) {
-        return festival ? base * 0.95 : base;
+public class Student {
+    private int id;
+    private String name;
+    private double score;
+
+    // 无参构造函数
+    public Student() {}
+
+    // 有参构造函数
+    public Student(int id, String name, double score) {
+        this.id = id;
+        this.name = name;
+        this.score = score;
     }
-    return base; // 未知等级静默放过，问题被掩盖
+
+    // Getter 与 Setter 方法
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public double getScore() { return score; }
+    public void setScore(double score) {
+        if (score >= 0 && score <= 100) {
+            this.score = score;
+        }
+    }
 }
 ```
 
-隐患拆解：等值判断用变量在前的写法埋下空指针；新增等级必须改动这个日益膨胀的方法，违反开闭原则；未知输入静默返回原价，业务错误无法被发现。
+#### 2. 继承与方法重写
 
-#### 正例：策略模式与工厂模式解耦
+子类使用 `extends` 关键字继承父类，可复用父类逻辑并重写（Override）特定方法：
 
 ```java
-// 策略接口：每种定价规则一个实现，互不干扰
-public interface PricePolicy {
-    double apply(double base, boolean festival);
+class Animal {
+    protected String name;
+
+    public Animal(String name) {
+        this.name = name;
+    }
+
+    public void makeSound() {
+        System.out.println("动物发出叫声");
+    }
 }
 
-public final class GoldPolicy implements PricePolicy {
+class Dog extends Animal {
+    public Dog(String name) {
+        super(name); // 调用父类构造函数
+    }
+
     @Override
-    public double apply(double base, boolean festival) {
-        if (base < 0) {
-            throw new IllegalArgumentException("基础价不允许为负");
-        }
-        return festival ? base * 0.7 : base * 0.8;
-    }
-}
-
-// 工厂：用不可变表注册策略，未知等级快速失败而不是静默放过
-public final class PricePolicyFactory {
-    private static final Map<String, PricePolicy> REGISTRY =
-            Map.of("gold", new GoldPolicy());
-
-    public static PricePolicy of(String level) {
-        PricePolicy policy = REGISTRY.get(level == null ? "" : level);
-        if (policy == null) {
-            throw new IllegalArgumentException("未知会员等级: " + level);
-        }
-        return policy;
+    public void makeSound() {
+        System.out.println(name + " 正在汪汪叫！");
     }
 }
 ```
 
-新增等级只需增加一个实现类并注册一行，原有代码零改动——这就是面向扩展开放、面向修改关闭。
+#### 3. 接口与多态
 
-### 高频故障与实操避坑
-
-| 症状 | 根因 | 修复方案 |
-|---|---|---|
-| 对象存入 Map 取不出 | 重写 `equals` 忘了重写 `hashCode` | 两者必须成对重写，用 IDE 一起生成 |
-| `foreach` 中删除抛并发修改异常 | 迭代器外直接调集合 `remove` | 用 `Iterator.remove()` 或 `removeIf` |
-| 容器 CPU 打满死循环 | 多线程写裸 `HashMap`（JDK 7 环链） | 换 `ConcurrentHashMap`，全量排查裸容器 |
-| 大集合扩容卡顿 | 未预估规模反复扩容 | 构造时给出初始容量：`new HashMap<>(预估量 / 0.75 + 1)` |
-| 金额比较不相等 | 用 `double` 存金额 | 金额一律 `BigDecimal`，比较用 `compareTo` |
-
-对象判等与哈希的正确姿势，也是评审必查项：
+接口（`interface`）定义行为契约，实现类使用 `implements` 实现接口方法：
 
 ```java
-@Override
-public boolean equals(Object o) {
-    if (this == o) return true;                 // 同一引用快速返回
-    if (!(o instanceof Student other)) return false; // 类型检查兼空值防御
-    return id == other.id && name.equals(other.name);
+// 定义支付接口
+interface PaymentService {
+    void pay(double amount);
 }
 
-@Override
-public int hashCode() {
-    return Objects.hash(id, name);              // 与 equals 字段严格对应
+// 微信支付实现类
+class WechatPay implements PaymentService {
+    @Override
+    public void pay(double amount) {
+        System.out.println("使用微信支付扣款: " + amount + " 元");
+    }
+}
+
+// 支付宝支付实现类
+class AliPay implements PaymentService {
+    @Override
+    public void pay(double amount) {
+        System.out.println("使用支付宝扣款: " + amount + " 元");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        // 多态：父接口引用指向具体子类实现
+        PaymentService payment = new WechatPay();
+        payment.pay(99.0);
+
+        // 切换实现
+        payment = new AliPay();
+        payment.pay(199.0);
+    }
 }
 ```
 
-### 阶段实战大作业与验收清单
+### 字符串与常用 API
 
-实现一个单机综合信息管理系统：学生信息的多维度增删查改、自定义文件格式持久化、异常兜底全覆盖。
+#### 1. String 常用方法速查表
 
-| 项目 | 验收标准 |
-|---|---|
-| 面向对象 | 领域模型至少三层：实体、仓储、服务，职责清晰不越界 |
-| 持久化 | 自定义文本格式落盘，读入时损坏行跳过并记日志，不允许整库崩溃 |
-| 异常兜底 | 文件不存在、格式错误、重复主键均有专属异常与友好提示 |
-| 多维度排序 | 支持按总分、姓名、学号组合排序，比较器可插拔 |
-| 集合规范 | 判等成对重写 `equals` 与 `hashCode`；容量给出初始预估 |
-| 防御性代码 | 所有外部输入（文件行、控制台输入）先校验后使用 |
+| 方法名 | 功能说明 | 示例 |
+|---|---|---|
+| `length()` | 返回字符串字符数 | `"hello".length()` 返回 5 |
+| `charAt(int index)` | 获取指定索引处的字符 | `"abc".charAt(1)` 返回 `'b'` |
+| `substring(start, end)` | 截取子字符串（左闭右开） | `"hello".substring(0, 2)` 返回 `"he"` |
+| `equals(Object anObject)` | 比较字符串内容是否相等 | `str1.equals(str2)` |
+| `split(String regex)` | 按指定分隔符切分字符串 | `"a,b,c".split(",")` |
+
+#### 2. StringBuilder 字符串拼接
+
+当需要进行大量字符串拼接时，应使用 `StringBuilder` 避免生成过多临时无用对象：
+
+```java
+StringBuilder sb = new StringBuilder();
+sb.append("SELECT * FROM users ");
+sb.append("WHERE age >= 18 ");
+sb.append("ORDER BY id DESC");
+
+String sql = sb.toString();
+System.out.println(sql);
+```
+
+### 集合框架常用类
+
+Java 集合框架用于在内存中存储并操作数据集合。
+
+#### 1. ArrayList 动态列表
+
+`ArrayList` 是底层基于动态扩容数组实现的列表集合。
+
+```java
+import java.util.ArrayList;
+import java.util.List;
+
+public class ListDemo {
+    public static void main(String[] args) {
+        // 创建列表集合
+        List<String> fruits = new ArrayList<>();
+
+        // 1. 添加元素
+        fruits.add("苹果");
+        fruits.add("香蕉");
+        fruits.add("橙子");
+
+        // 2. 根据索引获取与修改
+        System.out.println("首个元素: " + fruits.get(0));
+        fruits.set(1, "葡萄");
+
+        // 3. 删除元素
+        fruits.remove("橙子");
+
+        // 4. 遍历列表
+        for (String fruit : fruits) {
+            System.out.println("水果: " + fruit);
+        }
+    }
+}
+```
+
+#### 2. HashMap 键值对映射
+
+`HashMap` 根据键（Key）的哈希值存储并索引对应的值（Value）。
+
+```java
+import java.util.HashMap;
+import java.util.Map;
+
+public class MapDemo {
+    public static void main(String[] args) {
+        // 创建 Map 映射（键为学号，值为姓名）
+        Map<Integer, String> studentMap = new HashMap<>();
+
+        // 1. 放入键值对
+        studentMap.put(1001, "张三");
+        studentMap.put(1002, "李四");
+        studentMap.put(1003, "王五");
+
+        // 2. 根据键获取值
+        System.out.println("学号 1002 的学生: " + studentMap.get(1002));
+
+        // 3. 检查键是否存在
+        if (studentMap.containsKey(1001)) {
+            System.out.println("学号 1001 存在于系统中");
+        }
+
+        // 4. 遍历 Map 键值对
+        for (Map.Entry<Integer, String> entry : studentMap.entrySet()) {
+            System.out.println("学号: " + entry.getKey() + ", 姓名: " + entry.getValue());
+        }
+    }
+}
+```
+
+### 异常处理机制
+
+Java 使用 `try-catch-finally` 机制捕获并处理运行期出现的异常，防止程序崩溃。
+
+#### 实例代码
+
+```java
+public class ExceptionDemo {
+    public static int divide(int a, int b) {
+        if (b == 0) {
+            // 主动抛出非法参数异常
+            throw new IllegalArgumentException("除数不能为 0！");
+        }
+        return a / b;
+    }
+
+    public static void main(String[] args) {
+        try {
+            int result = divide(10, 0);
+            System.out.println("结果: " + result);
+        } catch (IllegalArgumentException e) {
+            // 捕获特定异常并给出友好提示
+            System.err.println("捕获到业务异常: " + e.getMessage());
+        } finally {
+            // 无论是否发生异常，finally 块都会执行
+            System.out.println("计算处理结束");
+        }
+    }
+}
+```
+
+### 基础文件读写操作
+
+在 Java 中可以使用现代 `java.nio.file.Files` 工具类轻松完成纯文本文件的读写。
+
+#### 实例代码
+
+```java
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+
+public class FileDemo {
+    public static void main(String[] args) {
+        Path filePath = Path.of("students.txt");
+
+        try {
+            // 1. 写入多行文本
+            List<String> lines = List.of("1001,张三,88.5", "1002,李四,92.0");
+            Files.write(filePath, lines);
+            System.out.println("文件写入成功！");
+
+            // 2. 读取全部行
+            List<String> readLines = Files.readAllLines(filePath);
+            for (String line : readLines) {
+                System.out.println("读取到行: " + line);
+            }
+        } catch (IOException e) {
+            System.err.println("文件操作失败: " + e.getMessage());
+        }
+    }
+}
+```
+
+### 阶段实战大作业
+
+编写一个单机控制台学生管理系统：
+1. 包含 `Student` 实体类（包含学号、姓名、专业、成绩）；
+2. 使用 `ArrayList` 或 `HashMap` 管理学生列表；
+3. 提供控制台菜单：1. 添加学生、2. 查询学生、3. 删除学生、4. 导出保存到文本文件；
+4. 包含完善的输入格式校验与异常处理，输入非法数据不报错退出。

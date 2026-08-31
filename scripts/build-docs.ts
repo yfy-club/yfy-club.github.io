@@ -41,7 +41,7 @@ const QA_INDEX_OUT = fileURLToPath(new URL('../worker/src/qa-index.json', import
  * 高亮语言。成稿里出现的才打进来，多的不加载。
  * 档案库重构后成稿覆盖 C/C++、Java、数据库与工程配置，语言面相应扩开。
  */
-const LANGS = ['bash', 'ts', 'css', 'sql', 'json', 'java', 'c', 'cpp'] as const
+const LANGS = ['bash', 'ts', 'css', 'sql', 'json', 'java', 'c', 'cpp', 'html'] as const
 
 /**
  * 哨兵主题。

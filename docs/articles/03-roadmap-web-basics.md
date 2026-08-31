@@ -2,176 +2,306 @@
 category: roadmap
 slug: roadmap-web-basics
 title: 阶段二：Web 前端视野、现代布局与异步交互
-summary: Web 前端筑基：浏览器渲染流水线、事件模型、事件循环与原生交互看板大作业。
-minutes: 12
+summary: Web 前端入门教程：HTML 标签结构、CSS 盒子与 Flex 布局、JavaScript 语法、DOM 操作与 Fetch 异步交互。
+minutes: 15
 ---
 
-### 核心背景与技术定位
+### 推荐学习视频教程
 
-阶段二把视野从单机程序拉向浏览器：用户看到的每一个像素，都是浏览器把 HTML、CSS、JavaScript 三份输入加工后的产物。不理解这条加工流水线，写出的页面就会在数据一多时卡顿、在交互一密时掉帧，却说不清慢在哪里。
+阶段二推荐配合以下视频教程进行系统性学习与编码实战：
 
-#### 为什么原生先行、框架在后
+| 模块 | 推荐视频教程 | BV 号 | 核心学习重点 |
+|---|---|---|---|
+| HTML5 基础 | [HTML5 基础精讲](https://www.bilibili.com/video/BV1BrBiYNEWg) | `BV1BrBiYNEWg` | 语义化标签、链接、表格与表单组件 |
+| CSS 布局实战 | [CSS 样式与布局实战](https://www.bilibili.com/video/BV1sQeEzFEKi) | `BV1sQeEzFEKi` | 盒子模型、选择器优先级与 Flex 弹性布局 |
+| JavaScript 基础 | [JavaScript 核心机制与 DOM](https://www.bilibili.com/video/BV15L4y1a7or) | `BV15L4y1a7or` | 变量、函数、DOM 操作与事件驱动模型 |
 
-React、Vue 这些框架解决的是「大型界面的组织问题」，而它们封装掉的正是本阶段要学的原生能力：DOM 操作、事件模型、异步时序。跳过原生直接学框架，等于只会按按钮不会看仪表盘——框架一升级、行为一变化，就失去了判断依据。社团的顺序是：先用原生 JavaScript 把看板写出来，再进项目学框架，此时框架的每个设计你都能对上号。
+<video-preview provider="bilibili" id="BV1BrBiYNEWg" title="HTML5 基础精讲" bvid="BV1BrBiYNEWg"></video-preview>
 
-#### 本阶段的能力边界
+### HTML 核心常用标签
 
-完成本阶段后应能：口述从 URL 到像素的完整链路、用 Flex 与 Grid 完成任意常规布局、解释事件三阶段与委托原理、画出事件循环的微任务宏任务调度时序。
+HTML 用于定义网页的结构与骨架。
 
-### 浏览器渲染流水线与事件模型
+#### 常用基础标签速查表
 
-浏览器把一份页面变成屏幕像素要走五道工序，每道工序都可能成为性能瓶颈：
-
-| 工序 | 做什么 | 触发重做的典型操作 |
+| 标签名 | 描述说明 | 示例 |
 |---|---|---|
-| DOM 树构建 | 解析 HTML 生成节点树 | `innerHTML` 整段替换 |
-| 样式计算 | 解析 CSS 算出每节点最终样式 | 增删类名、改样式规则 |
-| 布局（重排） | 计算每节点的位置与尺寸 | 读写 `offsetWidth`、改几何属性 |
-| 绘制（重绘） | 生成绘制指令与图层 | 改颜色、阴影等外观属性 |
-| 合成 | GPU 合成各图层输出画面 | `transform`、`opacity` 动画 |
+| `<h1> ~ <h6>` | 一级到六级标题 | `<h1>主标题</h1>` |
+| `<p>` | 文本段落 | `<p>段落文本内容</p>` |
+| `<a>` | 超链接（`href` 属性指定目标 URL） | `<a href="https://example.com">访问链接</a>` |
+| `<img>` | 图片标签（`src` 指定路径，`alt` 替代文本） | `<img src="logo.png" alt="社团徽标">` |
+| `<ul>` / `<li>` | 无序列表项 | `<ul><li>苹果</li><li>香蕉</li></ul>` |
+| `<button>` | 交互按钮 | `<button type="button">点击提交</button>` |
+| `<input>` | 输入框（`type="text"`、`type="password"`） | `<input type="text" placeholder="请输入姓名">` |
 
-#### 重排与重绘的成本差
+#### 实例代码
 
-改几何属性（宽高、位置）会让布局阶段从该节点开始重新计算，波及子孙与后续兄弟，这是最贵的操作；改外观属性（颜色、背景）只触发重绘，跳过布局；而 `transform` 与 `opacity` 的变化只发生在合成阶段，不碰布局也不碰绘制，这就是「动画优先用 transform」的物理依据。
+```html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>我的第一个网页</title>
+</head>
+<body>
+    <h1>欢迎来到 Web 开发的世界</h1>
+    <p>这是一个基础段落，下面是一个常用功能链接：</p>
+    <a href="https://www.bilibili.com" target="_blank">打开 B 站</a>
 
-#### 读写的隐形代价
-
-浏览器为了性能会延迟批量执行布局，但一旦你在写操作之间插入一次几何属性读取（如 `offsetHeight`），浏览器必须立刻把布局算完给你准确值——读写交替就造成强制同步布局，这是页面卡顿最常见的隐形元凶。
-
-#### 捕获、目标与冒泡三阶段
-
-一次点击事件的生命周期分三段：先从 `window` 沿 DOM 树向下**捕获**，到达**处于目标**的元素，再从目标沿树向上**冒泡**。`addEventListener` 的第三个参数决定监听挂在捕获段还是冒泡段，默认冒泡。绝大多数业务只需冒泡段。
-
-#### 事件委托：冒泡的工程红利
-
-给一百个列表项各绑一个监听器，内存里就是一百个闭包；利用冒泡把监听器只绑在父容器上，通过 `event.target` 判断真实来源，一份监听覆盖全部子项，动态新增的子项也自动生效。这是冒泡机制换来的最实用的工程红利。
-
-#### 单线程事件循环的调度时序
-
-JavaScript 主线程是单线程的，靠事件循环调度任务：每执行完一个**宏任务**（脚本、`setTimeout`、事件回调），就先清空整个**微任务队列**（`Promise.then`、`queueMicrotask`），再去做渲染，然后取下一个宏任务。微任务插队能力强，宏任务之间会被渲染隔开——理解了这条时序，才能解释「为什么 `Promise.then` 总比 `setTimeout` 先打印」。
-
-```ts
-console.log('1 同步脚本本身是第一个宏任务')
-
-setTimeout(() => console.log('5 宏任务：等微任务与渲染都结束才轮到我'), 0)
-
-Promise.resolve()
-  .then(() => console.log('3 微任务：本轮回调结束后立刻执行'))
-  .then(() => console.log('4 微任务：链上下一环仍在微任务队列'))
-
-console.log('2 同步代码按书写顺序执行完毕')
-// 输出顺序：1 → 2 → 3 → 4 → 5
+    <h2>技术学习清单</h2>
+    <ul>
+        <li>HTML 结构搭建</li>
+        <li>CSS 美化排版</li>
+        <li>JavaScript 动态交互</li>
+    </ul>
+</body>
+</html>
 ```
 
-### 现代布局体系
+### CSS 盒子模型与选择器
 
-#### Flex 与 Grid 的分工
+CSS 用于控制网页的排版布局与色彩外观。
 
-Flex 解决「一条线上的排布」：导航条、工具栏、卡片内的元素对齐；Grid 解决「一张网上的排布」：整页骨架、瀑布式卡片区。口诀：**先 Grid 定骨架，再 Flex 排局部。** 两者都能做的事优先 Grid，它的行列约束声明更直白。
+#### 1. 常用选择器
 
-```css
-/* 页面骨架：左栏固定 280 目录树，右栏自适应长文 */
-.archive-layout {
-  display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  gap: 24px;
-  min-height: 100vh;
-}
+| 选择器类型 | 语法格式 | 说明 | 示例 |
+|---|---|---|---|
+| 标签选择器 | `标签名 { ... }` | 选中页面所有指定标签 | `p { color: #333; }` |
+| 类选择器 | `.类名 { ... }` | 选中带有指定 class 的元素 | `.card { padding: 16px; }` |
+| ID 选择器 | `#id名 { ... }` | 选中具有唯一 id 的元素 | `#header { height: 60px; }` |
 
-/* 局部对齐：导航项水平分布，垂直居中 */
-.nav-bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* 移动端收窄时允许换行，而不是溢出撑破容器 */
-  flex-wrap: wrap;
-  gap: 12px;
-}
+#### 2. CSS 盒子模型
+
+每一个 HTML 元素在页面中都表现为一个矩形盒子，由内到外由四部分组成：
+1. **内容区**：呈现文本与图像的实际区域（由 `width` 和 `height` 控制）。
+2. **内边距**：内容与边框之间的空白区域（`padding`）。
+3. **边框**：包围内边距与内容的线条（`border`）。
+4. **外边距**：盒子与其他相邻元素之间的距离（`margin`）。
+
+#### 实例代码
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* 全局将所有元素设为边框盒子模型，尺寸计算更直观 */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        .card {
+            width: 300px;
+            padding: 20px;            /* 内边距 */
+            border: 2px solid #0088cc; /* 边框 */
+            margin: 20px auto;        /* 外边距：上下 20px，左右自动居中 */
+            background-color: #f9fbff;
+            border-radius: 8px;
+        }
+
+        .card-title {
+            color: #0088cc;
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h3 class="card-title">标准盒子模型卡片</h3>
+        <p>内边距、边框和外边距协同控制了元素的呼吸空间。</p>
+    </div>
+</body>
+</html>
 ```
 
-#### 响应式的断点纪律
+### Flex 弹性布局入门
 
-断点不是越多越好，社团约定两档：`768px` 以下按移动端单列重排，`768px` 以上按桌面布局。移动优先意味着基础样式写给最窄屏，再用 `min-width` 媒体查询逐级增强，避免桌面样式写了三百行再逐条推翻。
+Flex 是现代 Web 最常用的单维度排版方案，通过简单的声明即可实现水平垂直居中与空间分配。
 
-### 正反例设计范式
+#### Flex 容器核心属性速查表
 
-#### 反例：循环内读写交替引发布局抖动
-
-```ts
-// 反例：每次循环都强制同步布局，一百项就触发一百次重排
-function syncHeights_bad(items: HTMLElement[]) {
-  for (const el of items) {
-    const h = el.offsetHeight // 读：强制浏览器立刻完成布局
-    el.style.height = `${h + 8}px` // 写：布局失效
-  }
-}
-```
-
-隐患拆解：读写交替让浏览器的批量布局优化彻底失效，列表越长卡顿越明显；在滚动或动画回调里这样写，帧率直接腰斩。
-
-#### 正例：批量读写分离与文档片段
-
-```ts
-// 正例：先集中读、再集中写，整段只触发一次布局
-function syncHeights_good(items: HTMLElement[]) {
-  if (!items || items.length === 0) return // 空值防御在前
-
-  const heights = items.map((el) => el.offsetHeight) // 批量读
-  items.forEach((el, i) => {
-    el.style.height = `${heights[i]! + 8}px` // 批量写
-  })
-}
-
-// 正例：大批量插入先进文档片段，一次性上树，只触发一次重排
-function renderList_good(list: HTMLElement, data: readonly string[]) {
-  const fragment = document.createDocumentFragment()
-  for (const text of data) {
-    const li = document.createElement('li')
-    li.textContent = text // textContent 不解析 HTML，天然防注入
-    fragment.appendChild(li)
-  }
-  list.replaceChildren(fragment) // 原子替换，旧节点一并清理
-}
-```
-
-需要按帧节流的动画与滚动处理，用 `requestAnimationFrame` 把写操作对齐到渲染时机，而不是在事件回调里随手改样式。
-
-### 高频故障与实操避坑
-
-| 症状 | 根因 | 修复方案 |
+| CSS 属性 | 常用属性值 | 功能说明 |
 |---|---|---|
-| 列表一多滚动就卡 | 循环内强制同步布局 | 读写分离，批量更新 |
-| 监听器绑了不生效 | 元素在绑定后才插入 | 改用事件委托绑在父容器 |
-| `then` 里拿到旧值 | 异步时序误解 | 画出事件循环时序再改代码 |
-| 布局在某些浏览器错位 | 用了过新的 CSS 特性 | 查兼容性表，关键特性加回退 |
-| 输入框打字触发海量请求 | 键盘事件直连请求 | 防抖 300ms，请求前判空 |
+| `display` | `flex` | 将当前元素声明为弹性容器 |
+| `flex-direction` | `row`（默认） / `column` | 设置主轴方向为水平或垂直 |
+| `justify-content` | `flex-start` / `center` / `space-between` | 控制子元素在**主轴**上的对齐方式 |
+| `align-items` | `stretch` / `center` / `flex-start` | 控制子元素在**交叉轴**上的对齐方式 |
+| `gap` | 如 `16px` | 控制子元素之间的固定间隙 |
 
-防抖是交互层的基本功，核心是「最后一次触发后才真正执行」：
+#### 实例代码：经典导航栏与水平垂直居中
 
-```ts
-function debounce<A extends unknown[]>(
-  fn: (...args: A) => void,
-  waitMs: number,
-): (...args: A) => void {
-  let timer: ReturnType<typeof setTimeout> | null = null
-  return (...args: A) => {
-    if (timer !== null) clearTimeout(timer) // 取消上一次未执行的调用
-    timer = setTimeout(() => {
-      timer = null
-      fn(...args)
-    }, waitMs)
-  }
-}
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        /* 导航栏：两端对齐 */
+        .navbar {
+            display: flex;
+            justify-content: space-between; /* 左右两端撑开 */
+            align-items: center;            /* 垂直居中 */
+            padding: 10px 20px;
+            background-color: #1a2a3a;
+            color: white;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px; /* 子项间距 */
+            list-style: none;
+        }
+
+        /* 水平垂直绝对居中容器 */
+        .center-box {
+            display: flex;
+            justify-content: center; /* 主轴水平居中 */
+            align-items: center;     /* 交叉轴垂直居中 */
+            height: 200px;
+            background-color: #eef5ff;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">云飞扬社团</div>
+        <ul class="nav-links">
+            <li>首页</li>
+            <li>档案库</li>
+            <li>项目展台</li>
+        </ul>
+    </nav>
+
+    <div class="center-box">
+        <p>通过 display: flex 轻松实现完美居中！</p>
+    </div>
+</body>
+</html>
 ```
 
-### 阶段实战大作业与验收清单
+### JavaScript 基础语法与核心 API
 
-基于原生 JavaScript 编写一块交互看板：数据列表动态渲染、顶部搜索框防抖过滤、全键盘可无障碍导航。不许引入任何框架与组件库。
+JavaScript 是网页的交互大脑，负责动态数据处理与用户操作响应。
 
-| 项目 | 验收标准 |
-|---|---|
-| 动态渲染 | 百条数据经文档片段一次性上树，增量更新用读写分离 |
-| 防抖搜索 | 输入停止 300ms 后过滤，空关键字恢复全量，过滤结果为空有提示态 |
-| 无障碍 | `Tab` 可遍历全部交互项，`Enter` 可激活，焦点样式清晰可见 |
-| 事件模型 | 列表项点击走事件委托，能口述捕获冒泡全流程 |
-| 性能 | 浏览器 Performance 面板录制无明显强制同步布局红线 |
+#### 1. 变量与常用数据类型
+
+```ts
+// 1. 变量声明：优先使用 const（常量），需要重新赋值时使用 let
+const siteName = "云飞扬开发档案库";
+let visitCount = 42;
+const isOnline = true;
+
+// 2. 数组与对象
+const student = {
+    id: 101,
+    name: "张三",
+    skills: ["HTML", "CSS", "JS"]
+};
+
+// 3. 模板字符串
+console.log(`网站: ${siteName}, 成员: ${student.name}`);
+```
+
+#### 2. 数组高频操作方法
+
+```ts
+const numbers = [1, 2, 3, 4, 5];
+
+// 1. push：向末尾添加元素
+numbers.push(6);
+
+// 2. map：遍历并映射为新数组
+const doubled = numbers.map(n => n * 2); // [2, 4, 6, 8, 10, 12]
+
+// 3. filter：按条件过滤元素
+const evens = numbers.filter(n => n % 2 === 0); // [2, 4, 6]
+
+// 4. forEach：循环遍历
+numbers.forEach((num, index) => {
+    console.log(`索引 ${index}: ${num}`);
+});
+```
+
+### DOM 操作与事件监听
+
+DOM 将网页解析为节点树，JavaScript 可以通过 DOM 接口查询节点、修改文本、动态增删样式与响应用户点击。
+
+#### 常用 DOM 接口
+
+* `document.querySelector(selector)`：按 CSS 选择器查找首个匹配元素。
+* `element.textContent`：安全地获取或设置元素纯文本。
+* `element.classList.add/remove/toggle`：操作元素的 class 类名。
+* `element.addEventListener(event, callback)`：绑定事件监听器。
+
+#### 实例代码：计数器与事件处理
+
+```html
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>简易计数器</h2>
+    <p>当前计数值: <span id="counter-value">0</span></p>
+    <button id="btn-add" type="button">点击加 1</button>
+    <button id="btn-reset" type="button">重置</button>
+
+    <script>
+        // 获取 DOM 元素
+        const valSpan = document.querySelector("#counter-value");
+        const addBtn = document.querySelector("#btn-add");
+        const resetBtn = document.querySelector("#btn-reset");
+
+        let count = 0;
+
+        // 绑定点击事件
+        addBtn.addEventListener("click", () => {
+            count += 1;
+            valSpan.textContent = String(count);
+        });
+
+        resetBtn.addEventListener("click", () => {
+            count = 0;
+            valSpan.textContent = String(count);
+        });
+    </script>
+</body>
+</html>
+```
+
+### Fetch 异步接口请求
+
+Fetch 用于在不刷新页面的前提下向后端发起 HTTP 网络请求并获取 JSON 数据。
+
+#### 实例代码
+
+```ts
+// 发起 GET 请求获取远程数据
+async function loadUserData(userId: number) {
+    try {
+        const response = await fetch(`https://jsonplaceholder.typicode.com/users/${userId}`);
+        
+        // 检查 HTTP 状态码是否成功
+        if (!response.ok) {
+            throw new Error(`HTTP 错误，状态码: ${response.status}`);
+        }
+
+        // 解析 JSON 数据
+        const user = await response.json();
+        console.log("获取到的用户姓名:", user.name);
+        console.log("用户邮箱:", user.email);
+    } catch (error) {
+        console.error("请求发生异常:", error);
+    }
+}
+
+// 调用异步函数
+loadUserData(1);
+```
+
+### 阶段实战大作业
+
+编写一个原生待办事项交互应用：
+1. 顶部提供输入框与“添加”按钮，输入文本回车或点击按钮向列表中追加待办项；
+2. 每一个待办项提供“完成/未完成”勾选框与“删除”按钮；
+3. 纯原生 HTML + CSS + JavaScript 编写，不引入任何外部框架。
