@@ -46,7 +46,7 @@ jobs:
       # 字体产物已提交进仓库，这一步会重切一遍并核对预算，改了文案没跑 fonts:subset 会在这里红。
       - run: npm run check
         env:
-          VITE_QA_ENDPOINT: https://yfy-qa.491453898.workers.dev
+          VITE_QA_ENDPOINT: https://ai.yunfeiyang.tech
 
       # 字体子集是确定性输出。重切后有 diff 说明提交的产物过期了，
       # 让它红在这里，别让线上跟仓库里的字体不一致。
