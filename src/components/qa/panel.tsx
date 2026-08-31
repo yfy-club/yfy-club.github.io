@@ -17,7 +17,8 @@ import { Diamond, Rail } from '@/components/hud'
 import { QA_KIND_NOTE, QA_PROMPTS } from '@/data/qa-prompts'
 import { playClick } from '@/lib/sound'
 import { useStore } from '@/lib/store'
-import { MAX_QUESTION, dismissTip, qaStore } from './store'
+import { MarkdownRenderer } from './markdown'
+import { MAX_QUESTION, dismissTip, qaStore, resetQa } from './store'
 import { abortAsk, ask } from './stream'
 import './qa.css'
 
@@ -34,6 +35,7 @@ interface PanelProps {
 export function QaPanel({ onClose }: PanelProps) {
   const qa = useStore(qaStore)
   const [text, setText] = useState('')
+  const [expanded, setExpanded] = useState(false)
   const input = useRef<HTMLInputElement>(null)
   const log = useRef<HTMLDivElement>(null)
 
@@ -51,12 +53,16 @@ export function QaPanel({ onClose }: PanelProps) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.preventDefault()
+      if (expanded) {
+        setExpanded(false)
+        return
+      }
       onClose()
       document.querySelector<HTMLButtonElement>('.dock-ask')?.focus()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, expanded])
 
   /*
    * 关面板即取消在途请求。
@@ -79,17 +85,77 @@ export function QaPanel({ onClose }: PanelProps) {
     void ask(q)
   }, [])
 
+  const handleNewChat = useCallback(() => {
+    playClick()
+    abortAsk()
+    resetQa()
+    setText('')
+    input.current?.focus()
+  }, [])
+
   const empty = qa.turns.length === 0
 
   return (
-    <section className="qa" id="qa-panel" aria-label="向 NAVI 提问">
+    <section
+      className={`qa ${expanded ? 'is-expanded' : ''}`}
+      id="qa-panel"
+      aria-label="向 NAVI 提问"
+    >
       <header className="qa-head">
-        <span className="qa-head-hud" aria-hidden="true">
-          ASK NAVI
-        </span>
-        <button type="button" className="qa-close" onClick={onClose} aria-label="关闭问答">
-          <span aria-hidden="true">✕</span>
-        </button>
+        <div className="qa-head-title">
+          <span className="qa-head-hud" aria-hidden="true">
+            ASK NAVI
+          </span>
+          {expanded && (
+            <span className="qa-badge-expanded" aria-hidden="true">
+              EXPANDED
+            </span>
+          )}
+        </div>
+
+        <div className="qa-head-actions">
+          {qa.turns.length > 0 && (
+            <button
+              type="button"
+              className="qa-head-btn qa-head-new"
+              onClick={handleNewChat}
+              aria-label="开启新对话并轮换模型"
+              title="开启新对话"
+            >
+              <span className="qa-btn-icon" aria-hidden="true">
+                ↺
+              </span>
+              <span>新对话</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            className="qa-head-btn qa-head-expand"
+            onClick={() => {
+              playClick()
+              setExpanded((v) => !v)
+            }}
+            aria-label={expanded ? '还原面板大小' : '放大面板'}
+            title={expanded ? '还原 (Esc)' : '放大'}
+          >
+            <span className="qa-expand-icon" aria-hidden="true">
+              {expanded ? '🗗' : '🗖'}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="qa-close"
+            onClick={() => {
+              playClick()
+              onClose()
+            }}
+            aria-label="关闭问答"
+          >
+            <span aria-hidden="true">✕</span>
+          </button>
+        </div>
       </header>
 
       <Rail />
@@ -137,7 +203,11 @@ export function QaPanel({ onClose }: PanelProps) {
                   {turn.q}
                 </p>
 
-                {turn.a && <p className="qa-answer">{turn.a}</p>}
+                {turn.a && (
+                  <div className="qa-answer">
+                    <MarkdownRenderer content={turn.a} />
+                  </div>
+                )}
 
                 {i === qa.turns.length - 1 && qa.status === 'pending' && (
                   <p className="qa-wait">
