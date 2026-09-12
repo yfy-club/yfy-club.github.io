@@ -294,6 +294,211 @@
 }
 
 /* -------------------------------------------------------------------------
+   演示测试账号数据表格
+   嵌于技术栈下方与操作按钮上方，直接融入卡片背景，零背景重框，零布局跳动。
+   ------------------------------------------------------------------------- */
+
+.stage-demo-panel {
+  width: 100%;
+  margin-top: var(--space-3);
+  background: transparent;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.stage-demo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-hud);
+  line-height: 1.5;
+  background: transparent;
+  table-layout: auto;
+}
+
+.stage-demo-table th {
+  padding: 4px 14px 4px 0;
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--ink-500);
+  text-align: left;
+  border-bottom: var(--hairline) solid var(--line-solid);
+  white-space: nowrap;
+  background: transparent;
+}
+
+.stage-demo-table th:last-child {
+  padding-right: 0;
+}
+
+.stage-demo-table td {
+  padding: 6px 14px 6px 0;
+  border-bottom: var(--hairline) solid var(--line-hair);
+  vertical-align: middle;
+  background: transparent;
+  white-space: nowrap;
+}
+
+.stage-demo-table td:last-child {
+  padding-right: 0;
+}
+
+.stage-demo-table tr:last-child td {
+  border-bottom: none;
+}
+
+.stage-col-role,
+.stage-cell-role {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.stage-col-account {
+  width: auto;
+}
+
+.stage-col-password {
+  width: auto;
+}
+
+.stage-role-tag {
+  display: inline-block;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-700);
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.stage-copy-cell {
+  display: inline-flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  margin: -2px -4px;
+  border-radius: 3px;
+  color: var(--ink-900);
+  cursor: pointer;
+  transition:
+    color var(--dur-micro) var(--ease-out-expo),
+    background-color var(--dur-micro) var(--ease-out-expo);
+  white-space: nowrap;
+}
+
+.stage-copy-code {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.3;
+  color: inherit;
+  white-space: nowrap;
+}
+
+.stage-copy-cell:hover {
+  background: rgba(14, 165, 233, 0.08);
+  color: var(--sky-700);
+}
+
+.stage-copy-cell:hover .stage-copy-code {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stage-copy-cell[data-active='true'] {
+  background: rgba(14, 165, 233, 0.16);
+  color: var(--sky-700);
+}
+
+.stage-copy-cell:focus-visible {
+  outline: 2px solid var(--sky-500);
+  outline-offset: 1px;
+}
+
+/* -------------------------------------------------------------------------
+   已复制悬浮轻量提示 (Toast)
+   桌面端右下角停靠，移动端视口底部居中悬浮胶囊，保证零布局跳动。
+   ------------------------------------------------------------------------- */
+
+.stage-toast-viewport {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: 9999;
+  pointer-events: none;
+}
+
+.stage-toast {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 9px 16px;
+  background: var(--bg-paper);
+  border: var(--hairline) solid var(--line-solid);
+  border-radius: var(--radius-sm);
+  box-shadow:
+    0 12px 32px -4px rgba(15, 23, 42, 0.14),
+    0 2px 6px -1px rgba(15, 23, 42, 0.06);
+  clip-path: polygon(
+    0 0,
+    calc(100% - 8px) 0,
+    100% 8px,
+    100% 100%,
+    8px 100%,
+    0 calc(100% - 8px)
+  );
+  color: var(--ink-900);
+  pointer-events: auto;
+}
+
+.stage-toast-diamond {
+  font-size: 8px;
+  color: var(--pink-700);
+  line-height: 1;
+}
+
+.stage-toast-badge {
+  font-family: var(--font-hud);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--sky-700);
+  line-height: 1;
+  padding-right: var(--space-2);
+  border-right: var(--hairline) solid var(--line-hair);
+}
+
+.stage-toast-text {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
+  color: var(--ink-900);
+}
+
+.stage-toast-role {
+  font-weight: 600;
+  color: var(--ink-700);
+}
+
+.stage-toast-label {
+  color: var(--ink-500);
+}
+
+.stage-toast-val {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sky-900);
+  background: var(--sky-50);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* -------------------------------------------------------------------------
    底部全宽向下展开的档案区域 (Dossier Expandable)
    ------------------------------------------------------------------------- */
 
@@ -472,8 +677,78 @@
     gap: var(--space-3);
   }
 
+  .stage-demo-table th {
+    padding: 4px 10px 4px 0;
+  }
+
+  .stage-demo-table td {
+    padding: 5px 10px 5px 0;
+  }
+
+  .stage-demo-table th:last-child,
+  .stage-demo-table td:last-child {
+    padding-right: 0;
+  }
+
   .stage-brief {
     max-width: none;
+  }
+}
+
+@media (width < 640px) {
+  .stage-toast-viewport {
+    left: var(--space-4);
+    right: var(--space-4);
+    bottom: max(20px, env(safe-area-inset-bottom, 20px));
+    display: flex;
+    justify-content: center;
+  }
+
+  .stage-toast {
+    padding: 8px 12px;
+    gap: 6px;
+    max-width: 100%;
+  }
+
+  .stage-toast-text {
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .stage-toast-val {
+    font-size: 11px;
+    padding: 1px 4px;
+    max-width: 130px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (width < 480px) {
+  .stage-card {
+    padding: var(--space-4) var(--space-3);
+  }
+
+  .stage-demo-table th {
+    padding: 3px 6px 3px 0;
+    font-size: 10px;
+  }
+
+  .stage-demo-table td {
+    padding: 4px 6px 4px 0;
+  }
+
+  .stage-demo-table th:last-child,
+  .stage-demo-table td:last-child {
+    padding-right: 0;
+  }
+
+  .stage-copy-code {
+    font-size: 11px;
+  }
+
+  .stage-role-tag {
+    font-size: 11px;
   }
 }
 

@@ -25,8 +25,21 @@ interface ProjectsProps {
   onHover: (tone: string | null) => void
 }
 
+interface ToastNotice {
+  role: string
+  label: string
+  value: string
+}
+
 export function Projects({ onHover }: ProjectsProps) {
   const [openId, setOpenId] = useState<string | null>(null)
+  const [notice, setNotice] = useState<ToastNotice | null>(null)
+
+  useEffect(() => {
+    if (!notice) return
+    const timer = window.setTimeout(() => setNotice(null), 2400)
+    return () => window.clearTimeout(timer)
+  }, [notice])
 
   return (
     <section className="projects" id="projects">
@@ -53,8 +66,33 @@ export function Projects({ onHover }: ProjectsProps) {
             open={openId === project.id}
             onToggle={() => setOpenId((cur) => (cur === project.id ? null : project.id))}
             onHover={onHover}
+            onNotify={setNotice}
           />
         ))}
+      </div>
+
+      {/* 复制成功全局轻量提示 Toast */}
+      <div className="stage-toast-viewport" aria-live="polite">
+        <AnimatePresence>
+          {notice && (
+            <motion.div
+              className="stage-toast"
+              role="status"
+              initial={{ opacity: 0, y: 16, scale: 0.96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 12, scale: 0.96 }}
+              transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <span className="stage-toast-diamond">◆</span>
+              <span className="stage-toast-badge">已复制</span>
+              <span className="stage-toast-text">
+                <span className="stage-toast-role">{notice.role}</span>
+                <span className="stage-toast-label">{notice.label}</span>
+                <code className="stage-toast-val">{notice.value}</code>
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </section>
   )
@@ -69,9 +107,10 @@ interface StageProps {
   open: boolean
   onToggle: () => void
   onHover: (tone: string | null) => void
+  onNotify: (msg: ToastNotice) => void
 }
 
-function Stage({ project, flip, open, onToggle, onHover }: StageProps) {
+function Stage({ project, flip, open, onToggle, onHover, onNotify }: StageProps) {
   const { ref, entered } = useInView<HTMLElement>()
 
   /*
@@ -138,6 +177,46 @@ function Stage({ project, flip, open, onToggle, onHover }: StageProps) {
                 </Tag>
               ))}
             </div>
+
+            {project.demoAccounts && (
+              <div className="stage-demo-panel">
+                <table className="stage-demo-table">
+                  <caption className="sr-only">{project.name} 演示测试账号</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col" className="stage-col-role">角色</th>
+                      <th scope="col" className="stage-col-account">账号</th>
+                      <th scope="col" className="stage-col-password">密码</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {project.demoAccounts.map((account) => (
+                      <tr key={account.role}>
+                        <td className="stage-cell-role">
+                          <span className="stage-role-tag">{account.role}</span>
+                        </td>
+                        <td className="stage-cell-account">
+                          <CopyCell
+                            value={account.account}
+                            label="账号"
+                            role={account.role}
+                            onNotify={onNotify}
+                          />
+                        </td>
+                        <td className="stage-cell-password">
+                          <CopyCell
+                            value={account.password}
+                            label="密码"
+                            role={account.role}
+                            onNotify={onNotify}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
             <div className="stage-actions">
               <button
@@ -253,4 +332,65 @@ function Shot({ id, alt }: { id: ShotId; alt: string }) {
       />
     </span>
   )
+}
+
+/* ====================================================================== */
+
+function CopyCell({
+  value,
+  label,
+  role,
+  onNotify,
+}: {
+  value: string
+  label: string
+  role: string
+  onNotify: (msg: ToastNotice) => void
+}) {
+  const [active, setActive] = useState(false)
+
+  const onCopy = () => {
+    const onSuccess = () => {
+      setActive(true)
+      setTimeout(() => setActive(false), 800)
+      onNotify({ role, label, value })
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(onSuccess).catch(() => {
+        if (fallbackCopy(value)) onSuccess()
+      })
+    } else {
+      if (fallbackCopy(value)) onSuccess()
+    }
+  }
+
+  return (
+    <button
+      type="button"
+      className="stage-copy-cell"
+      data-active={active}
+      onClick={onCopy}
+      title={`点击复制${label} ${value}`}
+      aria-label={`复制${role}${label} ${value}`}
+    >
+      <code className="stage-copy-code">{value}</code>
+    </button>
+  )
+}
+
+function fallbackCopy(text: string): boolean {
+  try {
+    const el = document.createElement('textarea')
+    el.value = text
+    el.style.position = 'fixed'
+    el.style.opacity = '0'
+    document.body.appendChild(el)
+    el.select()
+    const successful = document.execCommand('copy')
+    document.body.removeChild(el)
+    return successful
+  } catch {
+    return false
+  }
 }

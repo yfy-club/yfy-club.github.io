@@ -31,6 +31,13 @@ export interface Tier {
   tags: readonly string[]
 }
 
+export interface DemoAccount {
+  readonly role: string
+  readonly account: string
+  readonly password: string
+  readonly access: string
+}
+
 export interface Project {
   id: string
   /** 两位序号，走 hud 字体。 */
@@ -50,6 +57,8 @@ export interface Project {
   stack: readonly string[]
   metrics: readonly [Metric, Metric, Metric]
   tiers: readonly Tier[]
+  demoNotice?: string
+  demoAccounts?: readonly DemoAccount[]
 }
 
 export const PROJECTS: readonly Project[] = [
@@ -75,6 +84,15 @@ export const PROJECTS: readonly Project[] = [
       { code: 'TIER 03', name: '领域服务与鉴权', tags: ['Spring Boot', 'MyBatis-Plus', 'Sa-Token'] },
       { code: 'TIER 04', name: '持久化与仿真', tags: ['PostgreSQL', 'Flyway', 'Docker Compose'] },
     ],
+    demoNotice: '当前系统为模拟数据演示环境，请勿随意修改或删除测试数据。',
+    demoAccounts: [
+      {
+        role: '超级管理员',
+        account: 'admin',
+        password: 'AdminPass2026!',
+        access: '完整管理端功能演示',
+      },
+    ],
   },
   {
     id: 'zhixueban',
@@ -97,6 +115,21 @@ export const PROJECTS: readonly Project[] = [
       { code: 'TIER 02', name: '实时网关与分发', tags: ['Node.js', 'Express', 'SSE'] },
       { code: 'TIER 03', name: '多模型容灾调度', tags: ['Failover Pool', 'RBAC'] },
       { code: 'TIER 04', name: '持久化与工程', tags: ['MongoDB', 'pnpm Monorepo'] },
+    ],
+    demoNotice: '当前系统为模拟数据演示环境，请勿随意修改或删除测试数据。',
+    demoAccounts: [
+      {
+        role: 'VIP 会员',
+        account: 'vip@intellibuddy.com',
+        password: 'Demo2025',
+        access: '完整功能体验，包含高阶学习分析与报告',
+      },
+      {
+        role: '教师',
+        account: 'teacher@intellibuddy.com',
+        password: 'Demo2025',
+        access: '教师面板与教学管理功能体验',
+      },
     ],
   },
   {
