@@ -45,12 +45,18 @@
   gap: var(--space-2);
   text-decoration: none;
   color: var(--ink-900);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
+.nav-brand-text,
 .nav-brand-zh {
+  font-family: var(--font-hud);
   font-size: var(--text-h3);
   font-weight: 700;
   line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .nav-brand-hud {
@@ -234,8 +240,18 @@
     display: none;
   }
 
+  .nav-brand {
+    align-items: center;
+  }
+
   .nav-brand-hud {
     display: none;
+  }
+
+  /* 移动端导航容器间隙缩小为 8px，释放行宽 */
+  .nav-inner {
+    height: calc(var(--nav-h-sm) - var(--hairline));
+    gap: var(--space-2);
   }
 
   /* .nav-links 的 margin-right: auto 跟着一起没了，开关得自己顶到右边 */
@@ -250,9 +266,28 @@
     gap: 3px;
     font-size: var(--text-hud);
   }
+}
 
-  .nav-inner {
-    height: calc(var(--nav-h-sm) - var(--hairline));
+@media (width < 480px) {
+  /* 窄屏隐藏待开启文字后缀，仅依靠粉色呼吸动效与提示说明表达状态 */
+  .nav-toggle[data-pending]::after {
+    display: none;
+  }
+}
+
+@media (width < 360px) {
+  /* 极窄视口微调两端边距与开关间隙 */
+  .nav-inner.shell {
+    padding-inline: 12px;
+  }
+
+  .nav-tools {
+    gap: 1px;
+  }
+
+  .nav-toggle {
+    padding: 2px 3px;
+    letter-spacing: 0;
   }
 }
 

@@ -33,8 +33,8 @@ export function Nav() {
       <div className="nav-inner shell">
         <Link className="nav-brand" to="/">
           <Diamond tone="pink" />
-          <span className="nav-brand-zh">云飞扬</span>
-          <span className="nav-brand-hud">YFY PORTAL</span>
+          <span className="nav-brand-text">YFY</span>
+          <span className="nav-brand-hud">PORTAL</span>
         </Link>
 
         <nav className="nav-links" aria-label="站内导航">
