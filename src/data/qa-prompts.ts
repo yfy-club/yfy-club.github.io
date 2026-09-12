@@ -20,7 +20,7 @@ export const QA_PROMPTS: readonly QaPrompt[] = [
   { kind: 'concept', text: '介绍一下 Java 面向对象核心概念' },
   { kind: 'concept', text: '什么是 REST 接口与三层架构' },
   { kind: 'archive', text: '社团培养阶梯与成长蓝图是什么' },
-  { kind: 'archive', text: '第一周新人生存指南讲了什么' },
+  { kind: 'archive', text: 'Git 代码提交与分支协同规范是什么' },
 ]
 
 /** 各篇目专属快捷提问库 */
